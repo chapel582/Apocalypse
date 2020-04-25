@@ -1,6 +1,12 @@
 #include <windows.h>
 
+// TODO: this is a global for now
 bool GlobalRunning = false;
+
+BITMAPINFO BitmapInfo = {};
+void* BitmapMemory = NULL;
+HBITMAP BitmapHandle = {};
+HDC BitmapDeviceContext = {};
 
 LRESULT CALLBACK MainWindowCallback(
 	HWND Window,
@@ -14,7 +20,35 @@ LRESULT CALLBACK MainWindowCallback(
 	{
 		case(WM_SIZE):
 		{
-			OutputDebugStringA("WM_SIZE\n");
+			RECT ClientRect = {};
+			GetClientRect(Window, &ClientRect);
+			int Width = ClientRect.right - ClientRect.left;
+			int Height = ClientRect.bottom - ClientRect.top;
+
+			if(BitmapHandle)
+			{
+				DeleteObject(BitmapHandle);
+			}
+
+			if(!BitmapDeviceContext)
+			{
+				BitmapDeviceContext = CreateCompatibleDC(0);
+			}
+
+			BitmapInfo.bmiHeader.biSize = sizeof(BitmapInfo.bmiHeader);
+			BitmapInfo.bmiHeader.biWidth = Width;
+			BitmapInfo.bmiHeader.biHeight = Height;
+			BitmapInfo.bmiHeader.biPlanes = 1;
+			BitmapInfo.bmiHeader.biCompression = BI_RGB;
+
+			BitmapHandle = CreateDIBSection(
+				BitmapDeviceContext,
+				&BitmapInfo,
+				DIB_RGB_COLORS,
+				&BitmapMemory,
+				0,
+				0
+			);
 			break;
 		}
 		case(WM_ACTIVATEAPP):
@@ -40,16 +74,17 @@ LRESULT CALLBACK MainWindowCallback(
 			int Y = Paint.rcPaint.top;
 			int Width = Paint.rcPaint.right - Paint.rcPaint.left;
 			int Height = Paint.rcPaint.bottom - Paint.rcPaint.top;
-			static DWORD Operation = WHITENESS;
-			PatBlt(DeviceContext, X, Y, Width, Height, Operation);
-			if(Operation == WHITENESS)
-			{
-				Operation = BLACKNESS;
-			}
-			else
-			{
-				Operation = WHITENESS;
-			}
+			
+			StretchDIBits(
+				DeviceContext,
+				X, Y, Width, Height,
+				X, Y, Width, Height,
+				BitmapMemory,
+				&BitmapInfo,
+				DIB_RGB_COLORS,
+				SRCCOPY
+			);
+
 			EndPaint(Window, &Paint);
 			break;
 		}

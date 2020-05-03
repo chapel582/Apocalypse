@@ -8,6 +8,7 @@ struct win32_offscreen_buffer
 {
 	int Width;
 	int Height;
+	int Pitch;
 	void* Memory;
 	BITMAPINFO Info;
 };
@@ -49,6 +50,8 @@ LRESULT CALLBACK MainWindowCallback(
 			GetClientRect(Window, &ClientRect);
 			GlobalBackBuffer.Width = ClientRect.right - ClientRect.left;
 			GlobalBackBuffer.Height = ClientRect.bottom - ClientRect.top;
+			int BytesPerPixel = 4;
+			GlobalBackBuffer.Pitch = GlobalBackBuffer.Width * BytesPerPixel;
 
 			GlobalBackBuffer.Info.bmiHeader.biSize = (
 				sizeof(GlobalBackBuffer.Info.bmiHeader)
@@ -63,7 +66,6 @@ LRESULT CALLBACK MainWindowCallback(
 			GlobalBackBuffer.Info.bmiHeader.biBitCount = 32;
 			GlobalBackBuffer.Info.bmiHeader.biCompression = BI_RGB;
 
-			int BytesPerPixel = 4;
 			size_t BitmapMemorySize = (
 				(GlobalBackBuffer.Width * GlobalBackBuffer.Height) * 
 				BytesPerPixel
@@ -168,8 +170,6 @@ int CALLBACK WinMain(
 
 				// NOTE: this is currently our render loop
 				// NOTE: it will be removed soon
-				int BytesPerPixel = 4;
-				int Pitch = GlobalBackBuffer.Width * BytesPerPixel;
 				uint8_t* Row = (uint8_t*) GlobalBackBuffer.Memory;
 				for(int Y = 0; Y < GlobalBackBuffer.Height; Y++)
 				{
@@ -183,7 +183,7 @@ int CALLBACK WinMain(
 						*ColorChannel++ = 0;
 						Pixel++;
 					}
-					Row += Pitch;
+					Row += GlobalBackBuffer.Pitch;
 				}
 
 				HDC DeviceContext = GetDC(WindowHandle);

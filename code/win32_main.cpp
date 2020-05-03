@@ -4,10 +4,15 @@
 // TODO: this is a global for now
 bool GlobalRunning = false;
 
-BITMAPINFO GlobalBitmapInfo = {};
-void* GlobalBitmapMemory = NULL;
-int GlobalBitmapWidth = 0;
-int GlobalBitmapHeight = 0;
+struct win32_offscreen_buffer
+{
+	int Width;
+	int Height;
+	void* Memory;
+	BITMAPINFO Info;
+};
+
+win32_offscreen_buffer GlobalBackBuffer;
 
 void Win32UpdateWindow(HDC DeviceContext, int WindowWidth, int WindowHeight)
 {
@@ -15,14 +20,14 @@ void Win32UpdateWindow(HDC DeviceContext, int WindowWidth, int WindowHeight)
 		DeviceContext,
 		0,
 		0,
-		GlobalBitmapWidth,
-		GlobalBitmapHeight,
+		GlobalBackBuffer.Width,
+		GlobalBackBuffer.Height,
 		0,
 		0,
 		WindowWidth,
 		WindowHeight,
-		GlobalBitmapMemory,
-		&GlobalBitmapInfo,
+		GlobalBackBuffer.Memory,
+		&GlobalBackBuffer.Info,
 		DIB_RGB_COLORS,
 		SRCCOPY
 	);
@@ -42,27 +47,32 @@ LRESULT CALLBACK MainWindowCallback(
 		{
 			RECT ClientRect = {};
 			GetClientRect(Window, &ClientRect);
-			GlobalBitmapWidth = ClientRect.right - ClientRect.left;
-			GlobalBitmapHeight = ClientRect.bottom - ClientRect.top;
+			GlobalBackBuffer.Width = ClientRect.right - ClientRect.left;
+			GlobalBackBuffer.Height = ClientRect.bottom - ClientRect.top;
 
-			GlobalBitmapInfo.bmiHeader.biSize = (
-				sizeof(GlobalBitmapInfo.bmiHeader)
+			GlobalBackBuffer.Info.bmiHeader.biSize = (
+				sizeof(GlobalBackBuffer.Info.bmiHeader)
 			);
-			GlobalBitmapInfo.bmiHeader.biWidth = GlobalBitmapWidth;
-			GlobalBitmapInfo.bmiHeader.biHeight = -GlobalBitmapHeight;
-			GlobalBitmapInfo.bmiHeader.biPlanes = 1;
-			GlobalBitmapInfo.bmiHeader.biBitCount = 32;
-			GlobalBitmapInfo.bmiHeader.biCompression = BI_RGB;
+			GlobalBackBuffer.Info.bmiHeader.biWidth = (
+				GlobalBackBuffer.Width
+			);
+			GlobalBackBuffer.Info.bmiHeader.biHeight = (
+				-GlobalBackBuffer.Height
+			);
+			GlobalBackBuffer.Info.bmiHeader.biPlanes = 1;
+			GlobalBackBuffer.Info.bmiHeader.biBitCount = 32;
+			GlobalBackBuffer.Info.bmiHeader.biCompression = BI_RGB;
 
 			int BytesPerPixel = 4;
 			size_t BitmapMemorySize = (
-				(GlobalBitmapWidth * GlobalBitmapHeight) * BytesPerPixel
+				(GlobalBackBuffer.Width * GlobalBackBuffer.Height) * 
+				BytesPerPixel
 			);
-			if(GlobalBitmapMemory)
+			if(GlobalBackBuffer.Memory)
 			{
-				VirtualFree(GlobalBitmapMemory, 0, MEM_RELEASE);
+				VirtualFree(GlobalBackBuffer.Memory, 0, MEM_RELEASE);
 			}
-			GlobalBitmapMemory = VirtualAlloc(
+			GlobalBackBuffer.Memory = VirtualAlloc(
 				0, BitmapMemorySize, MEM_COMMIT, PAGE_READWRITE
 			);
 			break;
@@ -111,8 +121,11 @@ int CALLBACK WinMain(
 	int ShowCode
 )
 {
+	GlobalBackBuffer = {};
+
 	WNDCLASS WindowClass = {};
 	WindowClass.lpfnWndProc = MainWindowCallback;
+	WindowClass.style = CS_HREDRAW | CS_VREDRAW;
 	WindowClass.hInstance = Instance;
 	WindowClass.lpszClassName = "ApocalypseWindowClass";
 
@@ -156,12 +169,12 @@ int CALLBACK WinMain(
 				// NOTE: this is currently our render loop
 				// NOTE: it will be removed soon
 				int BytesPerPixel = 4;
-				int Pitch = GlobalBitmapWidth * BytesPerPixel;
-				uint8_t* Row = (uint8_t*) GlobalBitmapMemory;
-				for(int Y = 0; Y < GlobalBitmapHeight; Y++)
+				int Pitch = GlobalBackBuffer.Width * BytesPerPixel;
+				uint8_t* Row = (uint8_t*) GlobalBackBuffer.Memory;
+				for(int Y = 0; Y < GlobalBackBuffer.Height; Y++)
 				{
 					uint32_t* Pixel = (uint32_t*) Row;
-					for(int X = 0; X < GlobalBitmapWidth; X++)
+					for(int X = 0; X < GlobalBackBuffer.Width; X++)
 					{
 						// *Pixel = 0x000000;
 						uint8_t* ColorChannel = (uint8_t*) Pixel;

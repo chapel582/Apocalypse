@@ -17,6 +17,7 @@ win32_offscreen_buffer GlobalBackBuffer;
 
 void Win32BufferToWindow(HDC DeviceContext, int WindowWidth, int WindowHeight)
 {
+	// TODO: aspect ratio correction
 	StretchDIBits(
 		DeviceContext,
 		0,

@@ -5,7 +5,7 @@ REM TODO - can we just build both with one exe?
 call .\setup.bat
 
 set BuildFolder=..\build
-set CommonCompilerFlags=-MTd -nologo -GR- -EHa- -Oi -Od -W4 -FC -Z7 -w44062
+set CommonCompilerFlags=-MTd -nologo -GR- -EHa- -Oi -Od -W4 -FC -Z7 -w44062 /wd4533
 set CommonLinkerFlags=-opt:ref user32.lib gdi32.lib winmm.lib
 
 IF NOT EXIST %BuildFolder% mkdir %BuildFolder%

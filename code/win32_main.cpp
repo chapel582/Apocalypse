@@ -1,8 +1,143 @@
-#include <windows.h>
+// C stuff
 #include <stdint.h>
 
+// Windows stuff
+#include <windows.h>
+#include <dsound.h>
+
+enum WindowsResultCodes
+{
+	WindowsSuccess,
+
+	// InitDSound
+	DSoundLibLoad,
+	DSoundCreate,
+	DSoundCooperative,
+	DSoundPrimary,
+	DSoundSecondary
+};
 // TODO: this is a global for now
 bool GlobalRunning = false;
+
+// NOTE: DLL stubs
+#define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter)
+typedef DIRECT_SOUND_CREATE(direct_sound_create);
+
+// NOTE: Init DSound!
+int Win32InitDSound(
+	HWND WindowHandle, int32_t SamplesPerSecond, int32_t BufferSize
+)
+{
+	int result = WindowsSuccess;
+	HMODULE DSoundLibrary = LoadLibraryA("dsound.dll");
+	LPDIRECTSOUND DirectSound = NULL;
+	LPDIRECTSOUNDBUFFER PrimaryBuffer = NULL;
+	LPDIRECTSOUNDBUFFER SecondaryBuffer = NULL;
+
+	if(!DSoundLibrary)
+	{
+		OutputDebugStringA("dsound failed to load\n");
+		// TODO: consider if we should be able to play
+		// CONT: without sound
+		result = DSoundLibLoad;
+		goto sounderror;
+	}
+
+	direct_sound_create* DirectSoundCreate = (
+		(direct_sound_create*) GetProcAddress(
+			DSoundLibrary, "DirectSoundCreate"
+		)
+	);
+	if(
+		!(
+			DirectSoundCreate && 
+			SUCCEEDED(DirectSoundCreate(0, &DirectSound, 0))
+		)
+	)
+	{
+		// TODO: consider if we should be able to play 
+		// CONT: without sound
+		OutputDebugStringA("DirectSoundCreate failed\n");
+		result = DSoundCreate;
+		goto sounderror;
+	}
+
+	WAVEFORMATEX WaveFormat = {};
+	WaveFormat.wFormatTag = WAVE_FORMAT_PCM;
+	WaveFormat.nChannels = 2;
+	WaveFormat.nSamplesPerSec = SamplesPerSecond;
+	WaveFormat.wBitsPerSample = 16;
+	WaveFormat.nBlockAlign = (
+		(WaveFormat.nChannels*WaveFormat.wBitsPerSample) / 8
+	);
+	WaveFormat.nAvgBytesPerSec = (
+		WaveFormat.nSamplesPerSec*WaveFormat.nBlockAlign
+	);
+	WaveFormat.cbSize = 0;
+
+	if(
+		!SUCCEEDED(
+			DirectSound->SetCooperativeLevel(
+				WindowHandle, DSSCL_PRIORITY
+			)
+		)
+	)
+	{
+		OutputDebugStringA("SetCooperativeLevel failed\n");
+		result = DSoundCooperative;
+		goto sounderror;
+	}
+
+	DSBUFFERDESC PrimaryBufferDescription = {};
+	PrimaryBufferDescription.dwSize = (
+		sizeof(PrimaryBufferDescription)
+	);
+	PrimaryBufferDescription.dwFlags = DSBCAPS_PRIMARYBUFFER;
+
+	// NOTE: "Create" a primary buffer
+	// TODO: DSBCAPS_GLOBALFOCUS?
+	if(
+		!SUCCEEDED(
+			DirectSound->CreateSoundBuffer(
+				&PrimaryBufferDescription, &PrimaryBuffer, 0
+			)
+		)
+	)
+	{
+		OutputDebugStringA("Failed to create primary buffer\n");
+		result = DSoundPrimary;
+		goto sounderror;
+	}
+
+	 // TODO: DSBCAPS_GETCURRENTPOSITION2
+	DSBUFFERDESC SecondaryBufferDescription = {};
+	SecondaryBufferDescription.dwSize = (
+		sizeof(SecondaryBufferDescription)
+	);
+	SecondaryBufferDescription.dwFlags = 0;
+	SecondaryBufferDescription.dwBufferBytes = BufferSize;
+	SecondaryBufferDescription.lpwfxFormat = &WaveFormat;
+	if(
+		!SUCCEEDED(
+			DirectSound->CreateSoundBuffer(
+				&SecondaryBufferDescription, &SecondaryBuffer, 0
+			)
+		)
+	)
+	{
+		OutputDebugStringA(
+			"Failed to create secondary buffer.\n"
+		);
+		result = DSoundSecondary;
+		goto sounderror;
+	}
+	goto soundend;
+
+sounderror:
+	// TODO: do we have to do any cleanup?
+soundend:
+	return result;
+}
 
 struct win32_offscreen_buffer
 {
@@ -174,7 +309,7 @@ int CALLBACK WinMain(
 
 	WNDCLASS WindowClass = {};
 	WindowClass.lpfnWndProc = MainWindowCallback;
-	WindowClass.style = CS_HREDRAW | CS_VREDRAW;
+	WindowClass.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
 	WindowClass.hInstance = Instance;
 	WindowClass.lpszClassName = "ApocalypseWindowClass";
 
@@ -231,6 +366,15 @@ int CALLBACK WinMain(
 
 		if(WindowHandle)
 		{
+			// NOTE: Since we specified CS_OWNDC, we can just grab this 
+			// CONT: once and use it forever. No sharing
+			HDC DeviceContext = GetDC(WindowHandle);
+			Win32InitDSound(
+				WindowHandle,
+				48000,
+				48000 * sizeof(int16_t) * 2
+			);	
+
 			int XOffset = 0;
 			int YOffset = 0;
 
@@ -268,7 +412,6 @@ int CALLBACK WinMain(
 					Row += GlobalBackBuffer.Pitch;
 				}
 
-				HDC DeviceContext = GetDC(WindowHandle);
 				win32_window_dimension Dimensions = GetWindowDimension(
 					WindowHandle
 				);

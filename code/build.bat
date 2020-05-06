@@ -20,5 +20,5 @@ rem NOTE: -GR- Disabled runtime type information
 rem NOTE: -MT is used so that we don't use the c-runtime library DLL but 
 rem CONT: statically link instead 
 rem NOTE: -Od should be removed for non-debug builds
-cl %CommonCompilerFlags% ..\code\win32_main.cpp -Fmwin32_main.map /link %CommonLinkerFlags%
+cl %CommonCompilerFlags% ..\code\win32_apocalypse.cpp -Fmwin32_apocalypse.map /link %CommonLinkerFlags%
 popd

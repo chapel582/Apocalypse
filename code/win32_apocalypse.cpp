@@ -1,21 +1,18 @@
-// C stuff
+// NOTE: C stuff
 #include <stdint.h>
 
-// Windows stuff
+// NOTE: Windows stuff
 #include <windows.h>
+#include <Winuser.h>
 #include <dsound.h>
 
-enum WindowsResultCodes
-{
-	WindowsSuccess,
+// NOTE: Apocalypse stuff
+#include "win32_apocalypse.h"
 
-	// InitDSound
-	DSoundLibLoad,
-	DSoundCreate,
-	DSoundCooperative,
-	DSoundPrimary,
-	DSoundSecondary
-};
+#define ARRAY_COUNT(Array) (sizeof(Array) / sizeof(Array[0]))
+// TODO: only assert on debug builds
+#define ASSERT(Expression) if(!(Expression)) {*(int*) 0 = 0;}
+
 // TODO: this is a global for now
 bool GlobalRunning = false;
 
@@ -24,11 +21,11 @@ bool GlobalRunning = false;
 typedef DIRECT_SOUND_CREATE(direct_sound_create);
 
 // NOTE: Init DSound!
-int Win32InitDSound(
+windows_result_code Win32InitDSound(
 	HWND WindowHandle, int32_t SamplesPerSecond, int32_t BufferSize
 )
 {
-	int result = WindowsSuccess;
+	windows_result_code result = WindowsSuccess;
 	HMODULE DSoundLibrary = LoadLibraryA("dsound.dll");
 	LPDIRECTSOUND DirectSound = NULL;
 	LPDIRECTSOUNDBUFFER PrimaryBuffer = NULL;
@@ -148,7 +145,7 @@ struct win32_offscreen_buffer
 	BITMAPINFO Info;
 };
 
-win32_offscreen_buffer GlobalBackBuffer;
+win32_offscreen_buffer GlobalBackBuffer = {};
 
 void Win32BufferToWindow(HDC DeviceContext, int WindowWidth, int WindowHeight)
 {
@@ -184,6 +181,27 @@ win32_window_dimension GetWindowDimension(HWND Window)
 	Result.Width = ClientRect.right - ClientRect.left;
 	Result.Height = ClientRect.bottom - ClientRect.top;
 	return Result;
+}
+
+apocalypse_mouse_events GlobalMouseEvents = {};
+
+void Win32WriteMouseEvent(LPARAM LParam, mouse_event_type Type)
+{
+	apocalypse_mouse_event* MouseEvent = (
+		&GlobalMouseEvents.Events[GlobalMouseEvents.Length]
+	);
+	MouseEvent->XPos = LParam & 0xFFFF;
+	MouseEvent->YPos = (LParam & 0xFFFF0000) >> 16;
+	MouseEvent->Type = Type;
+	GlobalMouseEvents.Length++;
+	ASSERT(
+		GlobalMouseEvents.Length < ARRAY_COUNT(GlobalMouseEvents.Events)
+	);
+}
+
+void Win32ResetMouseEvents()
+{
+	GlobalMouseEvents.Length = 0;
 }
 
 LRESULT CALLBACK MainWindowCallback(
@@ -274,6 +292,31 @@ LRESULT CALLBACK MainWindowCallback(
 				{
 				}
 			}
+			break;
+		}
+		case(WM_LBUTTONDOWN):
+		{
+			Win32WriteMouseEvent(LParam, PrimaryDown);
+			break;
+		}
+		case(WM_LBUTTONUP):
+		{
+			Win32WriteMouseEvent(LParam, PrimaryUp);
+			break;
+		}
+		case(WM_RBUTTONDOWN):
+		{
+			Win32WriteMouseEvent(LParam, SecondaryDown);
+			break;
+		}
+		case(WM_RBUTTONUP):
+		{
+			Win32WriteMouseEvent(LParam, SecondaryUp);
+			break;
+		}
+		case(WM_MOUSEMOVE):
+		{
+			Win32WriteMouseEvent(LParam, MouseMove);
 			break;
 		}
 		case(WM_PAINT):
@@ -369,12 +412,19 @@ int CALLBACK WinMain(
 			// NOTE: Since we specified CS_OWNDC, we can just grab this 
 			// CONT: once and use it forever. No sharing
 			HDC DeviceContext = GetDC(WindowHandle);
-			Win32InitDSound(
+			windows_result_code result = Win32InitDSound(
 				WindowHandle,
 				48000,
 				48000 * sizeof(int16_t) * 2
-			);	
+			);
+			if(result != WindowsSuccess)
+			{
+				goto end;
+			}
 
+
+			// NOTE: testing platform layer stuff
+			mouse_event_type CurrentPrimaryState = PrimaryUp;
 			int XOffset = 0;
 			int YOffset = 0;
 
@@ -393,6 +443,33 @@ int CALLBACK WinMain(
 					DispatchMessageA(&Message);
 				}
 
+				for(
+					int MouseEventIndex = 0;
+					MouseEventIndex < GlobalMouseEvents.Length;
+					MouseEventIndex++
+				)
+				{
+					// TODO: remove last action wins stuff from 
+					// CONT: testing platform layer mouse stuff
+					apocalypse_mouse_event* MouseEvent = (
+						&GlobalMouseEvents.Events[MouseEventIndex]
+					);
+
+					if(
+						MouseEvent->Type == PrimaryDown ||
+						MouseEvent->Type == PrimaryUp
+					)
+					{
+						CurrentPrimaryState = MouseEvent->Type;
+					}
+
+					if(CurrentPrimaryState == PrimaryDown)
+					{
+						XOffset = GlobalBackBuffer.Width - MouseEvent->XPos;
+						YOffset = GlobalBackBuffer.Height - MouseEvent->YPos;
+					}
+				}
+				Win32ResetMouseEvents();
 
 				// NOTE: this is currently our render loop
 				// NOTE: it will be removed soon
@@ -418,8 +495,6 @@ int CALLBACK WinMain(
 				Win32BufferToWindow(
 					DeviceContext, Dimensions.Width, Dimensions.Height
 				);
-				XOffset++;
-				YOffset++;
 			}
 		}
 		else

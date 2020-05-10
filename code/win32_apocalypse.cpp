@@ -532,9 +532,11 @@ int CALLBACK WinMain(
 
 					// TODO: More strenuous test!
 					// TODO: Switch to a sine wave
-					VOID *Region1;
+					// NOTE: there can be two regions because it's a circular 
+					// CONT: buffer so we may need two pointers
+					VOID* Region1;
 					DWORD Region1Size;
-					VOID *Region2;
+					VOID* Region2;
 					DWORD Region2Size;
 					if(
 						SUCCEEDED(
@@ -570,6 +572,7 @@ int CALLBACK WinMain(
 								) ? 
 								ToneVolume : -ToneVolume
 							);
+							// NOTE: SampleOut writes left and right channels
 							*SampleOut++ = SampleValue;
 							*SampleOut++ = SampleValue;
 						}
@@ -582,7 +585,16 @@ int CALLBACK WinMain(
 							SampleIndex++
 						)
 						{
-							int16_t SampleValue = ((RunningSampleIndex++ / HalfSquareWavePeriod) % 2) ? ToneVolume : -ToneVolume;
+							int16_t SampleValue = (
+								(
+									(
+										RunningSampleIndex++ / 
+										HalfSquareWavePeriod
+									) % 2
+								) ?
+								ToneVolume : -ToneVolume
+							);
+							// NOTE: SampleOut writes left and right channels
 							*SampleOut++ = SampleValue;
 							*SampleOut++ = SampleValue;
 						}

@@ -1,5 +1,6 @@
 // NOTE: C stuff
 #include <stdint.h>
+#include <math.h>
 
 // NOTE: Windows stuff
 #include <windows.h>
@@ -12,6 +13,8 @@
 #define ARRAY_COUNT(Array) (sizeof(Array) / sizeof(Array[0]))
 // TODO: only assert on debug builds
 #define ASSERT(Expression) if(!(Expression)) {*(int*) 0 = 0;}
+
+#define Pi32 3.14159265359f
 
 // TODO: this is a global for now
 bool GlobalRunning = false;
@@ -430,13 +433,16 @@ int CALLBACK WinMain(
 
 			// NOTE: for sound test
 			int SamplesPerSecond = 48000;
-            int ToneHz = 256;
-            int16_t ToneVolume = 3000;
-            uint32_t RunningSampleIndex = 0;
-            int SquareWavePeriod = SamplesPerSecond / ToneHz;
-            int HalfSquareWavePeriod = SquareWavePeriod / 2;
-            int BytesPerSample = sizeof(int16_t) * 2;
-            int SecondaryBufferSize = SamplesPerSecond*BytesPerSample;
+			int ToneHz = 256;
+			int WavePeriod = SamplesPerSecond / ToneHz;
+			int16_t ToneVolume = 3000;
+			uint32_t RunningSampleIndex = 0;
+			int BytesPerSample = sizeof(int16_t) * 2;
+			int SecondaryBufferSize = SamplesPerSecond*BytesPerSample;
+			// NOTE: LatencySampleCount is how far ahead we need to write
+			// NOTE: we write 1/15 of a second ahead
+			int LatencySampleCount = SamplesPerSecond / 15;
+			float SineAngle = 0.0f;
 
 			GlobalRunning = true;
 			while(GlobalRunning)
@@ -515,19 +521,22 @@ int CALLBACK WinMain(
 						BytesPerSample % 
 						SecondaryBufferSize
 					);
-					DWORD BytesToWrite;
-					if(ByteToLock == PlayCursor)
+					// NOTE: we want to be a little bit ahead of where it is now
+					DWORD TargetCursor = (
+						(PlayCursor + (LatencySampleCount * BytesPerSample)) % 
+						SecondaryBufferSize
+					);
+					DWORD BytesToWrite = 0;
+					if(ByteToLock > TargetCursor)
 					{
-						BytesToWrite = SecondaryBufferSize;
-					}
-					else if(ByteToLock > PlayCursor)
-					{
+						// NOTE: write to end of buffer
 						BytesToWrite = (SecondaryBufferSize - ByteToLock);
-						BytesToWrite += PlayCursor;
+						BytesToWrite += TargetCursor;
 					}
 					else
 					{
-						BytesToWrite = PlayCursor - ByteToLock;
+						// NOTE: write up to target cursor
+						BytesToWrite = TargetCursor - ByteToLock;
 					}
 
 					// TODO: More strenuous test!
@@ -563,18 +572,18 @@ int CALLBACK WinMain(
 							++SampleIndex
 						)
 						{
+							float SineValue = sinf(SineAngle);
 							int16_t SampleValue = (
-								(
-									(
-										RunningSampleIndex++ / 
-										HalfSquareWavePeriod
-									) % 2
-								) ? 
-								ToneVolume : -ToneVolume
+								(int16_t) (SineValue * ToneVolume)
 							);
+							SineAngle += (
+								(2.0f * Pi32 * 1.0f) / ((float) WavePeriod)
+							);
+
 							// NOTE: SampleOut writes left and right channels
 							*SampleOut++ = SampleValue;
 							*SampleOut++ = SampleValue;
+							RunningSampleIndex++;
 						}
 
 						DWORD Region2SampleCount = Region2Size / BytesPerSample;
@@ -585,18 +594,18 @@ int CALLBACK WinMain(
 							SampleIndex++
 						)
 						{
+							float SineValue = sinf(SineAngle);
 							int16_t SampleValue = (
-								(
-									(
-										RunningSampleIndex++ / 
-										HalfSquareWavePeriod
-									) % 2
-								) ?
-								ToneVolume : -ToneVolume
+								(int16_t) (SineValue * ToneVolume)
 							);
+							SineAngle += (
+								(2.0f * Pi32 * 1.0f) / ((float) WavePeriod)
+							);
+
 							// NOTE: SampleOut writes left and right channels
 							*SampleOut++ = SampleValue;
 							*SampleOut++ = SampleValue;
+							RunningSampleIndex++;
 						}
 
 						GlobalSecondaryBuffer->Unlock(

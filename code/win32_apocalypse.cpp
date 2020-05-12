@@ -1,4 +1,5 @@
 // NOTE: C stuff
+#include <stdio.h>
 #include <stdint.h>
 #include <math.h>
 
@@ -19,6 +20,26 @@
 // TODO: this is a global for now
 bool GlobalRunning = false;
 LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer = NULL;
+
+// NOTE: Performance counters
+int64_t GlobalPerformanceFrequency = 0;
+inline int64_t GetWallClock(void)
+{
+	LARGE_INTEGER Result;
+	// NOTE: QueryPerformanceCounter gets wall clock time
+	QueryPerformanceCounter(&Result);
+	return Result.QuadPart;
+}
+
+inline float GetSecondsElapsed(int64_t Start, int64_t End)
+{
+	float Result;
+	Result = (
+		((float) (End - Start)) / 
+		((float) GlobalPerformanceFrequency)
+	);
+	return Result;
+}
 
 // NOTE: DLL stubs
 #define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter)
@@ -351,6 +372,10 @@ int CALLBACK WinMain(
 	int ShowCode
 )
 {
+	LARGE_INTEGER PerformanceFrequency;
+	QueryPerformanceFrequency(&PerformanceFrequency);
+	GlobalPerformanceFrequency = PerformanceFrequency.QuadPart;
+
 	GlobalBackBuffer = {};
 
 	WNDCLASS WindowClass = {};
@@ -447,6 +472,8 @@ int CALLBACK WinMain(
 			GlobalRunning = true;
 			while(GlobalRunning)
 			{
+				int64_t StartOfFrame = GetWallClock();
+
 				MSG Message = {};
 				while(PeekMessage(&Message, 0, 0, 0, PM_REMOVE))
 				{
@@ -626,6 +653,19 @@ int CALLBACK WinMain(
 				Win32BufferToWindow(
 					DeviceContext, Dimensions.Width, Dimensions.Height
 				);
+				
+				float FrameMs = (
+					GetSecondsElapsed(StartOfFrame, GetWallClock()) * 1000.0f
+				);
+
+				char FrameTimeBuffer[128];
+				sprintf_s(
+					&FrameTimeBuffer[0],
+					sizeof(FrameTimeBuffer),
+					"%f\n",
+					FrameMs
+				);
+				OutputDebugStringA(FrameTimeBuffer);
 			}
 		}
 		else

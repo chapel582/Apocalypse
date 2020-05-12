@@ -472,7 +472,9 @@ int CALLBACK WinMain(
 			GlobalRunning = true;
 			while(GlobalRunning)
 			{
-				int64_t StartOfFrame = GetWallClock();
+				int64_t FrameStartCounter = GetWallClock();
+				// NOTE: rdtsc gets cycle counts instead of wall clock time
+				uint64_t FrameStartCycle = __rdtsc();
 
 				MSG Message = {};
 				while(PeekMessage(&Message, 0, 0, 0, PM_REMOVE))
@@ -654,16 +656,26 @@ int CALLBACK WinMain(
 					DeviceContext, Dimensions.Width, Dimensions.Height
 				);
 				
-				float FrameMs = (
-					GetSecondsElapsed(StartOfFrame, GetWallClock()) * 1000.0f
+
+				// NOTE: Performance code 
+				uint64_t FrameEndCycle = __rdtsc();
+				int64_t FrameEndCounter = GetWallClock();
+
+				float FrameMegaCycles = (
+					(FrameEndCycle - FrameStartCycle) / 1000000.0f
 				);
+				float FrameSeconds = GetSecondsElapsed(
+					FrameStartCounter, FrameEndCounter
+				);
+				float Fps = 1.0f / FrameSeconds; 
+				float FrameMs = 1000.0f * FrameSeconds;
 
 				char FrameTimeBuffer[128];
 				sprintf_s(
 					&FrameTimeBuffer[0],
 					sizeof(FrameTimeBuffer),
-					"%f\n",
-					FrameMs
+					"%.02ff/s, %.02f ms/f, %.02fMc/f\n",
+					Fps, FrameMs, FrameMegaCycles
 				);
 				OutputDebugStringA(FrameTimeBuffer);
 			}

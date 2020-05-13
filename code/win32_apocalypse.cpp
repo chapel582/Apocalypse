@@ -1,14 +1,28 @@
+/*
+TODO: This is not a final platform layer
+	- Fullscreen support
+	- Threading
+	- sleep
+	- control cursor visibility
+	- Hardware acceleration
+	- Blit speed improvements
+	- Raw input and support for multiple keyboards
+*/
+
 // NOTE: C stuff
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
+
+// NOTE: Apocalypse stuff
+#include "apocalypse.cpp"
 
 // NOTE: Windows stuff
 #include <windows.h>
 #include <Winuser.h>
 #include <dsound.h>
 
-// NOTE: Apocalypse stuff
+// NOTE: Win32 Apocalypse stuff
 #include "win32_apocalypse.h"
 
 #define ARRAY_COUNT(Array) (sizeof(Array) / sizeof(Array[0]))
@@ -488,6 +502,7 @@ int CALLBACK WinMain(
 					DispatchMessageA(&Message);
 				}
 
+				// TODO: Have mouse code be platform independent
 				for(
 					int MouseEventIndex = 0;
 					MouseEventIndex < GlobalMouseEvents.Length;
@@ -495,7 +510,7 @@ int CALLBACK WinMain(
 				)
 				{
 					// TODO: remove last action wins stuff from 
-					// CONT: testing platform layer mouse stuff
+					// NOTE: testing platform layer mouse stuff
 					apocalypse_mouse_event* MouseEvent = (
 						&GlobalMouseEvents.Events[MouseEventIndex]
 					);
@@ -516,23 +531,12 @@ int CALLBACK WinMain(
 				}
 				Win32ResetMouseEvents();
 
-				// NOTE: this is currently our render loop
-				// CONT: it will be removed soon
-				uint8_t* Row = (uint8_t*) GlobalBackBuffer.Memory;
-				for(int Y = 0; Y < GlobalBackBuffer.Height; Y++)
-				{
-					uint32_t* Pixel = (uint32_t*) Row;
-					for(int X = 0; X < GlobalBackBuffer.Width; X++)
-					{
-						// *Pixel = 0x000000;
-						uint8_t* ColorChannel = (uint8_t*) Pixel;
-						*ColorChannel++ = (uint8_t) (X + XOffset);
-						*ColorChannel++ = (uint8_t) (Y + YOffset);
-						*ColorChannel++ = 0;
-						Pixel++;
-					}
-					Row += GlobalBackBuffer.Pitch;
-				}
+				game_offscreen_buffer BackBuffer = {};
+				BackBuffer.Memory = GlobalBackBuffer.Memory;
+				BackBuffer.Width = GlobalBackBuffer.Width;
+				BackBuffer.Height = GlobalBackBuffer.Height;
+				BackBuffer.Pitch = GlobalBackBuffer.Pitch;
+				GameUpdateAndRender(BackBuffer, XOffset, YOffset);
 
 				// NOTE: DirectSound output test
 				DWORD PlayCursor;
@@ -569,7 +573,6 @@ int CALLBACK WinMain(
 					}
 
 					// TODO: More strenuous test!
-					// TODO: Switch to a sine wave
 					// NOTE: there can be two regions because it's a circular 
 					// CONT: buffer so we may need two pointers
 					VOID* Region1;

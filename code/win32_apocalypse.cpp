@@ -9,13 +9,13 @@ TODO: This is not a final platform layer
 	- Raw input and support for multiple keyboards
 */
 
+// NOTE: Apocalypse stuff
+#include "apocalypse.cpp"
+
 // NOTE: C stuff
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
-
-// NOTE: Apocalypse stuff
-#include "apocalypse.cpp"
 
 // NOTE: Windows stuff
 #include <windows.h>
@@ -28,8 +28,6 @@ TODO: This is not a final platform layer
 #define ARRAY_COUNT(Array) (sizeof(Array) / sizeof(Array[0]))
 // TODO: only assert on debug builds
 #define ASSERT(Expression) if(!(Expression)) {*(int*) 0 = 0;}
-
-#define Pi32 3.14159265359f
 
 // TODO: this is a global for now
 bool GlobalRunning = false;
@@ -473,17 +471,20 @@ int CALLBACK WinMain(
 			// NOTE: for sound test
 			int SamplesPerSecond = 48000;
 			int ToneHz = 256;
-			int WavePeriod = SamplesPerSecond / ToneHz;
-			int16_t ToneVolume = 3000;
 			uint32_t RunningSampleIndex = 0;
 			int BytesPerSample = sizeof(int16_t) * 2;
-			int SecondaryBufferSize = SamplesPerSecond*BytesPerSample;
+			int SecondaryBufferSize = SamplesPerSecond * BytesPerSample;
 			// NOTE: LatencySampleCount is how far ahead we need to write
 			// NOTE: we write 1/15 of a second ahead
 			int LatencySampleCount = SamplesPerSecond / 15;
-			float SineAngle = 0.0f;
 
 			GlobalRunning = true;
+			int16_t* SoundSamples = (int16_t*) VirtualAlloc(
+				0,
+				SecondaryBufferSize,
+				MEM_RESERVE | MEM_COMMIT,
+				PAGE_READWRITE
+			);
 			while(GlobalRunning)
 			{
 				int64_t FrameStartCounter = GetWallClock();
@@ -531,35 +532,26 @@ int CALLBACK WinMain(
 				}
 				Win32ResetMouseEvents();
 
-				game_offscreen_buffer BackBuffer = {};
-				BackBuffer.Memory = GlobalBackBuffer.Memory;
-				BackBuffer.Width = GlobalBackBuffer.Width;
-				BackBuffer.Height = GlobalBackBuffer.Height;
-				BackBuffer.Pitch = GlobalBackBuffer.Pitch;
-				GameUpdateAndRender(BackBuffer, XOffset, YOffset);
-
-				// NOTE: DirectSound output test
 				DWORD PlayCursor;
 				DWORD WriteCursor;
-				if(
-					SUCCEEDED(
-						GlobalSecondaryBuffer->GetCurrentPosition(
-							&PlayCursor, &WriteCursor
-						)
+				bool SoundIsValid = SUCCEEDED(
+					GlobalSecondaryBuffer->GetCurrentPosition(
+						&PlayCursor, &WriteCursor
 					)
-				)
+				);
+				DWORD BytesToWrite = 0;
+				DWORD ByteToLock = (
+					RunningSampleIndex * 
+					BytesPerSample % 
+					SecondaryBufferSize
+				);
+				if(SoundIsValid)
 				{
-					DWORD ByteToLock = (
-						RunningSampleIndex * 
-						BytesPerSample % 
-						SecondaryBufferSize
-					);
 					// NOTE: we want to be a little bit ahead of where it is now
 					DWORD TargetCursor = (
 						(PlayCursor + (LatencySampleCount * BytesPerSample)) % 
 						SecondaryBufferSize
 					);
-					DWORD BytesToWrite = 0;
 					if(ByteToLock > TargetCursor)
 					{
 						// NOTE: write to end of buffer
@@ -571,7 +563,25 @@ int CALLBACK WinMain(
 						// NOTE: write up to target cursor
 						BytesToWrite = TargetCursor - ByteToLock;
 					}
+				}
 
+				game_sound_output_buffer SoundBuffer = {};
+				SoundBuffer.SamplesPerSecond = SamplesPerSecond;
+				SoundBuffer.SampleCount = BytesToWrite / BytesPerSample;
+				SoundBuffer.Samples = SoundSamples;
+
+				game_offscreen_buffer BackBuffer = {};
+				BackBuffer.Memory = GlobalBackBuffer.Memory;
+				BackBuffer.Width = GlobalBackBuffer.Width;
+				BackBuffer.Height = GlobalBackBuffer.Height;
+				BackBuffer.Pitch = GlobalBackBuffer.Pitch;
+				GameUpdateAndRender(
+					&BackBuffer, XOffset, YOffset,
+					&SoundBuffer, ToneHz
+				);
+
+				if(SoundIsValid)
+				{
 					// TODO: More strenuous test!
 					// NOTE: there can be two regions because it's a circular 
 					// CONT: buffer so we may need two pointers
@@ -596,6 +606,7 @@ int CALLBACK WinMain(
 						// TODO: assert that Region1Size/Region2Size is valid
 
 						// TODO: Collapse these two loops
+						int16_t* SourceSample = SoundBuffer.Samples;
 						DWORD Region1SampleCount = Region1Size / BytesPerSample;
 						int16_t* SampleOut = (int16_t*) Region1;
 						for(
@@ -604,17 +615,9 @@ int CALLBACK WinMain(
 							++SampleIndex
 						)
 						{
-							float SineValue = sinf(SineAngle);
-							int16_t SampleValue = (
-								(int16_t) (SineValue * ToneVolume)
-							);
-							SineAngle += (
-								(2.0f * Pi32 * 1.0f) / ((float) WavePeriod)
-							);
-
 							// NOTE: SampleOut writes left and right channels
-							*SampleOut++ = SampleValue;
-							*SampleOut++ = SampleValue;
+							*SampleOut++ = *SourceSample++;
+							*SampleOut++ = *SourceSample++;
 							RunningSampleIndex++;
 						}
 
@@ -626,17 +629,9 @@ int CALLBACK WinMain(
 							SampleIndex++
 						)
 						{
-							float SineValue = sinf(SineAngle);
-							int16_t SampleValue = (
-								(int16_t) (SineValue * ToneVolume)
-							);
-							SineAngle += (
-								(2.0f * Pi32 * 1.0f) / ((float) WavePeriod)
-							);
-
 							// NOTE: SampleOut writes left and right channels
-							*SampleOut++ = SampleValue;
-							*SampleOut++ = SampleValue;
+							*SampleOut++ = *SourceSample++;
+							*SampleOut++ = *SourceSample++;
 							RunningSampleIndex++;
 						}
 

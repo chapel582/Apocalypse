@@ -1,5 +1,14 @@
 #ifndef APOCALYPSE_H
 
+#include <stdint.h>
+
+struct game_sound_output_buffer
+{
+	int SamplesPerSecond;
+	int SampleCount;
+	int16_t* Samples;
+};
+
 struct game_offscreen_buffer
 {
 	void* Memory;
@@ -9,7 +18,8 @@ struct game_offscreen_buffer
 };
 
 void GameUpdateAndRender(
-	game_offscreen_buffer BackBuffer, int XOffset, int YOffset
+	game_offscreen_buffer* BackBuffer, int XOffset, int YOffset,
+	game_sound_output_buffer* SoundBuffer
 );
 
 typedef enum

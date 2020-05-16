@@ -17,11 +17,6 @@ struct game_offscreen_buffer
 	int Pitch;
 };
 
-void GameUpdateAndRender(
-	game_offscreen_buffer* BackBuffer, int XOffset, int YOffset,
-	game_sound_output_buffer* SoundBuffer
-);
-
 typedef enum
 {
 	PrimaryDown,
@@ -31,18 +26,24 @@ typedef enum
 	MouseMove
 } mouse_event_type;
 
-struct apocalypse_mouse_event
+struct game_mouse_event
 {
 	int XPos;
 	int YPos;
 	mouse_event_type Type;
 };
 
-struct apocalypse_mouse_events
+struct game_mouse_events
 {
-	apocalypse_mouse_event Events[128];
+	game_mouse_event Events[128];
 	int Length;
 };
+
+void GameUpdateAndRender(
+	game_offscreen_buffer* BackBuffer,
+	game_mouse_events* MouseEvents,
+	game_sound_output_buffer* SoundBuffer
+);
 
 #define APOCALYPSE_H
 #endif

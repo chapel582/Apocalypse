@@ -219,11 +219,11 @@ win32_window_dimension GetWindowDimension(HWND Window)
 	return Result;
 }
 
-apocalypse_mouse_events GlobalMouseEvents = {};
+game_mouse_events GlobalMouseEvents = {};
 
 void Win32WriteMouseEvent(LPARAM LParam, mouse_event_type Type)
 {
-	apocalypse_mouse_event* MouseEvent = (
+	game_mouse_event* MouseEvent = (
 		&GlobalMouseEvents.Events[GlobalMouseEvents.Length]
 	);
 	MouseEvent->XPos = LParam & 0xFFFF;
@@ -463,14 +463,8 @@ int CALLBACK WinMain(
 			}
 			bool SoundIsPlaying = false;
 
-			// NOTE: testing platform layer stuff
-			mouse_event_type CurrentPrimaryState = PrimaryUp;
-			int XOffset = 0;
-			int YOffset = 0;
-
 			// NOTE: for sound test
 			int SamplesPerSecond = 48000;
-			int ToneHz = 256;
 			uint32_t RunningSampleIndex = 0;
 			int BytesPerSample = sizeof(int16_t) * 2;
 			int SecondaryBufferSize = SamplesPerSecond * BytesPerSample;
@@ -501,36 +495,7 @@ int CALLBACK WinMain(
 
 					TranslateMessage(&Message);
 					DispatchMessageA(&Message);
-				}
-
-				// TODO: Have mouse code be platform independent
-				for(
-					int MouseEventIndex = 0;
-					MouseEventIndex < GlobalMouseEvents.Length;
-					MouseEventIndex++
-				)
-				{
-					// TODO: remove last action wins stuff from 
-					// NOTE: testing platform layer mouse stuff
-					apocalypse_mouse_event* MouseEvent = (
-						&GlobalMouseEvents.Events[MouseEventIndex]
-					);
-
-					if(
-						MouseEvent->Type == PrimaryDown ||
-						MouseEvent->Type == PrimaryUp
-					)
-					{
-						CurrentPrimaryState = MouseEvent->Type;
-					}
-
-					if(CurrentPrimaryState == PrimaryDown)
-					{
-						XOffset = GlobalBackBuffer.Width - MouseEvent->XPos;
-						YOffset = GlobalBackBuffer.Height - MouseEvent->YPos;
-					}
-				}
-				Win32ResetMouseEvents();
+				}				
 
 				DWORD PlayCursor;
 				DWORD WriteCursor;
@@ -576,9 +541,11 @@ int CALLBACK WinMain(
 				BackBuffer.Height = GlobalBackBuffer.Height;
 				BackBuffer.Pitch = GlobalBackBuffer.Pitch;
 				GameUpdateAndRender(
-					&BackBuffer, XOffset, YOffset,
-					&SoundBuffer, ToneHz
+					&BackBuffer,
+					&GlobalMouseEvents,
+					&SoundBuffer
 				);
+				Win32ResetMouseEvents();
 
 				if(SoundIsValid)
 				{

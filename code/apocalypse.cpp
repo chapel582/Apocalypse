@@ -5,12 +5,47 @@
 #define Pi32 3.14159265359f
 
 void GameUpdateAndRender(
-	game_offscreen_buffer* BackBuffer, int XOffset, int YOffset,
-	game_sound_output_buffer* SoundBuffer, int ToneHz
+	game_offscreen_buffer* BackBuffer,
+	game_mouse_events* MouseEvents,
+	game_sound_output_buffer* SoundBuffer
 )
 {
+	// TODO: remove these
+	static int XOffset = 0;
+	static int YOffset = 0;
+
+	// SECTION START: User input
+	// TODO: move to game memory
+	static mouse_event_type CurrentPrimaryState = PrimaryUp;
+	for(
+		int MouseEventIndex = 0;
+		MouseEventIndex < MouseEvents->Length;
+		MouseEventIndex++
+	)
+	{
+		// TODO: remove last action wins stuff from 
+		// NOTE: testing platform layer mouse stuff
+		game_mouse_event* MouseEvent = &MouseEvents->Events[MouseEventIndex];
+
+		if(
+			MouseEvent->Type == PrimaryDown ||
+			MouseEvent->Type == PrimaryUp
+		)
+		{
+			CurrentPrimaryState = MouseEvent->Type;
+		}
+
+		if(CurrentPrimaryState == PrimaryDown)
+		{
+			XOffset = BackBuffer->Width - MouseEvent->XPos;
+			YOffset = BackBuffer->Height - MouseEvent->YPos;
+		}
+	}
+	// SECTION STOP: User input
+
 	// SECTION START: Audio code
 	static float SineT;
+	int ToneHz = 256;
 	int16_t ToneVolume = 3000;
 	int WavePeriod = SoundBuffer->SamplesPerSecond / ToneHz;
 	int16_t* SampleOut = SoundBuffer->Samples;

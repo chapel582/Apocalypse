@@ -2,11 +2,29 @@
 
 #include <stdint.h>
 
-struct game_sound_output_buffer
+#if APOCALYPSE_SLOW
+// TODO: Complete assertion macro
+#define ASSERT(Expression) if(!(Expression)) {*(int*) 0 = 0;}
+#else
+#define ASSERT(Expression)
+#endif
+
+#define ARRAY_COUNT(Array) (sizeof(Array) / sizeof(Array[0]))
+
+#define KILOBYTES(Value) (1024LL * Value)
+#define MEGABYTES(Value) (1024LL * KILOBYTES(Value))
+#define GIGABYTES(Value) (1024LL * MEGABYTES(Value))
+#define TERABYTES(Value) (1024LL * GIGABYTES(Value))
+
+struct game_memory
 {
-	int SamplesPerSecond;
-	int SampleCount;
-	int16_t* Samples;
+	bool IsInitialized;
+
+	size_t PermanentStorageSize;
+	void* PermanentStorage;
+
+	size_t TransientStorageSize;
+	void* TransientStorage;
 };
 
 struct game_offscreen_buffer
@@ -15,6 +33,13 @@ struct game_offscreen_buffer
 	int Width;
 	int Height;
 	int Pitch;
+};
+
+struct game_sound_output_buffer
+{
+	int SamplesPerSecond;
+	int SampleCount;
+	int16_t* Samples;
 };
 
 typedef enum
@@ -45,5 +70,15 @@ void GameUpdateAndRender(
 	game_sound_output_buffer* SoundBuffer
 );
 
+struct game_state
+{
+	int XOffset;
+	int YOffset;
+
+	float SineT;
+	int ToneHz;
+
+	mouse_event_type CurrentPrimaryState;
+};
 #define APOCALYPSE_H
 #endif

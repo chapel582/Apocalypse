@@ -25,10 +25,6 @@ TODO: This is not a final platform layer
 // NOTE: Win32 Apocalypse stuff
 #include "win32_apocalypse.h"
 
-#define ARRAY_COUNT(Array) (sizeof(Array) / sizeof(Array[0]))
-// TODO: only assert on debug builds
-#define ASSERT(Expression) if(!(Expression)) {*(int*) 0 = 0;}
-
 // TODO: this is a global for now
 bool GlobalRunning = false;
 LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer = NULL;
@@ -449,6 +445,35 @@ int CALLBACK WinMain(
 
 		if(WindowHandle)
 		{
+#if APOCALYPSE_INTERNAL
+			LPVOID BaseAddress = (LPVOID) TERABYTES(2);
+#else
+			LPVOID BaseAddress = 0;
+#endif
+
+			game_memory GameMemory = {};
+			GameMemory.PermanentStorageSize = MEGABYTES(64);
+			GameMemory.TransientStorageSize = GIGABYTES(4);
+			GameMemory.PermanentStorage = VirtualAlloc(
+				BaseAddress,
+				(
+					GameMemory.PermanentStorageSize + 
+					GameMemory.TransientStorageSize
+				),
+				MEM_RESERVE | MEM_COMMIT,
+				PAGE_READWRITE
+			);
+			GameMemory.TransientStorage = (
+				((uint8_t*) GameMemory.PermanentStorage) + 
+				GameMemory.PermanentStorageSize
+			);
+			if(!GameMemory.PermanentStorage || !GameMemory.TransientStorage)
+			{
+				// TODO: more logging
+				OutputDebugStringA("Unable to allocate game memory\n");
+				goto end;
+			}
+			
 			// NOTE: Since we specified CS_OWNDC, we can just grab this 
 			// CONT: once and use it forever. No sharing
 			HDC DeviceContext = GetDC(WindowHandle);
@@ -541,6 +566,7 @@ int CALLBACK WinMain(
 				BackBuffer.Height = GlobalBackBuffer.Height;
 				BackBuffer.Pitch = GlobalBackBuffer.Pitch;
 				GameUpdateAndRender(
+					&GameMemory,
 					&BackBuffer,
 					&GlobalMouseEvents,
 					&SoundBuffer

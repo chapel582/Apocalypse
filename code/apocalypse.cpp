@@ -5,18 +5,28 @@
 #define Pi32 3.14159265359f
 
 void GameUpdateAndRender(
+	game_memory* Memory,
 	game_offscreen_buffer* BackBuffer,
 	game_mouse_events* MouseEvents,
 	game_sound_output_buffer* SoundBuffer
 )
 {
-	// TODO: remove these
-	static int XOffset = 0;
-	static int YOffset = 0;
+	ASSERT(sizeof(game_state) <= Memory->PermanentStorageSize);
+	game_state* GameState = (game_state*) Memory->PermanentStorage;
+	if(!Memory->IsInitialized)
+	{
+		GameState->XOffset = 0;
+		GameState->YOffset = 0;
+		GameState->CurrentPrimaryState = PrimaryUp;
+		GameState->SineT = 0;
+		GameState->ToneHz = 256;
+
+		// TODO: this may be more appropriate in the platform layer
+		Memory->IsInitialized = true;
+	}
 
 	// SECTION START: User input
 	// TODO: move to game memory
-	static mouse_event_type CurrentPrimaryState = PrimaryUp;
 	for(
 		int MouseEventIndex = 0;
 		MouseEventIndex < MouseEvents->Length;
@@ -32,22 +42,20 @@ void GameUpdateAndRender(
 			MouseEvent->Type == PrimaryUp
 		)
 		{
-			CurrentPrimaryState = MouseEvent->Type;
+			GameState->CurrentPrimaryState = MouseEvent->Type;
 		}
 
-		if(CurrentPrimaryState == PrimaryDown)
+		if(GameState->CurrentPrimaryState == PrimaryDown)
 		{
-			XOffset = BackBuffer->Width - MouseEvent->XPos;
-			YOffset = BackBuffer->Height - MouseEvent->YPos;
+			GameState->XOffset = BackBuffer->Width - MouseEvent->XPos;
+			GameState->YOffset = BackBuffer->Height - MouseEvent->YPos;
 		}
 	}
 	// SECTION STOP: User input
 
 	// SECTION START: Audio code
-	static float SineT;
-	int ToneHz = 256;
 	int16_t ToneVolume = 3000;
-	int WavePeriod = SoundBuffer->SamplesPerSecond / ToneHz;
+	int WavePeriod = SoundBuffer->SamplesPerSecond / GameState->ToneHz;
 	int16_t* SampleOut = SoundBuffer->Samples;
 	for(
 		int SampleIndex = 0;
@@ -55,9 +63,9 @@ void GameUpdateAndRender(
 		++SampleIndex
 	)
 	{
-		float SineValue = sinf(SineT);
+		float SineValue = sinf(GameState->SineT);
 		int16_t SampleValue = (int16_t) (SineValue * ToneVolume);
-		SineT += (2.0f * Pi32 * 1.0f) / ((float) WavePeriod);
+		GameState->SineT += (2.0f * Pi32 * 1.0f) / ((float) WavePeriod);
 
 		// NOTE: SampleOut writes left and right channels
 		*SampleOut++ = SampleValue;
@@ -75,8 +83,8 @@ void GameUpdateAndRender(
 		{
 			// *Pixel = 0x000000;
 			uint8_t* ColorChannel = (uint8_t*) Pixel;
-			*ColorChannel++ = (uint8_t) (X + XOffset);
-			*ColorChannel++ = (uint8_t) (Y + YOffset);
+			*ColorChannel++ = (uint8_t) (X + GameState->XOffset);
+			*ColorChannel++ = (uint8_t) (Y + GameState->YOffset);
 			*ColorChannel++ = 0;
 			Pixel++;
 		}

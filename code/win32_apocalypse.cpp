@@ -322,10 +322,15 @@ win32_window_dimension GetWindowDimension(HWND Window)
 }
 
 void Win32WriteMouseEvent(
-	game_mouse_events* MouseEvents, LPARAM LParam, mouse_event_type Type
+	game_mouse_events* MouseEvents,
+	LPARAM LParam,
+	mouse_event_type Type,
+	user_event_index* UserEventIndex 
 )
 {
 	game_mouse_event* MouseEvent = &MouseEvents->Events[MouseEvents->Length];
+	MouseEvent->UserEventIndex = *UserEventIndex;
+	*UserEventIndex += 1;
 	MouseEvent->XPos = LParam & 0xFFFF;
 	MouseEvent->YPos = (LParam & 0xFFFF0000) >> 16;
 	MouseEvent->Type = Type;
@@ -335,9 +340,15 @@ void Win32WriteMouseEvent(
 	);
 }
 
-void Win32ResetMouseEvents(game_mouse_events* MouseEvents)
+void Win32ResetUserEvents(
+	user_event_index* UserEventIndex, 
+	game_mouse_events* MouseEvents,
+	game_keyboard_events* KeyboardEvents
+)
 {
+	*UserEventIndex = 0;
 	MouseEvents->Length = 0;
+	KeyboardEvents->Length = 0;
 }
 
 LRESULT CALLBACK MainWindowCallback(
@@ -374,60 +385,7 @@ LRESULT CALLBACK MainWindowCallback(
 		case(WM_KEYDOWN):
 		case(WM_KEYUP):
 		{
-			uint32_t VKCode = (uint32_t) WParam;
-			bool WasDown = ((LParam & (1 << 30))) != 0;
-			bool IsDown = ((LParam & (1 << 31))) == 0;
-			if(IsDown && (WasDown != IsDown))
-			{
-				if(VKCode == 'W')
-				{
-					OutputDebugStringA("Hit W\n");
-				}
-				else if(VKCode == 'A')
-				{
-					OutputDebugStringA("Hit A\n");
-				}
-				else if(VKCode == 'S')
-				{
-				}
-				else if(VKCode == 'D')
-				{
-				}
-				else if(VKCode == 'Q')
-				{
-				}
-				else if(VKCode == 'E')
-				{
-				}
-				else if(VKCode == VK_UP)
-				{
-				}
-				else if(VKCode == VK_LEFT)
-				{
-				}
-				else if(VKCode == VK_DOWN)
-				{
-				}
-				else if(VKCode == VK_RIGHT)
-				{
-				}
-				else if(VKCode == VK_ESCAPE)
-				{
-					OutputDebugStringA("ESCAPE: ");
-					if(IsDown)
-					{
-						OutputDebugStringA("IsDown ");
-					}
-					if(WasDown)
-					{
-						OutputDebugStringA("WasDown");
-					}
-					OutputDebugStringA("\n");
-				}
-				else if(VKCode == VK_SPACE)
-				{
-				}
-			}
+			ASSERT(!"Keyboard event received in non-dispatch message");
 			break;
 		}
 		case(WM_LBUTTONDOWN):
@@ -562,7 +520,9 @@ int CALLBACK WinMain(
 				goto end;
 			}
 
+			user_event_index UserEventIndex = 0;
 			game_mouse_events MouseEvents = {};
+			game_keyboard_events KeyboardEvents = {};
 
 			// NOTE: Since we specified CS_OWNDC, we can just grab this 
 			// CONT: once and use it forever. No sharing
@@ -613,36 +573,76 @@ int CALLBACK WinMain(
 						case(WM_LBUTTONDOWN):
 						{
 							Win32WriteMouseEvent(
-								&MouseEvents, Message.lParam, PrimaryDown
+								&MouseEvents,
+								Message.lParam,
+								PrimaryDown,
+								&UserEventIndex
 							);
 							break;
 						}
 						case(WM_LBUTTONUP):
 						{
 							Win32WriteMouseEvent(
-								&MouseEvents, Message.lParam, PrimaryUp
+								&MouseEvents,
+								Message.lParam,
+								PrimaryUp,
+								&UserEventIndex
 							);
 							break;
 						}
 						case(WM_RBUTTONDOWN):
 						{
 							Win32WriteMouseEvent(
-								&MouseEvents, Message.lParam, SecondaryDown
+								&MouseEvents,
+								Message.lParam,
+								SecondaryDown,
+								&UserEventIndex
 							);
 							break;
 						}
 						case(WM_RBUTTONUP):
 						{
 							Win32WriteMouseEvent(
-								&MouseEvents, Message.lParam, SecondaryUp
+								&MouseEvents,
+								Message.lParam,
+								SecondaryUp,
+								&UserEventIndex
 							);
 							break;
 						}
 						case(WM_MOUSEMOVE):
 						{
 							Win32WriteMouseEvent(
-								&MouseEvents, Message.lParam, MouseMove
+								&MouseEvents,
+								Message.lParam,
+								MouseMove,
+								&UserEventIndex
 							);
+							break;
+						}
+						case(WM_SYSKEYDOWN):
+						case(WM_SYSKEYUP):
+						case(WM_KEYDOWN):
+						case(WM_KEYUP):
+						{
+							ASSERT(
+								KeyboardEvents.Length < 
+								ARRAY_COUNT(KeyboardEvents.Events)
+							);
+							game_keyboard_event* KeyboardEvent = (
+								&KeyboardEvents.Events[KeyboardEvents.Length++]
+							);
+
+							KeyboardEvent->UserEventIndex = UserEventIndex++;
+							ASSERT(((uint32_t) Message.wParam) <= 0xFF);
+							KeyboardEvent->Code = (uint8_t) Message.wParam;
+							KeyboardEvent->WasDown = (
+								(Message.lParam & (1 << 30)) != 0
+							);
+							KeyboardEvent->IsDown = (
+								(Message.lParam & (1 << 31)) == 0
+							);
+							
 							break;
 						}
 						default:
@@ -701,9 +701,12 @@ int CALLBACK WinMain(
 					&GameMemory,
 					&BackBuffer,
 					&MouseEvents,
+					&KeyboardEvents,
 					&SoundBuffer
 				);
-				Win32ResetMouseEvents(&MouseEvents);
+				Win32ResetUserEvents(
+					&UserEventIndex, &MouseEvents, &KeyboardEvents
+				);
 
 				if(SoundIsValid)
 				{

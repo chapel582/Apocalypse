@@ -73,8 +73,12 @@ typedef enum
 	MouseMove
 } mouse_event_type;
 
+// NOTE: user events (mouse and keyboard) have UserEventIndex field
+// NOTE: this is to allow them to 
+typedef uint16_t user_event_index;
 struct game_mouse_event
 {
+	user_event_index UserEventIndex;
 	int XPos;
 	int YPos;
 	mouse_event_type Type;
@@ -82,13 +86,40 @@ struct game_mouse_event
 
 struct game_mouse_events
 {
+	// TODO: see if we can drop this below 128?
 	game_mouse_event Events[128];
 	int Length;
+};
+
+// TODO: other platform layers need to conform their key codes
+struct game_keyboard_event
+{
+	user_event_index UserEventIndex;
+	uint8_t Code; // NOTE: right now this is just the VK from Windows
+	// TODO: see if it would be helpful to combine the two below into a 
+	// CONT: single byte with flags
+	uint8_t IsDown; // NOTE: compact bool
+	uint8_t WasDown; // NOTE: compact bool
+};
+
+struct game_keyboard_events
+{
+	// TODO: see if we can drop this below 1024?
+	game_keyboard_event Events[1024];
+	int Length;
+};
+
+struct keyboard_state
+{
+	bool ShiftDown;
+	bool CtrlDown;
+	// TODO: caps lock, other stateful things?
 };
 
 void GameUpdateAndRender(
 	game_offscreen_buffer* BackBuffer,
 	game_mouse_events* MouseEvents,
+	game_keyboard_events* KeyboardEvents,
 	game_sound_output_buffer* SoundBuffer
 );
 
@@ -99,6 +130,9 @@ struct game_state
 
 	float SineT;
 	int ToneHz;
+
+	char TempBuffer[1024];
+	int TempBufferLength;
 
 	mouse_event_type CurrentPrimaryState;
 };

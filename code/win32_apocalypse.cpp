@@ -29,7 +29,7 @@ TODO: This is not a final platform layer
 bool GlobalRunning = false;
 LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer = NULL;
 
-// NOTE: Performance counters
+// START SECTION: Performance counters
 int64_t GlobalPerformanceFrequency = 0;
 inline int64_t GetWallClock(void)
 {
@@ -46,6 +46,112 @@ inline float GetSecondsElapsed(int64_t Start, int64_t End)
 		((float) (End - Start)) / 
 		((float) GlobalPerformanceFrequency)
 	);
+	return Result;
+}
+// STOP SECTION: Performance counters
+
+debug_read_file_result DEBUGPlatformReadEntireFile(char* FileName)
+{
+	debug_read_file_result Result = {};
+	HANDLE FileHandle = INVALID_HANDLE_VALUE;
+
+	FileHandle = CreateFileA(
+		FileName, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0
+	);
+	if(FileHandle == INVALID_HANDLE_VALUE)
+	{
+		goto error;
+	}
+	LARGE_INTEGER FileSize;
+	if(!GetFileSizeEx(FileHandle, &FileSize))
+	{
+		// TODO: logging with getlasterror
+		goto error;
+	}
+
+	uint32_t FileSize32 = SafeTruncateUInt64(FileSize.QuadPart);
+	Result.Contents = VirtualAlloc(
+		0, FileSize32, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE
+	);
+	if(Result.Contents == NULL)
+	{
+		// TODO: logging
+		goto error;
+	}
+
+	DWORD BytesRead = 0;
+	if(
+		ReadFile(FileHandle, Result.Contents, FileSize32, &BytesRead, 0) &&
+		(FileSize32 == BytesRead)
+	)
+	{
+		Result.ContentsSize = FileSize32;
+	}
+	else
+	{
+		// TODO: logging
+		goto error;
+	}
+
+	goto end;
+
+error:
+	if(FileHandle != INVALID_HANDLE_VALUE)
+	{
+		CloseHandle(FileHandle);	
+	}
+	if(Result.Contents != NULL)
+	{
+		VirtualFree(Result.Contents, 0, MEM_RELEASE);
+		Result.Contents = NULL;
+	}
+end:
+	return Result;
+}
+
+void DEBUGPlatformFreeFileMemory(void* Memory)
+{
+	if(Memory)
+	{
+		VirtualFree(Memory, 0, MEM_RELEASE);		
+	}
+}
+
+bool DEBUGPlatformWriteEntireFile(
+	char* FileName, void* Memory, uint32_t MemorySize
+)
+{
+	bool Result = false;
+	HANDLE FileHandle = INVALID_HANDLE_VALUE;
+	FileHandle = CreateFileA(
+		FileName, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0
+	);
+	if(FileHandle == INVALID_HANDLE_VALUE)
+	{
+		// TODO: logging
+		goto error;
+	}
+
+	DWORD BytesWritten;
+	if(!WriteFile(FileHandle, Memory, MemorySize, &BytesWritten, 0))
+	{
+		// TODO: logging
+		goto error;
+	}
+	if(BytesWritten != MemorySize)
+	{
+		goto error;
+	}
+	
+	Result = true;
+	goto end;
+
+error:
+end:
+	if(FileHandle != INVALID_HANDLE_VALUE)
+	{
+		CloseHandle(FileHandle);
+	}
 	return Result;
 }
 

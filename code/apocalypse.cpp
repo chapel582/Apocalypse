@@ -15,6 +15,16 @@ void GameUpdateAndRender(
 	game_state* GameState = (game_state*) Memory->PermanentStorage;
 	if(!Memory->IsInitialized)
 	{
+		char* FileName = __FILE__;
+		debug_read_file_result File = DEBUGPlatformReadEntireFile(FileName);
+		if(File.Contents)
+		{
+			DEBUGPlatformWriteEntireFile(
+				"test.out", File.Contents, File.ContentsSize
+			);
+			DEBUGPlatformFreeFileMemory(File.Contents);
+		}
+
 		GameState->XOffset = 0;
 		GameState->YOffset = 0;
 		GameState->CurrentPrimaryState = PrimaryUp;

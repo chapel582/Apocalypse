@@ -16,6 +16,28 @@
 #define GIGABYTES(Value) (1024LL * MEGABYTES(Value))
 #define TERABYTES(Value) (1024LL * GIGABYTES(Value))
 
+inline uint32_t SafeTruncateUInt64(uint64_t Value)
+{
+	ASSERT(Value <= 0xFFFFFFFF);
+	return (uint32_t) Value;
+}
+
+#if APOCALYPSE_INTERNAL
+// NOTE: These are blocking calls that don't protect against lost data
+// CONT: they are intended for debug purposes only
+struct debug_read_file_result
+{
+	uint32_t ContentsSize;
+	void* Contents;
+};
+
+debug_read_file_result DEBUGPlatformReadEntireFile(char* FileName);
+void DEBUGPlatformFreeFileMemory(void* Memory);
+bool DEBUGPlatformWriteEntireFile(
+	char* FileName, void* Memory, uint32_t MemorySize
+);
+#endif 
+
 struct game_memory
 {
 	bool IsInitialized;

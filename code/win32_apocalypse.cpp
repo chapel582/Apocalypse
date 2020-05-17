@@ -321,25 +321,23 @@ win32_window_dimension GetWindowDimension(HWND Window)
 	return Result;
 }
 
-game_mouse_events GlobalMouseEvents = {};
-
-void Win32WriteMouseEvent(LPARAM LParam, mouse_event_type Type)
+void Win32WriteMouseEvent(
+	game_mouse_events* MouseEvents, LPARAM LParam, mouse_event_type Type
+)
 {
-	game_mouse_event* MouseEvent = (
-		&GlobalMouseEvents.Events[GlobalMouseEvents.Length]
-	);
+	game_mouse_event* MouseEvent = &MouseEvents->Events[MouseEvents->Length];
 	MouseEvent->XPos = LParam & 0xFFFF;
 	MouseEvent->YPos = (LParam & 0xFFFF0000) >> 16;
 	MouseEvent->Type = Type;
-	GlobalMouseEvents.Length++;
+	MouseEvents->Length++;
 	ASSERT(
-		GlobalMouseEvents.Length < ARRAY_COUNT(GlobalMouseEvents.Events)
+		MouseEvents->Length < ARRAY_COUNT(MouseEvents->Events)
 	);
 }
 
-void Win32ResetMouseEvents()
+void Win32ResetMouseEvents(game_mouse_events* MouseEvents)
 {
-	GlobalMouseEvents.Length = 0;
+	MouseEvents->Length = 0;
 }
 
 LRESULT CALLBACK MainWindowCallback(
@@ -433,28 +431,12 @@ LRESULT CALLBACK MainWindowCallback(
 			break;
 		}
 		case(WM_LBUTTONDOWN):
-		{
-			Win32WriteMouseEvent(LParam, PrimaryDown);
-			break;
-		}
 		case(WM_LBUTTONUP):
-		{
-			Win32WriteMouseEvent(LParam, PrimaryUp);
-			break;
-		}
 		case(WM_RBUTTONDOWN):
-		{
-			Win32WriteMouseEvent(LParam, SecondaryDown);
-			break;
-		}
 		case(WM_RBUTTONUP):
-		{
-			Win32WriteMouseEvent(LParam, SecondaryUp);
-			break;
-		}
 		case(WM_MOUSEMOVE):
 		{
-			Win32WriteMouseEvent(LParam, MouseMove);
+			ASSERT(!"Mouse event received in non-dispatch message");
 			break;
 		}
 		case(WM_PAINT):
@@ -579,7 +561,9 @@ int CALLBACK WinMain(
 				OutputDebugStringA("Unable to allocate game memory\n");
 				goto end;
 			}
-			
+
+			game_mouse_events MouseEvents = {};
+
 			// NOTE: Since we specified CS_OWNDC, we can just grab this 
 			// CONT: once and use it forever. No sharing
 			HDC DeviceContext = GetDC(WindowHandle);
@@ -602,14 +586,15 @@ int CALLBACK WinMain(
 			// NOTE: LatencySampleCount is how far ahead we need to write
 			// NOTE: we write 1/15 of a second ahead
 			int LatencySampleCount = SamplesPerSecond / 15;
-
-			GlobalRunning = true;
+			// TODO: pool with bitmap alloc
 			int16_t* SoundSamples = (int16_t*) VirtualAlloc(
 				0,
 				SecondaryBufferSize,
 				MEM_RESERVE | MEM_COMMIT,
 				PAGE_READWRITE
 			);
+
+			GlobalRunning = true;
 			while(GlobalRunning)
 			{
 				int64_t FrameStartCounter = GetWallClock();
@@ -623,9 +608,50 @@ int CALLBACK WinMain(
 					{
 						GlobalRunning = false;
 					}
-
-					TranslateMessage(&Message);
-					DispatchMessageA(&Message);
+					switch(Message.message)
+					{
+						case(WM_LBUTTONDOWN):
+						{
+							Win32WriteMouseEvent(
+								&MouseEvents, Message.lParam, PrimaryDown
+							);
+							break;
+						}
+						case(WM_LBUTTONUP):
+						{
+							Win32WriteMouseEvent(
+								&MouseEvents, Message.lParam, PrimaryUp
+							);
+							break;
+						}
+						case(WM_RBUTTONDOWN):
+						{
+							Win32WriteMouseEvent(
+								&MouseEvents, Message.lParam, SecondaryDown
+							);
+							break;
+						}
+						case(WM_RBUTTONUP):
+						{
+							Win32WriteMouseEvent(
+								&MouseEvents, Message.lParam, SecondaryUp
+							);
+							break;
+						}
+						case(WM_MOUSEMOVE):
+						{
+							Win32WriteMouseEvent(
+								&MouseEvents, Message.lParam, MouseMove
+							);
+							break;
+						}
+						default:
+						{
+							TranslateMessage(&Message);
+							DispatchMessageA(&Message);
+							break;
+						}
+					}
 				}				
 
 				DWORD PlayCursor;
@@ -674,10 +700,10 @@ int CALLBACK WinMain(
 				GameUpdateAndRender(
 					&GameMemory,
 					&BackBuffer,
-					&GlobalMouseEvents,
+					&MouseEvents,
 					&SoundBuffer
 				);
-				Win32ResetMouseEvents();
+				Win32ResetMouseEvents(&MouseEvents);
 
 				if(SoundIsValid)
 				{

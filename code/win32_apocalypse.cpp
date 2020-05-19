@@ -31,7 +31,7 @@ LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer = NULL;
 
 // START SECTION: Performance counters
 int64_t GlobalPerformanceFrequency = 0;
-inline int64_t GetWallClock(void)
+inline int64_t Win32GetWallClock(void)
 {
 	LARGE_INTEGER Result;
 	// NOTE: QueryPerformanceCounter gets wall clock time
@@ -39,7 +39,7 @@ inline int64_t GetWallClock(void)
 	return Result.QuadPart;
 }
 
-inline float GetSecondsElapsed(int64_t Start, int64_t End)
+inline float Win32GetSecondsElapsed(int64_t Start, int64_t End)
 {
 	float Result;
 	Result = (
@@ -430,6 +430,13 @@ int CALLBACK WinMain(
 	QueryPerformanceFrequency(&PerformanceFrequency);
 	GlobalPerformanceFrequency = PerformanceFrequency.QuadPart;
 
+	// NOTE: set the windows scheduler granularity to 1 ms so that our Sleep()
+	// CONT: can be more granular
+	UINT DesiredSchedulerMS = 1;
+	bool SleepIsGranular = (
+		timeBeginPeriod(DesiredSchedulerMS) == TIMERR_NOERROR
+	);
+
 	GlobalBackBuffer = {};
 
 	WNDCLASS WindowClass = {};
@@ -437,6 +444,11 @@ int CALLBACK WinMain(
 	WindowClass.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
 	WindowClass.hInstance = Instance;
 	WindowClass.lpszClassName = "ApocalypseWindowClass";
+
+	// TODO: query this on Windows
+	int MonitorRefreshHz = 60;
+	int GameUpdateHz = MonitorRefreshHz / 2;
+	float TargetSecondsPerFrame = 1.0f / (float) GameUpdateHz;
 
 	if(RegisterClassA(&WindowClass))
 	{
@@ -557,7 +569,7 @@ int CALLBACK WinMain(
 			GlobalRunning = true;
 			while(GlobalRunning)
 			{
-				int64_t FrameStartCounter = GetWallClock();
+				int64_t FrameStartCounter = Win32GetWallClock();
 				// NOTE: rdtsc gets cycle counts instead of wall clock time
 				uint64_t FrameStartCycle = __rdtsc();
 
@@ -775,6 +787,48 @@ int CALLBACK WinMain(
 					SoundIsPlaying = true;
 				}
 
+				// SECTION START: Fixing frame rate
+				// TODO: more testing
+				uint64_t WorkEndCounter = Win32GetWallClock();
+				float WorkSeconds = Win32GetSecondsElapsed(
+					FrameStartCounter, WorkEndCounter
+				);
+				float SecondsElapsedForFrame = WorkSeconds;
+				if(SecondsElapsedForFrame < TargetSecondsPerFrame)
+				{
+					if(SleepIsGranular)
+					{
+						// NOTE: casting down so we don't sleep too long
+						uint32_t SleepMs = (uint32_t) (
+							1000.0f * (
+								TargetSecondsPerFrame - SecondsElapsedForFrame
+							)
+						);
+						if(SleepMs > 0)
+						{
+							Sleep(SleepMs - 1);
+						}
+					}
+
+					float TestSecondsElapsedForFrame = Win32GetSecondsElapsed(
+						FrameStartCounter, Win32GetWallClock()
+					);
+					ASSERT(TestSecondsElapsedForFrame < TargetSecondsPerFrame);
+
+					while(SecondsElapsedForFrame < TargetSecondsPerFrame)
+					{
+						SecondsElapsedForFrame = Win32GetSecondsElapsed(
+							FrameStartCounter, Win32GetWallClock()
+						);
+					}
+				}
+				else
+				{
+					// TODO: missed frame rate
+					// TODO: logging
+				}
+				// SECTION STOP: Fixing frame rate
+
 				win32_window_dimension Dimensions = GetWindowDimension(
 					WindowHandle
 				);
@@ -785,12 +839,12 @@ int CALLBACK WinMain(
 
 				// NOTE: Performance code 
 				uint64_t FrameEndCycle = __rdtsc();
-				int64_t FrameEndCounter = GetWallClock();
+				int64_t FrameEndCounter = Win32GetWallClock();
 
 				float FrameMegaCycles = (
 					(FrameEndCycle - FrameStartCycle) / 1000000.0f
 				);
-				float FrameSeconds = GetSecondsElapsed(
+				float FrameSeconds = Win32GetSecondsElapsed(
 					FrameStartCounter, FrameEndCounter
 				);
 				float Fps = 1.0f / FrameSeconds; 

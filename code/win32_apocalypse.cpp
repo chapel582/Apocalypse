@@ -28,6 +28,7 @@ TODO: This is not a final platform layer
 // TODO: this is a global for now
 bool GlobalRunning = false;
 LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer = NULL;
+win32_offscreen_buffer GlobalBackBuffer = {};
 
 // START SECTION: Performance counters
 int64_t GlobalPerformanceFrequency = 0;
@@ -274,16 +275,85 @@ soundend:
 	return result;
 }
 
-struct win32_offscreen_buffer
+void Win32DebugDrawVertical(
+	win32_offscreen_buffer* BackBuffer, 
+	int X,
+	int Top, 
+	int Bottom, 
+	uint32_t Color
+)
 {
-	int Width;
-	int Height;
-	int Pitch;
-	void* Memory;
-	BITMAPINFO Info;
-};
+	uint8_t* Pixel = (
+		((uint8_t*) BackBuffer->Memory) +
+		X * BackBuffer->BytesPerPixel + 
+		Top * BackBuffer->Pitch
+	);
+	for(int Y = Top; Y < Bottom; Y++)
+	{
+		*((uint32_t*) Pixel) = Color;
+		Pixel += BackBuffer->Pitch;
+	}
+}
 
-win32_offscreen_buffer GlobalBackBuffer = {};
+void Win32DrawSoundBufferMarker(
+	win32_offscreen_buffer* BackBuffer,
+	win32_sound_output* SoundOutput,
+	float C, 
+	int PadX,
+	int Top,
+	int Bottom,
+	uint32_t Value,
+	uint32_t Color
+)
+{
+	ASSERT(Value < SoundOutput->SecondaryBufferSize);
+	float XFloat = (C * ((float) Value));
+	int X = PadX + ((int) XFloat);
+	Win32DebugDrawVertical(BackBuffer, X, Top, Bottom, Color);
+}
+
+void Win32DebugSyncDisplay(
+	win32_offscreen_buffer* BackBuffer,
+	win32_debug_time_marker* Markers,
+	int MarkerCount,
+	win32_sound_output* SoundOutput
+)
+{
+	int PadX = 16;
+	int PadY = 16;
+	int Top = PadY;
+	int Bottom = BackBuffer->Height - PadY;
+
+	float C = (
+		(float) (BackBuffer->Width - 2 * PadX) / 
+		(float) SoundOutput->SecondaryBufferSize
+	);
+
+	for(int MarkerIndex = 0; MarkerIndex < MarkerCount; MarkerIndex++)
+	{
+		win32_debug_time_marker* ThisMarker = &Markers[MarkerIndex];
+		Win32DrawSoundBufferMarker(
+			BackBuffer, 
+			SoundOutput,
+			C,
+			PadX,
+			Top,
+			Bottom,
+			ThisMarker->PlayCursor,
+			0xFFFFFFFF
+		);
+		Win32DrawSoundBufferMarker(
+			BackBuffer, 
+			SoundOutput,
+			C,
+			PadX,
+			Top,
+			Bottom,
+			ThisMarker->WriteCursor,
+			0xFFFF0000
+		);
+	}
+}
 
 void Win32BufferToWindow(HDC DeviceContext, int WindowWidth, int WindowHeight)
 {
@@ -304,12 +374,6 @@ void Win32BufferToWindow(HDC DeviceContext, int WindowWidth, int WindowHeight)
 		SRCCOPY
 	);
 }
-
-struct win32_window_dimension
-{
-	int Width;
-	int Height;
-};
 
 win32_window_dimension GetWindowDimension(HWND Window)
 {
@@ -438,6 +502,7 @@ int CALLBACK WinMain(
 	);
 
 	GlobalBackBuffer = {};
+	GlobalBackBuffer.BytesPerPixel = 4;
 
 	WNDCLASS WindowClass = {};
 	WindowClass.lpfnWndProc = MainWindowCallback;
@@ -446,9 +511,12 @@ int CALLBACK WinMain(
 	WindowClass.lpszClassName = "ApocalypseWindowClass";
 
 	// TODO: query this on Windows
+	int FramesOfAudioLatency = 3;
 	int MonitorRefreshHz = 60;
 	int GameUpdateHz = MonitorRefreshHz / 2;
 	float TargetSecondsPerFrame = 1.0f / (float) GameUpdateHz;
+	win32_debug_time_marker DebugTimeMarkers[30] = {};
+	int DebugTimeMarkerIndex = 0;
 
 	if(RegisterClassA(&WindowClass))
 	{
@@ -551,17 +619,23 @@ int CALLBACK WinMain(
 			bool SoundIsPlaying = false;
 
 			// NOTE: for sound test
-			int SamplesPerSecond = 48000;
-			uint32_t RunningSampleIndex = 0;
-			int BytesPerSample = sizeof(int16_t) * 2;
-			int SecondaryBufferSize = SamplesPerSecond * BytesPerSample;
+			win32_sound_output SoundOutput = {};
+			SoundOutput.SamplesPerSecond = 48000;
+			SoundOutput.RunningSampleIndex = 0;
+			SoundOutput.BytesPerSample = sizeof(int16_t) * 2;
+			SoundOutput.SecondaryBufferSize = (
+				SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample
+			);
 			// NOTE: LatencySampleCount is how far ahead we need to write
-			// NOTE: we write 1/15 of a second ahead
-			int LatencySampleCount = SamplesPerSecond / 15;
+			// NOTE: we write FramesOfAudioLatency ahead
+			SoundOutput.LatencySampleCount = (
+				FramesOfAudioLatency * 
+				(SoundOutput.SamplesPerSecond / GameUpdateHz)
+			);
 			// TODO: pool with bitmap alloc
 			int16_t* SoundSamples = (int16_t*) VirtualAlloc(
 				0,
-				SecondaryBufferSize,
+				SoundOutput.SecondaryBufferSize,
 				MEM_RESERVE | MEM_COMMIT,
 				PAGE_READWRITE
 			);
@@ -675,21 +749,29 @@ int CALLBACK WinMain(
 				);
 				DWORD BytesToWrite = 0;
 				DWORD ByteToLock = (
-					RunningSampleIndex * 
-					BytesPerSample % 
-					SecondaryBufferSize
+					SoundOutput.RunningSampleIndex * 
+					SoundOutput.BytesPerSample % 
+					SoundOutput.SecondaryBufferSize
 				);
 				if(SoundIsValid)
 				{
 					// NOTE: we want to be a little bit ahead of where it is now
 					DWORD TargetCursor = (
-						(PlayCursor + (LatencySampleCount * BytesPerSample)) % 
-						SecondaryBufferSize
+						(
+							PlayCursor + 
+							(
+								SoundOutput.LatencySampleCount * 
+								SoundOutput.BytesPerSample
+							)
+						) % 
+						SoundOutput.SecondaryBufferSize
 					);
 					if(ByteToLock > TargetCursor)
 					{
 						// NOTE: write to end of buffer
-						BytesToWrite = (SecondaryBufferSize - ByteToLock);
+						BytesToWrite = (
+							SoundOutput.SecondaryBufferSize - ByteToLock
+						);
 						BytesToWrite += TargetCursor;
 					}
 					else
@@ -698,10 +780,25 @@ int CALLBACK WinMain(
 						BytesToWrite = TargetCursor - ByteToLock;
 					}
 				}
+#if APOCALYPSE_INTERNAL
+				{
+					win32_debug_time_marker* Marker = (
+						&DebugTimeMarkers[DebugTimeMarkerIndex++]
+					);
+					if(DebugTimeMarkerIndex >= ARRAY_COUNT(DebugTimeMarkers))
+					{
+						DebugTimeMarkerIndex = 0;
+					}
+					Marker->PlayCursor = PlayCursor;
+					Marker->WriteCursor = WriteCursor;
+				}
+#endif
 
 				game_sound_output_buffer SoundBuffer = {};
-				SoundBuffer.SamplesPerSecond = SamplesPerSecond;
-				SoundBuffer.SampleCount = BytesToWrite / BytesPerSample;
+				SoundBuffer.SamplesPerSecond = SoundOutput.SamplesPerSecond;
+				SoundBuffer.SampleCount = (
+					BytesToWrite / SoundOutput.BytesPerSample
+				);
 				SoundBuffer.Samples = SoundSamples;
 
 				game_offscreen_buffer BackBuffer = {};
@@ -747,7 +844,9 @@ int CALLBACK WinMain(
 
 						// TODO: Collapse these two loops
 						int16_t* SourceSample = SoundBuffer.Samples;
-						DWORD Region1SampleCount = Region1Size / BytesPerSample;
+						DWORD Region1SampleCount = (
+							Region1Size / SoundOutput.BytesPerSample
+						);
 						int16_t* SampleOut = (int16_t*) Region1;
 						for(
 							DWORD SampleIndex = 0;
@@ -758,10 +857,12 @@ int CALLBACK WinMain(
 							// NOTE: SampleOut writes left and right channels
 							*SampleOut++ = *SourceSample++;
 							*SampleOut++ = *SourceSample++;
-							RunningSampleIndex++;
+							SoundOutput.RunningSampleIndex++;
 						}
 
-						DWORD Region2SampleCount = Region2Size / BytesPerSample;
+						DWORD Region2SampleCount = (
+							Region2Size / SoundOutput.BytesPerSample
+						);
 						SampleOut = (int16_t*) Region2;
 						for(
 							DWORD SampleIndex = 0;
@@ -772,7 +873,7 @@ int CALLBACK WinMain(
 							// NOTE: SampleOut writes left and right channels
 							*SampleOut++ = *SourceSample++;
 							*SampleOut++ = *SourceSample++;
-							RunningSampleIndex++;
+							SoundOutput.RunningSampleIndex++;
 						}
 
 						GlobalSecondaryBuffer->Unlock(
@@ -829,18 +930,27 @@ int CALLBACK WinMain(
 				}
 				// SECTION STOP: Fixing frame rate
 
+				uint64_t FrameEndCycle = __rdtsc();
+				int64_t FrameEndCounter = Win32GetWallClock();
+
 				win32_window_dimension Dimensions = GetWindowDimension(
 					WindowHandle
 				);
+#if APOCALYPSE_INTERNAL
+				// NOTE: this is debug code
+				Win32DebugSyncDisplay(
+					&GlobalBackBuffer,
+					DebugTimeMarkers,
+					ARRAY_COUNT(DebugTimeMarkers),
+					&SoundOutput
+				);
+#endif
 				Win32BufferToWindow(
 					DeviceContext, Dimensions.Width, Dimensions.Height
 				);
 				
 
 				// NOTE: Performance code 
-				uint64_t FrameEndCycle = __rdtsc();
-				int64_t FrameEndCounter = Win32GetWallClock();
-
 				float FrameMegaCycles = (
 					(FrameEndCycle - FrameStartCycle) / 1000000.0f
 				);
@@ -858,6 +968,9 @@ int CALLBACK WinMain(
 					Fps, FrameMs, FrameMegaCycles
 				);
 				OutputDebugStringA(FrameTimeBuffer);
+				// NOTE: reset
+				FrameStartCycle = FrameEndCycle;
+				FrameStartCounter = FrameEndCounter;
 			}
 		}
 		else

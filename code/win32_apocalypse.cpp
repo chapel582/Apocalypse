@@ -753,10 +753,11 @@ int CALLBACK WinMain(
 					SoundOutput.BytesPerSample % 
 					SoundOutput.SecondaryBufferSize
 				);
+				DWORD TargetCursor;
 				if(SoundIsValid)
 				{
 					// NOTE: we want to be a little bit ahead of where it is now
-					DWORD TargetCursor = (
+					TargetCursor = (
 						(
 							PlayCursor + 
 							(
@@ -780,8 +781,18 @@ int CALLBACK WinMain(
 						BytesToWrite = TargetCursor - ByteToLock;
 					}
 				}
-#if APOCALYPSE_INTERNAL
+				else
 				{
+					// TODO: Logging
+					TargetCursor = 0;
+					goto end;
+				}
+
+#if APOCALYPSE_INTERNAL
+				uint32_t LastPlayCursor; 
+				{
+					LastPlayCursor = 
+						DebugTimeMarkers[DebugTimeMarkerIndex].PlayCursor;
 					win32_debug_time_marker* Marker = (
 						&DebugTimeMarkers[DebugTimeMarkerIndex++]
 					);
@@ -822,6 +833,23 @@ int CALLBACK WinMain(
 					// TODO: More strenuous test!
 					// NOTE: there can be two regions because it's a circular 
 					// CONT: buffer so we may need two pointers
+
+					{
+						char TextBuffer[256];
+						sprintf_s(
+							&TextBuffer[0],
+							sizeof(TextBuffer),
+							"LPC:%u BTL:%u TC:%u BTW %u - PC: %u WC: %u\n",
+							LastPlayCursor,
+							ByteToLock,
+							TargetCursor,
+							BytesToWrite,
+							PlayCursor,
+							WriteCursor
+						);
+						OutputDebugStringA(&TextBuffer[0]);
+					}
+
 					VOID* Region1;
 					DWORD Region1Size;
 					VOID* Region2;
@@ -951,23 +979,25 @@ int CALLBACK WinMain(
 				
 
 				// NOTE: Performance code 
-				float FrameMegaCycles = (
-					(FrameEndCycle - FrameStartCycle) / 1000000.0f
-				);
-				float FrameSeconds = Win32GetSecondsElapsed(
-					FrameStartCounter, FrameEndCounter
-				);
-				float Fps = 1.0f / FrameSeconds; 
-				float FrameMs = 1000.0f * FrameSeconds;
+				{
+					float FrameMegaCycles = (
+						(FrameEndCycle - FrameStartCycle) / 1000000.0f
+					);
+					float FrameSeconds = Win32GetSecondsElapsed(
+						FrameStartCounter, FrameEndCounter
+					);
+					float Fps = 1.0f / FrameSeconds; 
+					float FrameMs = 1000.0f * FrameSeconds;
 
-				char FrameTimeBuffer[128];
-				sprintf_s(
-					&FrameTimeBuffer[0],
-					sizeof(FrameTimeBuffer),
-					"%.02ff/s, %.02f ms/f, %.02fMc/f\n",
-					Fps, FrameMs, FrameMegaCycles
-				);
-				OutputDebugStringA(FrameTimeBuffer);
+					char FrameTimeBuffer[128];
+					sprintf_s(
+						&FrameTimeBuffer[0],
+						sizeof(FrameTimeBuffer),
+						"%.02ff/s, %.02f ms/f, %.02fMc/f\n",
+						Fps, FrameMs, FrameMegaCycles
+					);
+					OutputDebugStringA(FrameTimeBuffer);
+				}
 				// NOTE: reset
 				FrameStartCycle = FrameEndCycle;
 				FrameStartCounter = FrameEndCounter;

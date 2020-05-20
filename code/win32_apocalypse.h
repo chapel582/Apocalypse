@@ -18,10 +18,12 @@ typedef enum
 struct win32_sound_output
 {
 	int SamplesPerSecond;
+	int SamplesinSecondaryBuffer;
 	uint32_t RunningSampleIndex;
 	int BytesPerSample;
 	uint32_t SecondaryBufferSize;
 	int LatencySampleCount;
+	// TODO: math gets simpler if we add a bytes per second field
 };
 
 struct win32_window_dimension

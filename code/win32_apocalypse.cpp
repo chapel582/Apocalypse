@@ -623,8 +623,10 @@ int CALLBACK WinMain(
 			SoundOutput.SamplesPerSecond = 48000;
 			SoundOutput.RunningSampleIndex = 0;
 			SoundOutput.BytesPerSample = sizeof(int16_t) * 2;
+			SoundOutput.SamplesinSecondaryBuffer = SoundOutput.SamplesPerSecond; 
 			SoundOutput.SecondaryBufferSize = (
-				SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample
+				SoundOutput.SamplesinSecondaryBuffer * 
+				SoundOutput.BytesPerSample
 			);
 			// NOTE: LatencySampleCount is how far ahead we need to write
 			// NOTE: we write FramesOfAudioLatency ahead
@@ -740,6 +742,21 @@ int CALLBACK WinMain(
 					}
 				}				
 
+				/* NOTE:
+					On TargetCursor and BytesToWrite calculations
+
+					generally, we want to there to be data written from play 
+					cursor up to the next time we are able to fill the sound 
+					buffer
+					
+					if write cursor is less than or equal to 
+					a frame ahead of play cursor plus the safety value 
+					(based on our target frame rate), then just write up to that 
+					position plus one frame
+
+					if the write cursor is more than a frame ahead of the 
+					current play cursor plus the safety margin, then just write a frame's worth of audio plus the safety margin.
+				*/
 				DWORD PlayCursor;
 				DWORD WriteCursor;
 				bool SoundIsValid = SUCCEEDED(
@@ -748,14 +765,17 @@ int CALLBACK WinMain(
 					)
 				);
 				DWORD BytesToWrite = 0;
-				DWORD ByteToLock = (
-					SoundOutput.RunningSampleIndex * 
-					SoundOutput.BytesPerSample % 
-					SoundOutput.SecondaryBufferSize
-				);
+				DWORD ByteToLock;
 				DWORD TargetCursor;
 				if(SoundIsValid)
 				{
+					ByteToLock = (
+						(
+							SoundOutput.RunningSampleIndex * 
+							SoundOutput.BytesPerSample
+						) % 
+						SoundOutput.SecondaryBufferSize
+					);
 					// NOTE: we want to be a little bit ahead of where it is now
 					TargetCursor = (
 						(
@@ -784,6 +804,7 @@ int CALLBACK WinMain(
 				else
 				{
 					// TODO: Logging
+					ByteToLock = 0;
 					TargetCursor = 0;
 					goto end;
 				}
@@ -903,6 +924,12 @@ int CALLBACK WinMain(
 							*SampleOut++ = *SourceSample++;
 							SoundOutput.RunningSampleIndex++;
 						}
+
+						// NOTE: this 
+						SoundOutput.RunningSampleIndex = (
+							SoundOutput.RunningSampleIndex % 
+							SoundOutput.SamplesinSecondaryBuffer
+						);
 
 						GlobalSecondaryBuffer->Unlock(
 							Region1, Region1Size, Region2, Region2Size

@@ -994,7 +994,7 @@ int CALLBACK WinMain(
 				}
 				// SECTION STOP: Audio
 
-				// SECTION START: Fixing frame rate
+				// SECTION START: Fixing frame rate to constant
 				// TODO: more testing
 				uint64_t WorkEndCounter = Win32GetWallClock();
 				float WorkSeconds = Win32GetSecondsElapsed(
@@ -1034,7 +1034,7 @@ int CALLBACK WinMain(
 					// TODO: missed frame rate
 					// TODO: logging
 				}
-				// SECTION STOP: Fixing frame rate
+				// SECTION STOP: Fixing frame rate to constant
 
 				uint64_t FrameEndCycle = __rdtsc();
 				int64_t FrameEndCounter = Win32GetWallClock();

@@ -773,6 +773,7 @@ int CALLBACK WinMain(
 					&UserEventIndex, &MouseEvents, &KeyboardEvents
 				);
 
+				// SECTION START: Audio
 				/* NOTE:
 					On TargetCursor and BytesToWrite calculations
 
@@ -991,6 +992,7 @@ int CALLBACK WinMain(
 					GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
 					SoundIsPlaying = true;
 				}
+				// SECTION STOP: Audio
 
 				// SECTION START: Fixing frame rate
 				// TODO: more testing

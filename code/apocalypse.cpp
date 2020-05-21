@@ -8,8 +8,7 @@ void GameUpdateAndRender(
 	game_memory* Memory,
 	game_offscreen_buffer* BackBuffer,
 	game_mouse_events* MouseEvents,
-	game_keyboard_events* KeyboardEvents,
-	game_sound_output_buffer* SoundBuffer
+	game_keyboard_events* KeyboardEvents
 )
 {
 	ASSERT(sizeof(game_state) <= Memory->PermanentStorageSize);
@@ -108,26 +107,6 @@ void GameUpdateAndRender(
 	}
 	// SECTION STOP: User input
 
-	// SECTION START: Audio code
-	int16_t ToneVolume = 3000;
-	int WavePeriod = SoundBuffer->SamplesPerSecond / GameState->ToneHz;
-	int16_t* SampleOut = SoundBuffer->Samples;
-	for(
-		int SampleIndex = 0;
-		SampleIndex < SoundBuffer->SampleCount;
-		++SampleIndex
-	)
-	{
-		float SineValue = sinf(GameState->SineT);
-		int16_t SampleValue = (int16_t) (SineValue * ToneVolume);
-		GameState->SineT += (2.0f * Pi32 * 1.0f) / ((float) WavePeriod);
-
-		// NOTE: SampleOut writes left and right channels
-		*SampleOut++ = SampleValue;
-		*SampleOut++ = SampleValue;
-	}
-	// SECTION STOP: Audio code
-
 	// NOTE: this is currently our render loop
 	// CONT: it will be removed soon
 	uint8_t* Row = (uint8_t*) BackBuffer->Memory;
@@ -144,5 +123,29 @@ void GameUpdateAndRender(
 			Pixel++;
 		}
 		Row += BackBuffer->Pitch;
+	}
+}
+
+void GameFillSound(game_memory* Memory, game_sound_output_buffer* SoundBuffer)
+{
+	ASSERT(sizeof(game_state) <= Memory->PermanentStorageSize);
+	game_state* GameState = (game_state*) Memory->PermanentStorage;
+
+	int16_t ToneVolume = 3000;
+	int WavePeriod = SoundBuffer->SamplesPerSecond / GameState->ToneHz;
+	int16_t* SampleOut = SoundBuffer->Samples;
+	for(
+		int SampleIndex = 0;
+		SampleIndex < SoundBuffer->SampleCount;
+		++SampleIndex
+	)
+	{
+		float SineValue = sinf(GameState->SineT);
+		int16_t SampleValue = (int16_t) (SineValue * ToneVolume);
+		GameState->SineT += (2.0f * Pi32 * 1.0f) / ((float) WavePeriod);
+
+		// NOTE: SampleOut writes left and right channels
+		*SampleOut++ = SampleValue;
+		*SampleOut++ = SampleValue;
 	}
 }

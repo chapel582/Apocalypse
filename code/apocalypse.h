@@ -119,9 +119,10 @@ struct keyboard_state
 void GameUpdateAndRender(
 	game_offscreen_buffer* BackBuffer,
 	game_mouse_events* MouseEvents,
-	game_keyboard_events* KeyboardEvents,
-	game_sound_output_buffer* SoundBuffer
+	game_keyboard_events* KeyboardEvents
 );
+
+void GameFillSound(game_memory* Memory, game_sound_output_buffer* SoundBuffer);
 
 struct game_state
 {

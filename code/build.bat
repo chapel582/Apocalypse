@@ -7,7 +7,7 @@ call .\setup.bat
 set BuildFolder=..\build
 REM TODO: take arguments from batch file and use those to set slow and internal flags 
 set CommonCompilerFlags=-DAPOCALYPSE_INTERNAL=1 -DAPOCALYPSE_SLOW=1 -DAPOCALYPSE_WIN32 -MTd -nologo -GR- -EHa- -Oi -Od -W4 -FC -Z7 -w44062 /wd4533
-set CommonLinkerFlags=-opt:ref user32.lib gdi32.lib winmm.lib
+set CommonLinkerFlags= -incremental:no -opt:ref user32.lib gdi32.lib winmm.lib
 
 IF NOT EXIST %BuildFolder% mkdir %BuildFolder%
 pushd %BuildFolder%

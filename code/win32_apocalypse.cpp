@@ -355,27 +355,34 @@ void Win32DebugSyncDisplay(
 	}
 }
 
-void Win32BufferToWindow(HDC DeviceContext, int WindowWidth, int WindowHeight)
+void Win32BufferToWindow(
+	win32_offscreen_buffer* BackBuffer, 
+	HDC DeviceContext
+	// ,
+	// int WindowWidth, 
+	// int WindowHeight
+)
 {
 	// TODO: aspect ratio correction
+	// TODO: while prototyping, no stretching
 	StretchDIBits(
 		DeviceContext,
 		0,
 		0,
-		WindowWidth,
-		WindowHeight,
+		BackBuffer->Width,
+		BackBuffer->Height,
 		0,
 		0,
-		GlobalBackBuffer.Width,
-		GlobalBackBuffer.Height,
-		GlobalBackBuffer.Memory,
-		&GlobalBackBuffer.Info,
+		BackBuffer->Width,
+		BackBuffer->Height,
+		BackBuffer->Memory,
+		&BackBuffer->Info,
 		DIB_RGB_COLORS,
 		SRCCOPY
 	);
 }
 
-win32_window_dimension GetWindowDimension(HWND Window)
+win32_window_dimension Win32GetWindowDimension(HWND Window)
 {
 	RECT ClientRect = {};
 	GetClientRect(Window, &ClientRect);
@@ -465,10 +472,16 @@ LRESULT CALLBACK MainWindowCallback(
 		{
 			PAINTSTRUCT Paint = {};
 			HDC DeviceContext = BeginPaint(Window, &Paint);
-			int WindowWidth = Paint.rcPaint.right - Paint.rcPaint.left;
-			int WindowHeight = Paint.rcPaint.bottom - Paint.rcPaint.top;
+			// int WindowWidth = Paint.rcPaint.right - Paint.rcPaint.left;
+			// int WindowHeight = Paint.rcPaint.bottom - Paint.rcPaint.top;
+			// win32_window_dimension WindowDim = Win32GetWindowDimension(Window);
 			
-			Win32BufferToWindow(DeviceContext, WindowWidth, WindowHeight);
+			Win32BufferToWindow(
+				&GlobalBackBuffer,
+				DeviceContext
+				// WindowDim.Width,
+				// WindowDim.Height
+			);
 
 			EndPaint(Window, &Paint);
 			break;
@@ -539,7 +552,7 @@ int CALLBACK WinMain(
 		
 		// NOTE: get memory for backbuffer
 		{
-			win32_window_dimension Dimensions = GetWindowDimension(WindowHandle);
+			win32_window_dimension Dimensions = Win32GetWindowDimension(WindowHandle);
 			GlobalBackBuffer.Width = Dimensions.Width;
 			GlobalBackBuffer.Height = Dimensions.Height;
 			int BytesPerPixel = 4;
@@ -633,7 +646,7 @@ int CALLBACK WinMain(
 			// TODO: figure out a more precise safety size to use
 			// CONT: by calculating 
 			SoundOutput.SafetySize = (uint32_t) (
-				0.018f * 
+				0.02f * 
 				SoundOutput.SamplesPerSecond * 
 				SoundOutput.BytesPerSample
 			);
@@ -1039,7 +1052,7 @@ int CALLBACK WinMain(
 				uint64_t FrameEndCycle = __rdtsc();
 				int64_t FrameEndCounter = Win32GetWallClock();
 
-				win32_window_dimension Dimensions = GetWindowDimension(
+				win32_window_dimension Dimensions = Win32GetWindowDimension(
 					WindowHandle
 				);
 #if APOCALYPSE_INTERNAL
@@ -1052,7 +1065,10 @@ int CALLBACK WinMain(
 				);
 #endif
 				Win32BufferToWindow(
-					DeviceContext, Dimensions.Width, Dimensions.Height
+					&GlobalBackBuffer,
+					DeviceContext
+					// Dimensions.Width,
+					// Dimensions.Height
 				);
 				FlipWallClock = Win32GetWallClock();
 				

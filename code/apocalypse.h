@@ -118,12 +118,24 @@ struct keyboard_state
 };
 
 void GameUpdateAndRender(
+	game_memory* Memory,
 	game_offscreen_buffer* BackBuffer,
 	game_mouse_events* MouseEvents,
-	game_keyboard_events* KeyboardEvents
+	game_keyboard_events* KeyboardEvents,
+	float dtForFrame
 );
 
 void GameFillSound(game_memory* Memory, game_sound_output_buffer* SoundBuffer);
+
+struct card
+{
+	float PosX;
+	float PosY;
+	float Width;
+	float Height;
+	float TimeLeft;
+	bool Active;
+};
 
 struct game_state
 {
@@ -137,6 +149,9 @@ struct game_state
 	int TempBufferLength;
 
 	mouse_event_type CurrentPrimaryState;
+
+	card Cards[12];
 };
+
 #define APOCALYPSE_H
 #endif

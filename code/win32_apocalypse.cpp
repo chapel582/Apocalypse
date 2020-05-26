@@ -784,7 +784,8 @@ int CALLBACK WinMain(
 					&GameMemory,
 					&BackBuffer,
 					&MouseEvents,
-					&KeyboardEvents
+					&KeyboardEvents,
+					TargetSecondsPerFrame
 				);
 				Win32ResetUserEvents(
 					&UserEventIndex, &MouseEvents, &KeyboardEvents

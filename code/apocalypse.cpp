@@ -77,7 +77,8 @@ void GameUpdateAndRender(
 	game_memory* Memory,
 	game_offscreen_buffer* BackBuffer,
 	game_mouse_events* MouseEvents,
-	game_keyboard_events* KeyboardEvents
+	game_keyboard_events* KeyboardEvents,
+	float dtForFrame
 )
 {
 	ASSERT(sizeof(game_state) <= Memory->PermanentStorageSize);
@@ -101,6 +102,49 @@ void GameUpdateAndRender(
 		GameState->ToneHz = 256;
 		GameState->TempBuffer[1024];
 		GameState->TempBufferLength = 0;
+
+		float Width = 30.0f;
+		float Height = 30.0f;
+		float XMargin = 10.0f;
+		float CardSpacing = (
+			(BackBuffer->Width - 2 * XMargin) / 
+			(ARRAY_COUNT(GameState->Cards) / 2)
+		);
+		float CurrentXPos = XMargin;
+		card* Card = &GameState->Cards[0];
+		int CardIndex;
+		for(
+			CardIndex = 0;
+			CardIndex < ARRAY_COUNT(GameState->Cards) / 2;
+			CardIndex++
+		)
+		{
+			Card->PosX = CurrentXPos;
+			Card->PosY = 0.0f;
+			Card->Width = Width;
+			Card->Height = Height;
+			Card->TimeLeft = 10.0f;
+			Card->Active = true;
+			CurrentXPos += CardSpacing;
+			Card++;
+		}
+		CurrentXPos = XMargin;
+		float LowerYPos = BackBuffer->Height - Height;
+		for(
+			;
+			CardIndex < ARRAY_COUNT(GameState->Cards);
+			CardIndex++
+		)
+		{
+			Card->PosX = CurrentXPos;
+			Card->PosY = LowerYPos;
+			Card->Width = Width;
+			Card->Height = Height;
+			Card->TimeLeft = 10.0f;
+			Card->Active = true;
+			CurrentXPos += CardSpacing;
+			Card++;
+		}
 
 		// TODO: this may be more appropriate in the platform layer
 		Memory->IsInitialized = true;
@@ -187,8 +231,18 @@ void GameUpdateAndRender(
 		0.0f,
 		0.0f
 	);
-	DrawRectangle(BackBuffer, 0.0f, 0.0f, 30.0f, 30.0f, 1.0f, 1.0f, 1.0f);
-#if 1
+
+	card* Card = &GameState->Cards[0];
+	for(
+		int CardIndex = 0;
+		CardIndex < ARRAY_COUNT(GameState->Cards);
+		CardIndex++
+	)
+	{
+		DrawRectangle(BackBuffer, Card->PosX, Card->PosY, Card->PosX + Card->Width, Card->PosY + Card->Height, 1.0f, 1.0f, 1.0f);
+		Card++;
+	}
+#if 0
 	uint8_t* Row = (uint8_t*) BackBuffer->Memory;
 	for(int Y = 0; Y < BackBuffer->Height; Y++)
 	{

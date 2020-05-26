@@ -523,13 +523,8 @@ int CALLBACK WinMain(
 	WindowClass.hInstance = Instance;
 	WindowClass.lpszClassName = "ApocalypseWindowClass";
 
-	// TODO: query this on Windows
-	int FramesOfAudioLatency = 3;
-	int MonitorRefreshHz = 60;
-	int GameUpdateHz = MonitorRefreshHz / 2;
 	// NOTE: if we ever have a variable framerate, we also have to update
 	// CONT: sound output config
-	float TargetSecondsPerFrame = 1.0f / (float) GameUpdateHz;
 	win32_debug_time_marker DebugTimeMarkers[30] = {};
 	int DebugTimeMarkerIndex = 0;
 
@@ -586,6 +581,20 @@ int CALLBACK WinMain(
 
 		if(WindowHandle)
 		{
+			// TODO: query this on Windows
+			int MonitorRefreshHz = 60;
+			{
+				HDC RefreshDC = GetDC(WindowHandle);
+				int Win32RefreshRate = GetDeviceCaps(RefreshDC, VREFRESH);
+				ReleaseDC(WindowHandle, RefreshDC);
+				if(Win32RefreshRate > 1)
+				{
+					MonitorRefreshHz = Win32RefreshRate;
+				}
+			}
+			int GameUpdateHz = MonitorRefreshHz / 2;
+			float TargetSecondsPerFrame = 1.0f / (float) GameUpdateHz;
+
 #if APOCALYPSE_INTERNAL
 			LPVOID BaseAddress = (LPVOID) TERABYTES(2);
 #else
@@ -654,12 +663,6 @@ int CALLBACK WinMain(
 				TargetSecondsPerFrame *
 				(float) SoundOutput.SamplesPerSecond *  
 				(float) SoundOutput.BytesPerSample
-			);
-			// NOTE: LatencySampleCount is how far ahead we need to write
-			// NOTE: we write FramesOfAudioLatency ahead
-			SoundOutput.LatencySampleCount = (
-				FramesOfAudioLatency * 
-				(SoundOutput.SamplesPerSecond / GameUpdateHz)
 			);
 			uint32_t LastPlayCursor = 0; 
 			// TODO: pool with bitmap alloc

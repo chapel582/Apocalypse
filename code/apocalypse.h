@@ -134,6 +134,9 @@ struct card
 	float Width;
 	float Height;
 	float TimeLeft;
+	float Red;
+	float Green;
+	float Blue;
 	bool Active;
 };
 

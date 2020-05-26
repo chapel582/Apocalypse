@@ -9,6 +9,15 @@ int32_t RoundFloat32ToInt32(float Input)
 	return (int32_t) (Input + 0.5f);
 }
 
+bool PointInRectangle(
+	float PointX, float PointY, float MinX, float MinY, float MaxX, float MaxY
+)
+{
+	return (
+		(PointX >= MinX && PointX < MaxX) && (PointY >= MinY && PointY < MaxY)
+	);
+}
+
 void DrawRectangle(
 	game_offscreen_buffer* BackBuffer, 
 	float MinXF,
@@ -129,6 +138,9 @@ void GameUpdateAndRender(
 			Card->Height = Height;
 			Card->TimeLeft = 10.0f;
 			Card->Active = true;
+			Card->Red = 1.0f;
+			Card->Green = 1.0f;
+			Card->Blue = 1.0f;
 			CurrentXPos += DistanceBetweenCardPos;
 			Card++;
 		}
@@ -146,6 +158,9 @@ void GameUpdateAndRender(
 			Card->Height = Height;
 			Card->TimeLeft = 10.0f;
 			Card->Active = true;
+			Card->Red = 1.0f;
+			Card->Green = 1.0f;
+			Card->Blue = 1.0f;
 			CurrentXPos += DistanceBetweenCardPos;
 			Card++;
 		}
@@ -174,7 +189,7 @@ void GameUpdateAndRender(
 			{
 				break;
 			}
-
+#if 0
 			if(
 				MouseEvent->Type == PrimaryDown ||
 				MouseEvent->Type == PrimaryUp
@@ -186,6 +201,34 @@ void GameUpdateAndRender(
 			{
 				GameState->XOffset = BackBuffer->Width - MouseEvent->XPos;
 				GameState->YOffset = BackBuffer->Height - MouseEvent->YPos;
+			}
+#endif
+			if(MouseEvent->Type == PrimaryUp)
+			{
+				card* Card = &GameState->Cards[0];
+				for(
+					int CardIndex = 0;
+					CardIndex < ARRAY_COUNT(GameState->Cards);
+					CardIndex++
+				)
+				{
+					if(
+						Card->Active &&
+						PointInRectangle(
+							(float) MouseEvent->XPos,
+							(float) MouseEvent->YPos,
+							Card->PosX,
+							Card->PosY,
+							Card->PosX + Card->Width,
+							Card->PosY + Card->Height
+						)
+					)
+					{
+						Card->Red = 0.0f;
+						Card->Blue = 0.0f;
+					}
+					Card++;
+				}
 			}
 
 			UserEventIndex++;
@@ -265,9 +308,9 @@ void GameUpdateAndRender(
 				Card->PosY,
 				Card->PosX + Card->Width,
 				Card->PosY + Card->Height,
-				1.0f,
-				1.0f,
-				1.0f
+				Card->Red,
+				Card->Blue,
+				Card->Green
 			);
 		}
 		Card++;

@@ -109,11 +109,12 @@ void GameUpdateAndRender(
 		// NOTE: Basically, this is the amount of space not taken up by the 
 		// CONT: cards divided by the number of spaces between and around the 
 		// CONT: cards
-		float CardSpacing = (
+		float SpaceSize = (
 			((float) BackBuffer->Width - (CardsPerHand * Width)) / 
 			(CardsPerHand + 1)
 		);
-		float CurrentXPos = CardSpacing;
+		float DistanceBetweenCardPos = SpaceSize + Width;
+		float CurrentXPos = SpaceSize;
 		card* Card = &GameState->Cards[0];
 		int CardIndex;
 		for(
@@ -128,10 +129,10 @@ void GameUpdateAndRender(
 			Card->Height = Height;
 			Card->TimeLeft = 10.0f;
 			Card->Active = true;
-			CurrentXPos += CardSpacing;
+			CurrentXPos += DistanceBetweenCardPos;
 			Card++;
 		}
-		CurrentXPos = CardSpacing;
+		CurrentXPos = SpaceSize;
 		float LowerYPos = BackBuffer->Height - Height;
 		for(
 			;
@@ -145,7 +146,7 @@ void GameUpdateAndRender(
 			Card->Height = Height;
 			Card->TimeLeft = 10.0f;
 			Card->Active = true;
-			CurrentXPos += CardSpacing;
+			CurrentXPos += DistanceBetweenCardPos;
 			Card++;
 		}
 

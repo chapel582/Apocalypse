@@ -150,7 +150,7 @@ struct game_state
 
 	mouse_event_type CurrentPrimaryState;
 
-	card Cards[12];
+	card Cards[14];
 };
 
 #define APOCALYPSE_H

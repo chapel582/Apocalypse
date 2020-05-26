@@ -78,7 +78,7 @@ void GameUpdateAndRender(
 	game_offscreen_buffer* BackBuffer,
 	game_mouse_events* MouseEvents,
 	game_keyboard_events* KeyboardEvents,
-	float dtForFrame
+	float DtForFrame
 )
 {
 	ASSERT(sizeof(game_state) <= Memory->PermanentStorageSize);
@@ -214,15 +214,29 @@ void GameUpdateAndRender(
 			UserEventIndex++;
 		}
 	}
-
-	if(GameState->TempBufferLength >= 12)
-	{
-		DEBUGPlatformWriteEntireFile(
-			"keyboardtest.out", GameState->TempBuffer, GameState->TempBufferLength
-		);
-		GameState->TempBufferLength = 0;
-	}
 	// SECTION STOP: User input
+
+	// SECTION START: Updating game state
+	{
+		card* Card = &GameState->Cards[0];
+		for(
+			int CardIndex = 0;
+			CardIndex < ARRAY_COUNT(GameState->Cards);
+			CardIndex++
+		)
+		{
+			if(Card->Active)
+			{
+				Card->TimeLeft -= DtForFrame;
+				if(Card->TimeLeft <= 0)
+				{
+					Card->Active = false;
+				}
+			}
+			Card++;
+		}
+	}
+	// SECTION STOP: Updating game state
 
 	// SECTION START: Render
 	DrawRectangle(
@@ -243,7 +257,19 @@ void GameUpdateAndRender(
 		CardIndex++
 	)
 	{
-		DrawRectangle(BackBuffer, Card->PosX, Card->PosY, Card->PosX + Card->Width, Card->PosY + Card->Height, 1.0f, 1.0f, 1.0f);
+		if(Card->Active)
+		{
+			DrawRectangle(
+				BackBuffer,
+				Card->PosX,
+				Card->PosY,
+				Card->PosX + Card->Width,
+				Card->PosY + Card->Height,
+				1.0f,
+				1.0f,
+				1.0f
+			);
+		}
 		Card++;
 	}
 #if 0

@@ -103,8 +103,8 @@ void GameUpdateAndRender(
 		GameState->TempBuffer[1024];
 		GameState->TempBufferLength = 0;
 
-		float Width = 30.0f;
-		float Height = 30.0f;
+		float Width = 60.0f;
+		float Height = 90.0f;
 		int CardsPerHand = (ARRAY_COUNT(GameState->Cards) / 2);
 		// NOTE: Basically, this is the amount of space not taken up by the 
 		// CONT: cards divided by the number of spaces between and around the 

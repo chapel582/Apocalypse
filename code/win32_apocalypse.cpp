@@ -776,6 +776,7 @@ int CALLBACK WinMain(
 				BackBuffer.Width = GlobalBackBuffer.Width;
 				BackBuffer.Height = GlobalBackBuffer.Height;
 				BackBuffer.Pitch = GlobalBackBuffer.Pitch;
+				BackBuffer.BytesPerPixel = GlobalBackBuffer.BytesPerPixel;
 				GameUpdateAndRender(
 					&GameMemory,
 					&BackBuffer,
@@ -883,7 +884,7 @@ int CALLBACK WinMain(
 					goto end;
 				}
 
-#if APOCALYPSE_INTERNAL	
+#if APOCALYPSE_INTERNAL
 				{
 					win32_debug_time_marker* Marker = (
 						&DebugTimeMarkers[DebugTimeMarkerIndex++]
@@ -1055,7 +1056,7 @@ int CALLBACK WinMain(
 				win32_window_dimension Dimensions = Win32GetWindowDimension(
 					WindowHandle
 				);
-#if APOCALYPSE_INTERNAL
+#if 0
 				// NOTE: this is debug code
 				Win32DebugSyncDisplay(
 					&GlobalBackBuffer,

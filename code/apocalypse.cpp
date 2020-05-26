@@ -4,6 +4,67 @@
 
 #define Pi32 3.14159265359f
 
+int32_t RoundFloat32ToInt32(float Input)
+{
+	return (int32_t) (Input + 0.5f);
+}
+
+void DrawRectangle(
+	game_offscreen_buffer* BackBuffer, 
+	float MinXF,
+	float MinYF,
+	float MaxXF,
+	float MaxYF,
+	uint32_t Color
+)
+{
+	int32_t MinX = RoundFloat32ToInt32(MinXF);
+	int32_t MinY = RoundFloat32ToInt32(MinYF);
+	int32_t MaxX = RoundFloat32ToInt32(MaxXF);
+	int32_t MaxY = RoundFloat32ToInt32(MaxYF);
+
+	if(MinX < 0)
+	{
+		MinX = 0;
+	}
+	else if(MinX > BackBuffer->Width)
+	{
+		MinX = BackBuffer->Width;
+	}
+	if(MaxX < 0)
+	{
+		MaxX = 0;
+	}
+	else if(MaxX > BackBuffer->Width)
+	{
+		MaxX = BackBuffer->Width;
+	}
+	if(MinY < 0)
+	{
+		MinY = 0;
+	}
+	else if(MinY > BackBuffer->Height)
+	{
+		MinY = BackBuffer->Height;
+	}
+
+	uint8_t* Row = (
+		((uint8_t*) BackBuffer->Memory) + 
+		MinX * BackBuffer->BytesPerPixel +
+		MinY * BackBuffer->Pitch 
+	);
+
+	for(int Y = MinY; Y < MaxY; Y++)
+	{
+		uint32_t* Pixel = (uint32_t*) Row; 
+		for(int X = MinX; X < MaxX; X++)
+		{
+			*Pixel++ = Color;
+		}
+		Row += BackBuffer->Pitch;
+	}
+}
+
 void GameUpdateAndRender(
 	game_memory* Memory,
 	game_offscreen_buffer* BackBuffer,
@@ -124,13 +185,14 @@ void GameUpdateAndRender(
 		}
 		Row += BackBuffer->Pitch;
 	}
+	DrawRectangle(BackBuffer, 0.0f, 0.0f, 30.0f, 30.0f, 0xFFFFFFFF);
 }
 
 void GameFillSound(game_memory* Memory, game_sound_output_buffer* SoundBuffer)
 {
 	ASSERT(sizeof(game_state) <= Memory->PermanentStorageSize);
 	game_state* GameState = (game_state*) Memory->PermanentStorage;
-
+#if 0
 	int16_t ToneVolume = 3000;
 	int WavePeriod = SoundBuffer->SamplesPerSecond / GameState->ToneHz;
 	int16_t* SampleOut = SoundBuffer->Samples;
@@ -148,4 +210,5 @@ void GameFillSound(game_memory* Memory, game_sound_output_buffer* SoundBuffer)
 		*SampleOut++ = SampleValue;
 		*SampleOut++ = SampleValue;
 	}
+#endif
 }

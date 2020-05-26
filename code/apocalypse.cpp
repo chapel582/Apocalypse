@@ -105,12 +105,15 @@ void GameUpdateAndRender(
 
 		float Width = 30.0f;
 		float Height = 30.0f;
-		float XMargin = 10.0f;
+		int CardsPerHand = (ARRAY_COUNT(GameState->Cards) / 2);
+		// NOTE: Basically, this is the amount of space not taken up by the 
+		// CONT: cards divided by the number of spaces between and around the 
+		// CONT: cards
 		float CardSpacing = (
-			(BackBuffer->Width - 2 * XMargin) / 
-			(ARRAY_COUNT(GameState->Cards) / 2)
+			((float) BackBuffer->Width - (CardsPerHand * Width)) / 
+			(CardsPerHand + 1)
 		);
-		float CurrentXPos = XMargin;
+		float CurrentXPos = CardSpacing;
 		card* Card = &GameState->Cards[0];
 		int CardIndex;
 		for(
@@ -128,7 +131,7 @@ void GameUpdateAndRender(
 			CurrentXPos += CardSpacing;
 			Card++;
 		}
-		CurrentXPos = XMargin;
+		CurrentXPos = CardSpacing;
 		float LowerYPos = BackBuffer->Height - Height;
 		for(
 			;

@@ -15,7 +15,9 @@ void DrawRectangle(
 	float MinYF,
 	float MaxXF,
 	float MaxYF,
-	uint32_t Color
+	float Red, 
+	float Green, 
+	float Blue
 )
 {
 	int32_t MinX = RoundFloat32ToInt32(MinXF);
@@ -47,6 +49,12 @@ void DrawRectangle(
 	{
 		MinY = BackBuffer->Height;
 	}
+
+	uint32_t Color = (
+		(RoundFloat32ToInt32(Red * 0xFF) << 16) |
+		(RoundFloat32ToInt32(Green * 0xFF) << 8) |
+		RoundFloat32ToInt32(Blue * 0xFF)
+	);
 
 	uint8_t* Row = (
 		((uint8_t*) BackBuffer->Memory) + 
@@ -168,24 +176,19 @@ void GameUpdateAndRender(
 	}
 	// SECTION STOP: User input
 
-	// NOTE: this is currently our render loop
-	// CONT: it will be removed soon
-	uint8_t* Row = (uint8_t*) BackBuffer->Memory;
-	for(int Y = 0; Y < BackBuffer->Height; Y++)
-	{
-		uint32_t* Pixel = (uint32_t*) Row;
-		for(int X = 0; X < BackBuffer->Width; X++)
-		{
-			// *Pixel = 0x000000;
-			uint8_t* ColorChannel = (uint8_t*) Pixel;
-			*ColorChannel++ = (uint8_t) (X + GameState->XOffset);
-			*ColorChannel++ = (uint8_t) (Y + GameState->YOffset);
-			*ColorChannel++ = 0;
-			Pixel++;
-		}
-		Row += BackBuffer->Pitch;
-	}
-	DrawRectangle(BackBuffer, 0.0f, 0.0f, 30.0f, 30.0f, 0xFFFFFFFF);
+	// SECTION START: Render
+	DrawRectangle(
+		BackBuffer,
+		0.0f,
+		0.0f,
+		(float) BackBuffer->Width,
+		(float) BackBuffer->Height,
+		1.0f,
+		0.0f,
+		0.0f
+	);
+	DrawRectangle(BackBuffer, 0.0f, 0.0f, 30.0f, 30.0f, 1.0f, 1.0f, 1.0f);
+	// SECTION STOP: Render
 }
 
 void GameFillSound(game_memory* Memory, game_sound_output_buffer* SoundBuffer)

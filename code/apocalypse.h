@@ -127,17 +127,44 @@ void GameUpdateAndRender(
 
 void GameFillSound(game_memory* Memory, game_sound_output_buffer* SoundBuffer);
 
+// TODO: move this out to a math file
+// SECTION START: Vector2
+struct vector2
+{
+	float X;
+	float Y;
+};
+
+vector2 Vector2(float X, float Y)
+{
+	vector2 Result = {};
+	Result.X = X;
+	Result.Y = Y;
+	return Result;
+}
+// SECTION STOP: Vector2
+
 struct card
 {
-	float PosX;
-	float PosY;
-	float Width;
-	float Height;
+	vector2 Pos; // NOTE: Bottom left
+	vector2 Dim;
 	float TimeLeft;
 	float Red;
 	float Green;
 	float Blue;
 	bool Active;
+};
+
+struct world_screen_converter
+{
+	float ScreenToWorld;
+	float WorldToScreen;
+	// NOTE: ScreenYOffset is where the screen origin is relative to the 
+	// CONT: World origin but in pixels
+	float ScreenYOffset; 
+	// NOTE: WorldYOffset is where the world origin is relative to the Screen 
+	// CONT: origin but in world units
+	float WorldYOffset;
 };
 
 struct game_state
@@ -153,6 +180,7 @@ struct game_state
 
 	mouse_event_type CurrentPrimaryState;
 
+	world_screen_converter WorldScreenConverter;
 	card Cards[14];
 };
 

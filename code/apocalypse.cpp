@@ -9,12 +9,53 @@ int32_t RoundFloat32ToInt32(float Input)
 	return (int32_t) (Input + 0.5f);
 }
 
+vector2 ScreenToWorldPos(
+	world_screen_converter Converter, uint32_t X, uint32_t Y
+)
+{
+	vector2 Result = {};
+	Result.X = Converter.ScreenToWorld * X;
+	Result.Y = (
+		(-1.0f * Converter.ScreenToWorld * Y) + Converter.WorldYOffset
+	);
+	return Result;
+}
+
+vector2 WorldToScreenPos(
+	world_screen_converter Converter, vector2 WorldPosition
+)
+{
+	vector2 Result = {};
+	Result.X = Converter.WorldToScreen * WorldPosition.X;
+	Result.Y = (
+		(-1.0f * Converter.WorldToScreen * WorldPosition.Y) + Converter.ScreenYOffset
+	);
+	return Result;
+}
+
+vector2 ScreenToWorldDim(world_screen_converter Converter, vector2 ScreenDim)
+{
+	vector2 Result = {};
+	Result.X = Converter.ScreenToWorld * ScreenDim.X;
+	Result.Y = Converter.ScreenToWorld * ScreenDim.Y;
+	return Result;
+}
+
+vector2 WorldToScreenDim(world_screen_converter Converter, vector2 WorldDim)
+{
+	vector2 Result = {};
+	Result.X = Converter.WorldToScreen * WorldDim.X;
+	Result.Y = Converter.WorldToScreen * WorldDim.Y;
+	return Result;
+}
+
 bool PointInRectangle(
-	float PointX, float PointY, float MinX, float MinY, float MaxX, float MaxY
+	vector2 Point, float MinX, float MinY, float MaxX, float MaxY
 )
 {
 	return (
-		(PointX >= MinX && PointX < MaxX) && (PointY >= MinY && PointY < MaxY)
+		(Point.X >= MinX && Point.X < MaxX) && 
+		(Point.Y >= MinY && Point.Y < MaxY)
 	);
 }
 
@@ -57,6 +98,14 @@ void DrawRectangle(
 	else if(MinY > BackBuffer->Height)
 	{
 		MinY = BackBuffer->Height;
+	}
+	if(MaxY < 0)
+	{
+		MaxY = 0;
+	}
+	else if(MaxY > BackBuffer->Height)
+	{
+		MaxY = BackBuffer->Height;
 	}
 
 	uint32_t Color = (
@@ -112,6 +161,21 @@ void GameUpdateAndRender(
 		GameState->TempBuffer[1024];
 		GameState->TempBufferLength = 0;
 
+		// NOTE: right now, the conversion assumes that the screen origin and 
+		// CONT: the world origin are on the same place on the x axis
+		world_screen_converter* WorldScreenConverter = (
+			&GameState->WorldScreenConverter
+		);
+		WorldScreenConverter->ScreenToWorld = 1.0f;
+		WorldScreenConverter->WorldToScreen = (
+			1.0f / WorldScreenConverter->ScreenToWorld
+		);
+		WorldScreenConverter->ScreenYOffset = (float) BackBuffer->Height;
+		WorldScreenConverter->WorldYOffset = (
+			WorldScreenConverter->ScreenToWorld * 
+			WorldScreenConverter->ScreenYOffset
+		);
+
 		float Width = 60.0f;
 		float Height = 90.0f;
 		int CardsPerHand = (ARRAY_COUNT(GameState->Cards) / 2);
@@ -132,10 +196,10 @@ void GameUpdateAndRender(
 			CardIndex++
 		)
 		{
-			Card->PosX = CurrentXPos;
-			Card->PosY = 0.0f;
-			Card->Width = Width;
-			Card->Height = Height;
+			Card->Pos.X = CurrentXPos;
+			Card->Pos.Y = 0;
+			Card->Dim.X = Width;
+			Card->Dim.Y = Height;
 			Card->TimeLeft = 10.0f;
 			Card->Active = true;
 			Card->Red = 1.0f;
@@ -145,17 +209,19 @@ void GameUpdateAndRender(
 			Card++;
 		}
 		CurrentXPos = SpaceSize;
-		float LowerYPos = BackBuffer->Height - Height;
+		float YPos = (
+			(WorldScreenConverter->ScreenToWorld * BackBuffer->Height) - Height 
+		);
 		for(
 			;
 			CardIndex < ARRAY_COUNT(GameState->Cards);
 			CardIndex++
 		)
 		{
-			Card->PosX = CurrentXPos;
-			Card->PosY = LowerYPos;
-			Card->Width = Width;
-			Card->Height = Height;
+			Card->Pos.X = CurrentXPos;
+			Card->Pos.Y = YPos;
+			Card->Dim.X = Width;
+			Card->Dim.Y = Height;
 			Card->TimeLeft = 10.0f;
 			Card->Active = true;
 			Card->Red = 1.0f;
@@ -203,6 +269,11 @@ void GameUpdateAndRender(
 				GameState->YOffset = BackBuffer->Height - MouseEvent->YPos;
 			}
 #endif
+			vector2 MouseEventWorldPos = ScreenToWorldPos(
+				GameState->WorldScreenConverter,
+				MouseEvent->XPos,
+				MouseEvent->YPos
+			);
 			if(MouseEvent->Type == PrimaryUp)
 			{
 				card* Card = &GameState->Cards[0];
@@ -215,12 +286,11 @@ void GameUpdateAndRender(
 					if(
 						Card->Active &&
 						PointInRectangle(
-							(float) MouseEvent->XPos,
-							(float) MouseEvent->YPos,
-							Card->PosX,
-							Card->PosY,
-							Card->PosX + Card->Width,
-							Card->PosY + Card->Height
+							MouseEventWorldPos,
+							Card->Pos.X,
+							Card->Pos.Y,
+							Card->Pos.X + Card->Dim.X,
+							Card->Pos.Y + Card->Dim.Y
 						)
 					)
 					{
@@ -302,12 +372,21 @@ void GameUpdateAndRender(
 	{
 		if(Card->Active)
 		{
+			vector2 WorldTopLeft = Vector2(
+				Card->Pos.X, Card->Pos.Y + Card->Dim.Y
+			);
+			vector2 ScreenPos = WorldToScreenPos(
+				GameState->WorldScreenConverter, WorldTopLeft
+			);
+			vector2 ScreenDim = WorldToScreenDim(
+				GameState->WorldScreenConverter, Card->Dim
+			);
 			DrawRectangle(
 				BackBuffer,
-				Card->PosX,
-				Card->PosY,
-				Card->PosX + Card->Width,
-				Card->PosY + Card->Height,
+				ScreenPos.X,
+				ScreenPos.Y,
+				ScreenPos.X + ScreenDim.X,
+				ScreenPos.Y + ScreenDim.Y,
 				Card->Red,
 				Card->Blue,
 				Card->Green

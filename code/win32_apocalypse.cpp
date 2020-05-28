@@ -547,7 +547,9 @@ int CALLBACK WinMain(
 		
 		// NOTE: get memory for backbuffer
 		{
-			win32_window_dimension Dimensions = Win32GetWindowDimension(WindowHandle);
+			win32_window_dimension Dimensions = Win32GetWindowDimension(
+				WindowHandle
+			);
 			GlobalBackBuffer.Width = Dimensions.Width;
 			GlobalBackBuffer.Height = Dimensions.Height;
 			int BytesPerPixel = 4;
@@ -1014,6 +1016,7 @@ int CALLBACK WinMain(
 
 				// SECTION START: Fixing frame rate to constant
 				// TODO: more testing
+				// TODO: have a way to log missing our framerate
 				uint64_t WorkEndCounter = Win32GetWallClock();
 				float WorkSeconds = Win32GetSecondsElapsed(
 					FrameStartCounter, WorkEndCounter
@@ -1034,11 +1037,6 @@ int CALLBACK WinMain(
 							Sleep(SleepMs - 1);
 						}
 					}
-
-					float TestSecondsElapsedForFrame = Win32GetSecondsElapsed(
-						FrameStartCounter, Win32GetWallClock()
-					);
-					ASSERT(TestSecondsElapsedForFrame < TargetSecondsPerFrame);
 
 					while(SecondsElapsedForFrame < TargetSecondsPerFrame)
 					{

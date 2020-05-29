@@ -144,17 +144,6 @@ vector2 Vector2(float X, float Y)
 }
 // SECTION STOP: Vector2
 
-struct card
-{
-	vector2 Pos; // NOTE: Bottom left
-	vector2 Dim;
-	float TimeLeft;
-	float Red;
-	float Green;
-	float Blue;
-	bool Active;
-};
-
 struct world_screen_converter
 {
 	float ScreenToWorld;
@@ -182,6 +171,18 @@ typedef enum
 	CardSet_Tableau,
 	CardSet_Count
 } card_set_e;
+
+struct card
+{
+	vector2 Pos; // NOTE: Bottom left
+	vector2 Dim;
+	float TimeLeft;
+	float Red;
+	float Green;
+	float Blue;
+	bool Active;
+	player_e Owner;
+};
 
 struct card_set_s
 {

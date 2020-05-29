@@ -131,18 +131,23 @@ void DrawRectangle(
 	}
 }
 
-void AddCardToCardSet(card_set_s* CardSet, card* Card)
+bool AddCardToSet(card_set_s* CardSet, card* Card)
 {
 	for(int Index = 0; Index < ARRAY_COUNT(CardSet->Cards); Index++)
 	{
-		if(CardSet->Cards[Index] == NULL)
+		if(CardSet->Cards[Index] == Card)
+		{
+			return false;
+		}
+		else if(CardSet->Cards[Index] == NULL)
 		{
 			CardSet->Cards[Index] = Card;
 			CardSet->CardCount++;
-			return;
+			return true;
 		}
 	}
 	ASSERT(false);
+	return false;
 }
 
 void AlignCardSet(card_set_s* CardSet)
@@ -160,7 +165,7 @@ void AlignCardSet(card_set_s* CardSet)
 	for(int Index = 0; Index < ARRAY_COUNT(CardSet->Cards); Index++)
 	{
 		card* Card = CardSet->Cards[Index];
-		if(Card->Active)
+		if(Card != NULL && Card->Active)
 		{
 			Card->Pos.X = CurrentXPos;
 			Card->Pos.Y = CardSet->YPos;
@@ -169,12 +174,15 @@ void AlignCardSet(card_set_s* CardSet)
 	}
 }
 
-void AddAndAlignCard(card_set_s* CardSet, card* Card)
+void AddCardAndAlign(card_set_s* CardSet, card* Card)
 {
-	AddCardToCardSet(CardSet, Card);
+	if(AddCardToSet(CardSet, Card))
+	{
+		AlignCardSet(CardSet);		
+	}
 }
 
-void RemoveCardFromCardSet(card_set_s* CardSet, card* Card)
+bool RemoveCardFromSet(card_set_s* CardSet, card* Card)
 {
 	for(int Index = 0; Index < ARRAY_COUNT(CardSet->Cards); Index++)
 	{
@@ -182,10 +190,18 @@ void RemoveCardFromCardSet(card_set_s* CardSet, card* Card)
 		{
 			CardSet->Cards[Index] = NULL;
 			CardSet->CardCount--;
-			return;
+			return true;
 		}
 	}
-	ASSERT(false);
+	return false;
+}
+
+void RemoveCardAndAlign(card_set_s* CardSet, card* Card)
+{
+	if(RemoveCardFromSet(CardSet, Card))
+	{
+		AlignCardSet(CardSet);
+	}
 }
 
 void GameUpdateAndRender(
@@ -280,7 +296,8 @@ void GameUpdateAndRender(
 			Card->Red = 1.0f;
 			Card->Green = 1.0f;
 			Card->Blue = 1.0f;
-			AddCardToCardSet(&GameState->Hands[Player_One], Card);
+			Card->Owner = Player_One;
+			AddCardToSet(&GameState->Hands[Player_One], Card);
 			Card++;
 		}
 		AlignCardSet(&GameState->Hands[Player_One]);
@@ -298,7 +315,8 @@ void GameUpdateAndRender(
 			Card->Red = 1.0f;
 			Card->Green = 1.0f;
 			Card->Blue = 1.0f;
-			AddCardToCardSet(&GameState->Hands[Player_Two], Card);
+			Card->Owner = Player_Two;
+			AddCardToSet(&GameState->Hands[Player_Two], Card);
 			Card++;
 		}
 		AlignCardSet(&GameState->Hands[Player_Two]);
@@ -366,9 +384,12 @@ void GameUpdateAndRender(
 						)
 					)
 					{
-						Card->Red = 0.0f;
-						Card->Green = 1.0f;
-						Card->Blue = 0.0f;
+						RemoveCardAndAlign(
+							&GameState->Hands[Card->Owner], Card
+						);
+						AddCardAndAlign(
+							&GameState->Tableaus[Card->Owner], Card
+						);
 					}
 					Card++;
 				}

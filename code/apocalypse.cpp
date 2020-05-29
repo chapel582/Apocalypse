@@ -461,8 +461,8 @@ void GameUpdateAndRender(
 				ScreenPos.X + ScreenDim.X,
 				ScreenPos.Y + ScreenDim.Y,
 				Card->Red,
-				Card->Blue,
-				Card->Green
+				Card->Green,
+				Card->Blue
 			);
 		}
 		Card++;

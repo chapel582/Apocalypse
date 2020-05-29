@@ -131,6 +131,63 @@ void DrawRectangle(
 	}
 }
 
+void AddCardToCardSet(card_set_s* CardSet, card* Card)
+{
+	for(int Index = 0; Index < ARRAY_COUNT(CardSet->Cards); Index++)
+	{
+		if(CardSet->Cards[Index] == NULL)
+		{
+			CardSet->Cards[Index] = Card;
+			CardSet->CardCount++;
+			return;
+		}
+	}
+	ASSERT(false);
+}
+
+void AlignCardSet(card_set_s* CardSet)
+{
+	// NOTE: Basically, this is the amount of space not taken up by the 
+	// CONT: cards divided by the number of spaces between and around the 
+	// CONT: cards
+	float Width = CardSet->Cards[0]->Dim.X;
+	float SpaceSize = (
+		(CardSet->ScreenWidth - (CardSet->CardCount * Width)) / 
+		(CardSet->CardCount + 1)
+	);
+	float DistanceBetweenCardPos = SpaceSize + Width;
+	float CurrentXPos = SpaceSize;
+	for(int Index = 0; Index < ARRAY_COUNT(CardSet->Cards); Index++)
+	{
+		card* Card = CardSet->Cards[Index];
+		if(Card->Active)
+		{
+			Card->Pos.X = CurrentXPos;
+			Card->Pos.Y = CardSet->YPos;
+			CurrentXPos += DistanceBetweenCardPos;
+		}
+	}
+}
+
+void AddAndAlignCard(card_set_s* CardSet, card* Card)
+{
+	AddCardToCardSet(CardSet, Card);
+}
+
+void RemoveCardFromCardSet(card_set_s* CardSet, card* Card)
+{
+	for(int Index = 0; Index < ARRAY_COUNT(CardSet->Cards); Index++)
+	{
+		if(CardSet->Cards[Index] == Card)
+		{
+			CardSet->Cards[Index] = NULL;
+			CardSet->CardCount--;
+			return;
+		}
+	}
+	ASSERT(false);
+}
+
 void GameUpdateAndRender(
 	game_memory* Memory,
 	game_offscreen_buffer* BackBuffer,
@@ -152,6 +209,8 @@ void GameUpdateAndRender(
 			);
 			DEBUGPlatformFreeFileMemory(File.Contents);
 		}
+		// NOTE: zero out memory at start just in case
+		*GameState = {};
 
 		GameState->XOffset = 0;
 		GameState->YOffset = 0;
@@ -176,60 +235,73 @@ void GameUpdateAndRender(
 			WorldScreenConverter->ScreenYOffset
 		);
 
-		float Width = 60.0f;
-		float Height = 90.0f;
-		int CardsPerHand = (ARRAY_COUNT(GameState->Cards) / 2);
-		// NOTE: Basically, this is the amount of space not taken up by the 
-		// CONT: cards divided by the number of spaces between and around the 
-		// CONT: cards
-		float SpaceSize = (
-			((float) BackBuffer->Width - (CardsPerHand * Width)) / 
-			(CardsPerHand + 1)
+		float CardWidth = 60.0f;
+		float CardHeight = 90.0f;
+		float HandTableauMargin = 5.0f;
+		float ScreenWidthInWorld = (
+			WorldScreenConverter->ScreenToWorld * BackBuffer->Width
 		);
-		float DistanceBetweenCardPos = SpaceSize + Width;
-		float CurrentXPos = SpaceSize;
+		card_set_s* CardSet = &GameState->Hands[Player_One];
+		CardSet->CardCount = 0;
+		CardSet->ScreenWidth = ScreenWidthInWorld;
+		CardSet->YPos = 0.0f;
+		CardSet = &GameState->Hands[Player_Two];
+		CardSet->CardCount = 0;
+		CardSet->ScreenWidth = ScreenWidthInWorld;
+		CardSet->YPos = (
+			(WorldScreenConverter->ScreenToWorld * BackBuffer->Height) - 
+			CardHeight 
+		);
+		CardSet = &GameState->Tableaus[Player_One];
+		CardSet->CardCount = 0;
+		CardSet->ScreenWidth = ScreenWidthInWorld;
+		CardSet->YPos = CardHeight + HandTableauMargin;
+		CardSet = &GameState->Tableaus[Player_Two];
+		CardSet->CardCount = 0;
+		CardSet->ScreenWidth = ScreenWidthInWorld;
+		CardSet->YPos = (
+			(WorldScreenConverter->ScreenToWorld * BackBuffer->Height) - 
+			(2 * CardHeight) -
+			HandTableauMargin 
+		);
+		
 		card* Card = &GameState->Cards[0];
 		int CardIndex;
 		for(
 			CardIndex = 0;
-			CardIndex < ARRAY_COUNT(GameState->Cards) / 2;
+			CardIndex < MAX_CARDS_PER_SET;
 			CardIndex++
 		)
 		{
-			Card->Pos.X = CurrentXPos;
-			Card->Pos.Y = 0;
-			Card->Dim.X = Width;
-			Card->Dim.Y = Height;
+			Card->Dim.X = CardWidth;
+			Card->Dim.Y = CardHeight;
 			Card->TimeLeft = 10.0f;
 			Card->Active = true;
 			Card->Red = 1.0f;
 			Card->Green = 1.0f;
 			Card->Blue = 1.0f;
-			CurrentXPos += DistanceBetweenCardPos;
+			AddCardToCardSet(&GameState->Hands[Player_One], Card);
 			Card++;
 		}
-		CurrentXPos = SpaceSize;
-		float YPos = (
-			(WorldScreenConverter->ScreenToWorld * BackBuffer->Height) - Height 
-		);
+		AlignCardSet(&GameState->Hands[Player_One]);
+
 		for(
-			;
-			CardIndex < ARRAY_COUNT(GameState->Cards);
+			CardIndex = 0;
+			CardIndex < MAX_CARDS_PER_SET;
 			CardIndex++
 		)
 		{
-			Card->Pos.X = CurrentXPos;
-			Card->Pos.Y = YPos;
-			Card->Dim.X = Width;
-			Card->Dim.Y = Height;
+			Card->Dim.X = CardWidth;
+			Card->Dim.Y = CardHeight;
 			Card->TimeLeft = 10.0f;
 			Card->Active = true;
 			Card->Red = 1.0f;
 			Card->Green = 1.0f;
 			Card->Blue = 1.0f;
-			CurrentXPos += DistanceBetweenCardPos;
+			AddCardToCardSet(&GameState->Hands[Player_Two], Card);
 			Card++;
 		}
+		AlignCardSet(&GameState->Hands[Player_Two]);
 
 		// TODO: this may be more appropriate in the platform layer
 		Memory->IsInitialized = true;
@@ -295,6 +367,7 @@ void GameUpdateAndRender(
 					)
 					{
 						Card->Red = 0.0f;
+						Card->Green = 1.0f;
 						Card->Blue = 0.0f;
 					}
 					Card++;

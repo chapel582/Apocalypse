@@ -167,6 +167,30 @@ struct world_screen_converter
 	float WorldYOffset;
 };
 
+#define MAX_CARDS_PER_SET 7
+
+typedef enum
+{
+	Player_One,
+	Player_Two,
+	Player_Count
+} player_e;
+
+typedef enum
+{
+	CardSet_Hand,
+	CardSet_Tableau,
+	CardSet_Count
+} card_set_e;
+
+struct card_set_s
+{
+	card* Cards[MAX_CARDS_PER_SET];
+	int CardCount;
+	float ScreenWidth;
+	float YPos;
+};
+
 struct game_state
 {
 	int XOffset;
@@ -181,7 +205,10 @@ struct game_state
 	mouse_event_type CurrentPrimaryState;
 
 	world_screen_converter WorldScreenConverter;
-	card Cards[14];
+	
+	card Cards[Player_Count * CardSet_Count * MAX_CARDS_PER_SET];
+	card_set_s Hands[Player_Count];
+	card_set_s Tableaus[Player_Count];
 };
 
 #define APOCALYPSE_H

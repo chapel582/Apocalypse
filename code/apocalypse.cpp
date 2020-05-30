@@ -131,7 +131,7 @@ void DrawRectangle(
 	}
 }
 
-bool AddCardToSet(card_set_s* CardSet, card* Card)
+bool AddCardToSet(card_set* CardSet, card* Card)
 {
 	for(int Index = 0; Index < ARRAY_COUNT(CardSet->Cards); Index++)
 	{
@@ -150,12 +150,12 @@ bool AddCardToSet(card_set_s* CardSet, card* Card)
 	return false;
 }
 
-void AlignCardSet(card_set_s* CardSet)
+void AlignCardSet(card_set* CardSet)
 {
 	// NOTE: Basically, this is the amount of space not taken up by the 
 	// CONT: cards divided by the number of spaces between and around the 
 	// CONT: cards
-	float Width = CardSet->Cards[0]->Dim.X;
+	float Width = CardSet->CardWidth;
 	float SpaceSize = (
 		(CardSet->ScreenWidth - (CardSet->CardCount * Width)) / 
 		(CardSet->CardCount + 1)
@@ -174,7 +174,7 @@ void AlignCardSet(card_set_s* CardSet)
 	}
 }
 
-void AddCardAndAlign(card_set_s* CardSet, card* Card)
+void AddCardAndAlign(card_set* CardSet, card* Card)
 {
 	if(AddCardToSet(CardSet, Card))
 	{
@@ -182,7 +182,7 @@ void AddCardAndAlign(card_set_s* CardSet, card* Card)
 	}
 }
 
-bool RemoveCardFromSet(card_set_s* CardSet, card* Card)
+bool RemoveCardFromSet(card_set* CardSet, card* Card)
 {
 	for(int Index = 0; Index < ARRAY_COUNT(CardSet->Cards); Index++)
 	{
@@ -196,7 +196,7 @@ bool RemoveCardFromSet(card_set_s* CardSet, card* Card)
 	return false;
 }
 
-void RemoveCardAndAlign(card_set_s* CardSet, card* Card)
+void RemoveCardAndAlign(card_set* CardSet, card* Card)
 {
 	if(RemoveCardFromSet(CardSet, Card))
 	{
@@ -227,9 +227,13 @@ void GameUpdateAndRender(
 		}
 		// NOTE: zero out memory at start just in case
 		*GameState = {};
+		// NOTE: right now, we assume everything after game state is just in the arena
+		InitMemArena(
+			&GameState->Arena,
+			Memory->PermanentStorageSize - sizeof(game_state),
+			((uint8_t*) Memory->PermanentStorage) + sizeof(game_state)
+		);
 
-		GameState->XOffset = 0;
-		GameState->YOffset = 0;
 		GameState->CurrentPrimaryState = PrimaryUp;
 		GameState->SineT = 0;
 		GameState->ToneHz = 256;
@@ -251,16 +255,28 @@ void GameUpdateAndRender(
 			WorldScreenConverter->ScreenYOffset
 		);
 
+		GameState->MaxCards = Player_Count * CardSet_Count * MAX_CARDS_PER_SET;
+		GameState->Cards = PushArray(
+			&GameState->Arena, GameState->MaxCards, card
+		);
+		GameState->Hands = PushArray(&GameState->Arena, Player_Count, card_set);
+		GameState->Tableaus = PushArray(
+			&GameState->Arena, Player_Count, card_set
+		);
+
 		float CardWidth = 60.0f;
 		float CardHeight = 90.0f;
 		float HandTableauMargin = 5.0f;
 		float ScreenWidthInWorld = (
 			WorldScreenConverter->ScreenToWorld * BackBuffer->Width
 		);
-		card_set_s* CardSet = &GameState->Hands[Player_One];
+		
+		card_set* CardSet = &GameState->Hands[Player_One];
 		CardSet->CardCount = 0;
 		CardSet->ScreenWidth = ScreenWidthInWorld;
 		CardSet->YPos = 0.0f;
+		CardSet->CardWidth = CardWidth;
+
 		CardSet = &GameState->Hands[Player_Two];
 		CardSet->CardCount = 0;
 		CardSet->ScreenWidth = ScreenWidthInWorld;
@@ -268,10 +284,14 @@ void GameUpdateAndRender(
 			(WorldScreenConverter->ScreenToWorld * BackBuffer->Height) - 
 			CardHeight 
 		);
+		CardSet->CardWidth = CardWidth;
+
 		CardSet = &GameState->Tableaus[Player_One];
 		CardSet->CardCount = 0;
 		CardSet->ScreenWidth = ScreenWidthInWorld;
 		CardSet->YPos = CardHeight + HandTableauMargin;
+		CardSet->CardWidth = CardWidth;
+
 		CardSet = &GameState->Tableaus[Player_Two];
 		CardSet->CardCount = 0;
 		CardSet->ScreenWidth = ScreenWidthInWorld;
@@ -280,6 +300,7 @@ void GameUpdateAndRender(
 			(2 * CardHeight) -
 			HandTableauMargin 
 		);
+		CardSet->CardWidth = CardWidth;
 		
 		card* Card = &GameState->Cards[0];
 		int CardIndex;
@@ -345,20 +366,7 @@ void GameUpdateAndRender(
 			{
 				break;
 			}
-#if 0
-			if(
-				MouseEvent->Type == PrimaryDown ||
-				MouseEvent->Type == PrimaryUp
-			)
-			{
-				GameState->CurrentPrimaryState = MouseEvent->Type;
-			}
-			if(GameState->CurrentPrimaryState == PrimaryDown)
-			{
-				GameState->XOffset = BackBuffer->Width - MouseEvent->XPos;
-				GameState->YOffset = BackBuffer->Height - MouseEvent->YPos;
-			}
-#endif
+
 			vector2 MouseEventWorldPos = ScreenToWorldPos(
 				GameState->WorldScreenConverter,
 				MouseEvent->XPos,
@@ -369,7 +377,7 @@ void GameUpdateAndRender(
 				card* Card = &GameState->Cards[0];
 				for(
 					int CardIndex = 0;
-					CardIndex < ARRAY_COUNT(GameState->Cards);
+					CardIndex < GameState->MaxCards;
 					CardIndex++
 				)
 				{
@@ -390,6 +398,7 @@ void GameUpdateAndRender(
 						AddCardAndAlign(
 							&GameState->Tableaus[Card->Owner], Card
 						);
+						break;
 					}
 					Card++;
 				}
@@ -428,7 +437,7 @@ void GameUpdateAndRender(
 		card* Card = &GameState->Cards[0];
 		for(
 			int CardIndex = 0;
-			CardIndex < ARRAY_COUNT(GameState->Cards);
+			CardIndex < GameState->MaxCards;
 			CardIndex++
 		)
 		{
@@ -458,11 +467,7 @@ void GameUpdateAndRender(
 	);
 
 	card* Card = &GameState->Cards[0];
-	for(
-		int CardIndex = 0;
-		CardIndex < ARRAY_COUNT(GameState->Cards);
-		CardIndex++
-	)
+	for(int CardIndex = 0; CardIndex < GameState->MaxCards; CardIndex++)
 	{
 		if(Card->Active)
 		{

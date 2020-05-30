@@ -127,6 +127,31 @@ void GameUpdateAndRender(
 
 void GameFillSound(game_memory* Memory, game_sound_output_buffer* SoundBuffer);
 
+
+struct memory_arena
+{
+	size_t TotalSize;
+	uint8_t* Base;
+	size_t Used;
+};
+
+void InitMemArena(memory_arena* Arena, size_t TotalSize, uint8_t* Base)
+{
+	Arena->TotalSize = TotalSize;
+	Arena->Base = Base;
+	Arena->Used = 0;
+}
+
+#define PushStruct(Arena, Type) (Type*) PushSize(Arena, sizeof(Type))
+#define PushArray(Arena, Count, Type) (Type*) PushSize(Arena, (Count) * sizeof(Type))
+void* PushSize(memory_arena* Arena, size_t SizeToPush)
+{
+	void* Result = Arena->Base + Arena->Used;
+	Arena->Used += SizeToPush;
+	ASSERT(Arena->Used <= Arena->TotalSize);
+	return Result;
+}
+
 // TODO: move this out to a math file
 // SECTION START: Vector2
 struct vector2
@@ -170,7 +195,7 @@ typedef enum
 	CardSet_Hand,
 	CardSet_Tableau,
 	CardSet_Count
-} card_set_e;
+} card_set_type;
 
 struct card
 {
@@ -184,18 +209,18 @@ struct card
 	player_e Owner;
 };
 
-struct card_set_s
+struct card_set
 {
 	card* Cards[MAX_CARDS_PER_SET];
 	int CardCount;
 	float ScreenWidth;
+	float CardWidth;
 	float YPos;
 };
 
 struct game_state
 {
-	int XOffset;
-	int YOffset;
+	memory_arena Arena;
 
 	float SineT;
 	int ToneHz;
@@ -207,9 +232,10 @@ struct game_state
 
 	world_screen_converter WorldScreenConverter;
 	
-	card Cards[Player_Count * CardSet_Count * MAX_CARDS_PER_SET];
-	card_set_s Hands[Player_Count];
-	card_set_s Tableaus[Player_Count];
+	card* Cards;
+	int MaxCards;
+	card_set* Hands;
+	card_set* Tableaus;
 };
 
 #define APOCALYPSE_H

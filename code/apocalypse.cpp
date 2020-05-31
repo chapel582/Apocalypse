@@ -1,4 +1,5 @@
 #include "apocalypse.h"
+#include "apocalypse_platform.h"
 
 #include <math.h>
 

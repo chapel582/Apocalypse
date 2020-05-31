@@ -11,6 +11,7 @@ TODO: This is not a final platform layer
 
 // NOTE: Apocalypse stuff
 #include "apocalypse.cpp"
+#include "apocalypse_platform.h"
 
 // NOTE: C stuff
 #include <stdio.h>

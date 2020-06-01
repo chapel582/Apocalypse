@@ -1,5 +1,6 @@
 #include "apocalypse.h"
 #include "apocalypse_platform.h"
+#include "apocalypse_intrinsics.h"
 
 #include <math.h>
 
@@ -8,6 +9,94 @@
 int32_t RoundFloat32ToInt32(float Input)
 {
 	return (int32_t) (Input + 0.5f);
+}
+
+#pragma pack(push, 1)
+struct bitmap_header
+{
+	uint16_t FileType;
+    uint32_t FileSize;
+    uint16_t Reserved1;
+    uint16_t Reserved2;
+    uint32_t BitmapOffset;
+    uint32_t BitmapSize;
+    int32_t Width;
+    int32_t Height;
+    uint16_t Planes;
+    uint16_t BitsPerPixel;
+    uint32_t Compression;
+    uint32_t SizeOfBitmap;
+    int32_t HorzResolution;
+    int32_t VertResolution;
+    uint32_t ColorsUsed;
+    uint32_t ColorsImportant;
+
+    uint32_t RedMask;
+    uint32_t GreenMask;
+    uint32_t BlueMask;
+};
+#pragma pack(pop)
+
+loaded_bitmap DEBUGLoadBmp(thread_context* Thread, char* FileName)
+{
+	// NOTE: this is not complete BMP loading code. Can't handle negative height
+	// CONT: or compression
+
+	loaded_bitmap Result = {};
+	debug_read_file_result ReadResult = DEBUGPlatformReadEntireFile(
+		Thread, FileName
+	);
+	if(ReadResult.ContentsSize == 0)
+	{
+		goto end;
+	}
+
+	bitmap_header* Header = (bitmap_header*) ReadResult.Contents;
+	uint32_t* Pixels = (uint32_t*) (
+		(uint8_t*) ReadResult.Contents + Header->BitmapOffset
+	);
+	Result.Pixels = Pixels;
+	Result.Width = Header->Width;
+	Result.Height = Header->Height;
+
+	ASSERT(Header->Compression == 3);
+
+	// NOTE: we use the masks to figure out how to transform our pixels into 
+	// CONT: ARGB format
+	uint32_t RedMask = Header->RedMask;
+	uint32_t GreenMask = Header->GreenMask;
+	uint32_t BlueMask = Header->BlueMask;
+	// NOTE: AlphaMask is the bits that aren't in the color channels
+	uint32_t AlphaMask = ~(RedMask | GreenMask | BlueMask);
+
+	// NOTE: need to figure out how much to shift to transform stuff
+	bit_scan_result RedShift = FindLeastSignificantSetBit(RedMask);
+	bit_scan_result GreenShift = FindLeastSignificantSetBit(GreenMask);
+	bit_scan_result BlueShift = FindLeastSignificantSetBit(BlueMask);
+	bit_scan_result AlphaShift = FindLeastSignificantSetBit(AlphaMask);
+
+	ASSERT(RedShift.Found);
+	ASSERT(GreenShift.Found);
+	ASSERT(BlueShift.Found);
+	ASSERT(AlphaShift.Found);
+
+	uint32_t* SourceDest = Pixels;
+	for(int32_t Y = 0; Y < Header->Height; Y++)
+	{
+		for(int32_t X = 0; X < Header->Width; X++)
+		{
+			uint32_t Original = *SourceDest;
+			*SourceDest++ = (
+				(((Original >> AlphaShift.Index) & 0xFF) << 24) |
+				(((Original >> RedShift.Index) & 0xFF) << 16) |
+				(((Original >> GreenShift.Index) & 0xFF) << 8) |
+				((Original >> BlueShift.Index) & 0xFF)
+			);
+		}
+	}
+
+end:
+	return Result;
 }
 
 vector2 ScreenToWorldPos(
@@ -29,7 +118,8 @@ vector2 WorldToScreenPos(
 	vector2 Result = {};
 	Result.X = Converter.WorldToScreen * WorldPosition.X;
 	Result.Y = (
-		(-1.0f * Converter.WorldToScreen * WorldPosition.Y) + Converter.ScreenYOffset
+		(-1.0f * Converter.WorldToScreen * WorldPosition.Y) + 
+		Converter.ScreenYOffset
 	);
 	return Result;
 }
@@ -132,6 +222,92 @@ void DrawRectangle(
 	}
 }
 
+void DrawBitmap(
+	game_offscreen_buffer* Buffer,
+	loaded_bitmap* Bitmap,
+	float RealX,
+	float RealY,
+	int32_t AlignX = 0,
+	int32_t AlignY = 0
+)
+{
+	RealX -= (float) AlignX;
+	RealY -= (float) AlignY;
+
+	int32_t MinX = RoundFloat32ToInt32(RealX);
+	int32_t	MinY = RoundFloat32ToInt32(RealY);
+	int32_t MaxX = RoundFloat32ToInt32(RealX + (float) Bitmap->Width);
+	int32_t MaxY = RoundFloat32ToInt32(RealY + (float) Bitmap->Height);
+
+	// TODO: what's this for?
+	int32_t SourceOffsetX = 0;
+	if(MinX < 0)
+	{
+		SourceOffsetX = -MinX;
+		MinX = 0;
+	}
+
+	// TODO: what's this for?
+	int32_t SourceOffsetY = 0;
+	if(MinY < 0)
+	{
+		SourceOffsetY = -MinY;
+		MinY = 0;
+	}
+
+	if(MaxX > Buffer->Width)
+	{
+		MaxX = Buffer->Width;
+	}
+
+	if(MaxY > Buffer->Height)
+	{
+		MaxY = Buffer->Height;
+	}
+
+	// TODO: SourceRow needs to change based on clipping
+	uint32_t* SourceRow = Bitmap->Pixels + Bitmap->Width * (Bitmap->Height - 1);
+	SourceRow += -SourceOffsetY * Bitmap->Width + SourceOffsetX;
+	uint8_t* DestRow = (
+		(uint8_t*) Buffer->Memory +
+		MinX * Buffer->BytesPerPixel + 
+		MinY * Buffer->Pitch
+	);
+
+	for(int Y = MinY; Y < MaxY; Y++)
+	{
+		uint32_t* Dest = (uint32_t*) DestRow;
+		uint32_t* Source = SourceRow;
+		for(int X = MinX; X < MaxX; X++)
+		{
+			// TODO: premultiplied alpha
+			float A = ((float) ((*Source >> 24) & 0xFF)) / 255.0f;
+			float SR = (float) (((*Source >> 16) & 0xFF));
+			float SG = (float) (((*Source >> 8) & 0xFF));
+			float SB = (float) (((*Source) & 0xFF));
+
+			float DR = (float) (((*Dest >> 16) & 0xFF));
+			float DG = (float) (((*Dest >> 8) & 0xFF));
+			float DB = (float) (((*Dest) & 0xFF));
+
+			float R = ((1.0f - A) * DR) + (A * SR);
+			float G = ((1.0f - A) * DG) + (A * SG);
+			float B = ((1.0f - A) * DB) + (A * SB);
+
+			*Dest = (
+				(((uint32_t) (R + 0.5f)) << 16) |
+				(((uint32_t) (G + 0.5f)) << 8) |
+				((uint32_t) (B + 0.5f))
+			);
+
+			Dest++;
+			Source++;
+		}
+		DestRow += Buffer->Pitch;
+		SourceRow -= Bitmap->Width;
+	}
+}
+
 bool AddCardToSet(card_set* CardSet, card* Card)
 {
 	for(int Index = 0; Index < ARRAY_COUNT(CardSet->Cards); Index++)
@@ -206,6 +382,7 @@ void RemoveCardAndAlign(card_set* CardSet, card* Card)
 }
 
 void GameUpdateAndRender(
+	thread_context* Thread,
 	game_memory* Memory,
 	game_offscreen_buffer* BackBuffer,
 	game_mouse_events* MouseEvents,
@@ -217,15 +394,6 @@ void GameUpdateAndRender(
 	game_state* GameState = (game_state*) Memory->PermanentStorage;
 	if(!Memory->IsInitialized)
 	{
-		char* FileName = __FILE__;
-		debug_read_file_result File = DEBUGPlatformReadEntireFile(FileName);
-		if(File.Contents)
-		{
-			DEBUGPlatformWriteEntireFile(
-				"test.out", File.Contents, File.ContentsSize
-			);
-			DEBUGPlatformFreeFileMemory(File.Contents);
-		}
 		// NOTE: zero out memory at start just in case
 		*GameState = {};
 		// NOTE: right now, we assume everything after game state is just in the arena
@@ -238,8 +406,6 @@ void GameUpdateAndRender(
 		GameState->CurrentPrimaryState = PrimaryUp;
 		GameState->SineT = 0;
 		GameState->ToneHz = 256;
-		GameState->TempBuffer[1024];
-		GameState->TempBufferLength = 0;
 
 		// NOTE: right now, the conversion assumes that the screen origin and 
 		// CONT: the world origin are on the same place on the x axis
@@ -343,6 +509,10 @@ void GameUpdateAndRender(
 		}
 		AlignCardSet(&GameState->Hands[Player_Two]);
 
+		GameState->TestBitmap = DEBUGLoadBmp(
+			Thread, "../data/test/test_hero_front_head.bmp"
+		);
+
 		// TODO: this may be more appropriate in the platform layer
 		Memory->IsInitialized = true;
 	}
@@ -422,9 +592,6 @@ void GameUpdateAndRender(
 			{
 				if(KeyboardEvent->IsDown != KeyboardEvent->WasDown)
 				{
-					GameState->TempBuffer[GameState->TempBufferLength++] = (
-						KeyboardEvent->Code
-					);
 				}
 			}
 
@@ -494,6 +661,16 @@ void GameUpdateAndRender(
 		}
 		Card++;
 	}
+
+#if 0
+	DrawBitmap(
+		BackBuffer,
+		&GameState->TestBitmap,
+		BackBuffer->Width / 2.0f,
+		BackBuffer->Height / 2.0f
+	);
+#endif 
+	
 #if 0
 	uint8_t* Row = (uint8_t*) BackBuffer->Memory;
 	for(int Y = 0; Y < BackBuffer->Height; Y++)

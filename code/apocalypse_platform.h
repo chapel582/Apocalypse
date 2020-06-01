@@ -22,6 +22,11 @@ inline uint32_t SafeTruncateUInt64(uint64_t Value)
 	return (uint32_t) Value;
 }
 
+typedef struct thread_context
+{
+	int PlaceHolder;
+} thread_context;
+
 #if APOCALYPSE_INTERNAL
 // NOTE: These are blocking calls that don't protect against lost data
 // CONT: they are intended for debug purposes only
@@ -31,10 +36,12 @@ struct debug_read_file_result
 	void* Contents;
 };
 
-debug_read_file_result DEBUGPlatformReadEntireFile(char* FileName);
-void DEBUGPlatformFreeFileMemory(void* Memory);
+debug_read_file_result DEBUGPlatformReadEntireFile(
+	thread_context* Thread, char* FileName
+);
+void DEBUGPlatformFreeFileMemory(thread_context* Thread, void* Memory);
 bool DEBUGPlatformWriteEntireFile(
-	char* FileName, void* Memory, uint32_t MemorySize
+	thread_context* Thread, char* FileName, void* Memory, uint32_t MemorySize
 );
 #endif 
 
@@ -118,6 +125,7 @@ struct keyboard_state
 };
 
 void GameUpdateAndRender(
+	thread_context* Thread,
 	game_memory* Memory,
 	game_offscreen_buffer* BackBuffer,
 	game_mouse_events* MouseEvents,

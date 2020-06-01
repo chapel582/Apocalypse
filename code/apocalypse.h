@@ -26,6 +26,13 @@ void* PushSize(memory_arena* Arena, size_t SizeToPush)
 	return Result;
 }
 
+struct loaded_bitmap
+{
+	int32_t Width;
+	int32_t Height;
+	uint32_t* Pixels;
+};
+
 // TODO: move this out to a math file
 // SECTION START: Vector2
 struct vector2
@@ -96,11 +103,10 @@ struct game_state
 {
 	memory_arena Arena;
 
+	loaded_bitmap TestBitmap;
+	
 	float SineT;
 	int ToneHz;
-
-	char TempBuffer[1024];
-	int TempBufferLength;
 
 	mouse_event_type CurrentPrimaryState;
 

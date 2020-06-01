@@ -52,7 +52,9 @@ inline float Win32GetSecondsElapsed(int64_t Start, int64_t End)
 }
 // STOP SECTION: Performance counters
 
-debug_read_file_result DEBUGPlatformReadEntireFile(char* FileName)
+debug_read_file_result DEBUGPlatformReadEntireFile(
+	thread_context* Thread, char* FileName
+)
 {
 	debug_read_file_result Result = {};
 	HANDLE FileHandle = INVALID_HANDLE_VALUE;
@@ -111,7 +113,7 @@ end:
 	return Result;
 }
 
-void DEBUGPlatformFreeFileMemory(void* Memory)
+void DEBUGPlatformFreeFileMemory(thread_context* Thread, void* Memory)
 {
 	if(Memory)
 	{
@@ -120,7 +122,7 @@ void DEBUGPlatformFreeFileMemory(void* Memory)
 }
 
 bool DEBUGPlatformWriteEntireFile(
-	char* FileName, void* Memory, uint32_t MemorySize
+	thread_context* Thread, char* FileName, void* Memory, uint32_t MemorySize
 )
 {
 	bool Result = false;
@@ -551,8 +553,8 @@ int CALLBACK WinMain(
 			win32_window_dimension Dimensions = Win32GetWindowDimension(
 				WindowHandle
 			);
-			GlobalBackBuffer.Width = Dimensions.Width;
-			GlobalBackBuffer.Height = Dimensions.Height;
+			GlobalBackBuffer.Width = 960;
+			GlobalBackBuffer.Height = 540;
 			int BytesPerPixel = 4;
 			GlobalBackBuffer.Pitch = GlobalBackBuffer.Width * BytesPerPixel;
 
@@ -783,7 +785,9 @@ int CALLBACK WinMain(
 				BackBuffer.Height = GlobalBackBuffer.Height;
 				BackBuffer.Pitch = GlobalBackBuffer.Pitch;
 				BackBuffer.BytesPerPixel = GlobalBackBuffer.BytesPerPixel;
+				thread_context Thread;
 				GameUpdateAndRender(
+					&Thread,
 					&GameMemory,
 					&BackBuffer,
 					&MouseEvents,

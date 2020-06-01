@@ -9,6 +9,9 @@ struct bit_scan_result
 bit_scan_result FindLeastSignificantSetBit(uint32_t Input)
 {
 	bit_scan_result Result = {};
+#if COMPILER_MSVC
+	Result.Found = _BitScanForward((unsigned long*) &Result.Index, Value);
+#else
 	uint32_t Mask = 0b1;
 	int BitBeingChecked;
 	for(BitBeingChecked = 0; BitBeingChecked < 32; BitBeingChecked++)
@@ -21,6 +24,7 @@ bit_scan_result FindLeastSignificantSetBit(uint32_t Input)
 		}
 		Mask = Mask << 1;
 	}
+#endif
 	return Result;
 }
 

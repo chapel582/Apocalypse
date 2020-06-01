@@ -239,7 +239,8 @@ void DrawBitmap(
 	int32_t MaxX = RoundFloat32ToInt32(RealX + (float) Bitmap->Width);
 	int32_t MaxY = RoundFloat32ToInt32(RealY + (float) Bitmap->Height);
 
-	// TODO: what's this for?
+	// NOTE: X and Y Offsets are so we start drawing from the correct place if 
+	// CONT: part of the BMP is offscreen
 	int32_t SourceOffsetX = 0;
 	if(MinX < 0)
 	{
@@ -247,7 +248,6 @@ void DrawBitmap(
 		MinX = 0;
 	}
 
-	// TODO: what's this for?
 	int32_t SourceOffsetY = 0;
 	if(MinY < 0)
 	{

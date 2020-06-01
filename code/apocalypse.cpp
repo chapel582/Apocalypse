@@ -266,6 +266,8 @@ void DrawBitmap(
 	}
 
 	// TODO: SourceRow needs to change based on clipping
+	// NOTE: bitmaps are stored upside down
+	// CONT: Bitmap->Width * (Bitmap->Height - 1) means we start at the last row
 	uint32_t* SourceRow = Bitmap->Pixels + Bitmap->Width * (Bitmap->Height - 1);
 	SourceRow += -SourceOffsetY * Bitmap->Width + SourceOffsetX;
 	uint8_t* DestRow = (

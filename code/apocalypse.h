@@ -78,6 +78,96 @@ typedef enum
 	CardSet_Count
 } card_set_type;
 
+struct deck_card;
+struct deck_card
+{
+	int RedCost;
+	int GreenCost;
+	int BlueCost;
+	deck_card* Next;
+	deck_card* Previous;
+};
+
+#define MAX_CARDS_IN_DECK 60
+struct deck
+{
+	deck_card Cards[MAX_CARDS_IN_DECK];
+	// NOTE: these linked lists are doubly linked and circular 
+	deck_card* InDeck;
+	int InDeckLength;
+	deck_card* OutOfDeck;
+	int OutOfDeckLength;
+};
+
+void InOutSwap(
+	deck* Deck,
+	deck_card* DeckCard,
+	deck_card* First,
+	int* ToIncrement,
+	int* ToDecrement
+)
+{
+	deck_card* OldPrevious = DeckCard->Previous;
+	deck_card* OldNext = DeckCard->Next;
+
+	if(OldPrevious != NULL)
+	{
+		OldPrevious->Next = OldNext;		
+	}
+	if(OldNext != NULL)
+	{
+		OldNext->Previous = OldPrevious;
+	}
+	*ToDecrement--;
+
+	if(First != NULL)
+	{
+		deck_card* OldLast = First->Previous;
+		if(OldLast != NULL)
+		{
+			OldLast->Next = DeckCard;
+		}
+		DeckCard->Previous = OldLast;
+	}
+	else
+	{
+		DeckCard->Previous = NULL;
+	}
+
+	DeckCard->Next = First;
+	*ToIncrement++;
+}
+
+void InDeckToOutDeck(deck* Deck, deck_card* DeckCard)
+{
+	if(Deck->InDeck == DeckCard)
+	{
+		Deck->InDeck = DeckCard->Next;
+	}
+	InOutSwap(
+		Deck,
+		DeckCard,
+		Deck->OutOfDeck,
+		&Deck->OutOfDeckLength,
+		&Deck->InDeckLength
+	);
+}
+
+void OutDeckToInDeck(deck* Deck, deck_card* DeckCard)
+{
+	if(Deck->OutOfDeck == DeckCard)
+	{
+		Deck->OutOfDeck = DeckCard->Next;
+	}
+	InOutSwap(
+		Deck,
+		DeckCard,
+		Deck->InDeck,
+		&Deck->InDeckLength,
+		&Deck->OutOfDeckLength
+	);
+}
+
 struct card
 {
 	vector2 Pos; // NOTE: Bottom left
@@ -86,6 +176,9 @@ struct card
 	float Red;
 	float Green;
 	float Blue;
+	int RedCost;
+	int GreenCost;
+	int BlueCost;
 	bool Active;
 	player_e Owner;
 };
@@ -114,6 +207,7 @@ struct game_state
 	
 	card* Cards;
 	int MaxCards;
+	deck* Decks;
 	card_set* Hands;
 	card_set* Tableaus;
 };

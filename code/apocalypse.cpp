@@ -383,6 +383,55 @@ void RemoveCardAndAlign(card_set* CardSet, card* Card)
 	}
 }
 
+void DrawFullHand(
+	game_state* GameState, player_e Player, float CardWidth, float CardHeight
+)
+{
+	deck* Deck = &GameState->Decks[Player];
+	for(
+		int CardIndex = 0;
+		CardIndex < MAX_CARDS_PER_SET;
+		CardIndex++
+	)
+	{
+		card* Card = NULL;
+		for(
+			int SearchIndex = CardIndex;
+			SearchIndex < GameState->MaxCards;
+			SearchIndex++
+		)
+		{
+			Card = &GameState->Cards[SearchIndex];
+			if(!Card->Active)
+			{
+				break;
+			}
+		}
+		ASSERT(Card != NULL);
+		ASSERT(!Card->Active);
+
+		Card->Dim.X = CardWidth;
+		Card->Dim.Y = CardHeight;
+		Card->TimeLeft = 10.0f;
+		Card->Active = true;
+		Card->Red = 1.0f;
+		Card->Green = 1.0f;
+		Card->Blue = 1.0f;
+		
+		deck_card* CardToDraw = Deck->OutOfDeck;
+		ASSERT(CardToDraw != NULL);	
+		Card->RedCost = CardToDraw->RedCost;
+		Card->GreenCost = CardToDraw->GreenCost;
+		Card->BlueCost = CardToDraw->BlueCost;
+		Card->Owner = Player;
+		AddCardToSet(&GameState->Hands[Player], Card);
+
+		OutDeckToInDeck(Deck, CardToDraw);
+		Card++;
+	}
+	AlignCardSet(&GameState->Hands[Player]);
+}
+
 void GameUpdateAndRender(
 	thread_context* Thread,
 	game_memory* Memory,
@@ -428,6 +477,47 @@ void GameUpdateAndRender(
 		GameState->Cards = PushArray(
 			&GameState->Arena, GameState->MaxCards, card
 		);
+		{
+			GameState->Decks = PushArray(&GameState->Arena, Player_Count, deck);
+			for(
+				int PlayerIndex = Player_One;
+				PlayerIndex < Player_Count;
+				PlayerIndex++
+			)
+			{
+				deck* Deck = &GameState->Decks[PlayerIndex];
+				*Deck = {};
+
+				deck_card* DeckCard = &Deck->Cards[0];
+				*DeckCard = {};
+				DeckCard->RedCost = 0;
+				DeckCard->GreenCost = 0;
+				DeckCard->BlueCost = 0;
+				DeckCard->Next = NULL;
+				DeckCard->Previous = NULL;
+				Deck->OutOfDeck = DeckCard;
+				Deck->OutOfDeckLength++;
+				for(
+					int CardIndex = 1;
+					CardIndex < MAX_CARDS_IN_DECK;
+					CardIndex++
+				)
+				{
+					deck_card* PrevDeckCard = &Deck->Cards[CardIndex - 1];
+					DeckCard = &Deck->Cards[CardIndex];
+					*DeckCard = {};
+					DeckCard->RedCost = CardIndex;
+					DeckCard->GreenCost = 2 * CardIndex;
+					DeckCard->BlueCost = 3 * CardIndex;
+					DeckCard->Next = NULL;
+					DeckCard->Previous = PrevDeckCard;
+					PrevDeckCard->Next = DeckCard;
+					Deck->OutOfDeckLength++;
+				}
+				DeckCard->Next = Deck->OutOfDeck;
+			}
+		}
+
 		GameState->Hands = PushArray(&GameState->Arena, Player_Count, card_set);
 		GameState->Tableaus = PushArray(
 			&GameState->Arena, Player_Count, card_set
@@ -471,45 +561,8 @@ void GameUpdateAndRender(
 		);
 		CardSet->CardWidth = CardWidth;
 		
-		card* Card = &GameState->Cards[0];
-		int CardIndex;
-		for(
-			CardIndex = 0;
-			CardIndex < MAX_CARDS_PER_SET;
-			CardIndex++
-		)
-		{
-			Card->Dim.X = CardWidth;
-			Card->Dim.Y = CardHeight;
-			Card->TimeLeft = 10.0f;
-			Card->Active = true;
-			Card->Red = 1.0f;
-			Card->Green = 1.0f;
-			Card->Blue = 1.0f;
-			Card->Owner = Player_One;
-			AddCardToSet(&GameState->Hands[Player_One], Card);
-			Card++;
-		}
-		AlignCardSet(&GameState->Hands[Player_One]);
-
-		for(
-			CardIndex = 0;
-			CardIndex < MAX_CARDS_PER_SET;
-			CardIndex++
-		)
-		{
-			Card->Dim.X = CardWidth;
-			Card->Dim.Y = CardHeight;
-			Card->TimeLeft = 10.0f;
-			Card->Active = true;
-			Card->Red = 1.0f;
-			Card->Green = 1.0f;
-			Card->Blue = 1.0f;
-			Card->Owner = Player_Two;
-			AddCardToSet(&GameState->Hands[Player_Two], Card);
-			Card++;
-		}
-		AlignCardSet(&GameState->Hands[Player_Two]);
+		DrawFullHand(GameState, Player_One, CardWidth, CardHeight);
+		DrawFullHand(GameState, Player_Two, CardWidth, CardHeight);
 
 		GameState->TestBitmap = DEBUGLoadBmp(
 			Thread, "../data/test/test_hero_front_head.bmp"

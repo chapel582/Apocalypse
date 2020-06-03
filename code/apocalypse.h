@@ -1,6 +1,7 @@
 #ifndef APOCALYPSE_H
 
 #include "apocalypse_platform.h"
+#include "apocalypse_vector.h"
 
 struct memory_arena
 {
@@ -32,23 +33,6 @@ struct loaded_bitmap
 	int32_t Height;
 	uint32_t* Pixels;
 };
-
-// TODO: move this out to a math file
-// SECTION START: Vector2
-struct vector2
-{
-	float X;
-	float Y;
-};
-
-vector2 Vector2(float X, float Y)
-{
-	vector2 Result = {};
-	Result.X = X;
-	Result.Y = Y;
-	return Result;
-}
-// SECTION STOP: Vector2
 
 struct world_screen_converter
 {
@@ -168,10 +152,23 @@ void OutDeckToInDeck(deck* Deck, deck_card* DeckCard)
 	);
 }
 
+struct rectangle
+{
+	vector2 Min; // NOTE: Bottom left
+	vector2 Dim;
+};
+
+inline rectangle MakeRectangle(vector2 Min, vector2 Dim)
+{
+	rectangle Result;
+	Result.Min = Min;
+	Result.Dim = Dim;
+	return Result;
+}
+
 struct card
 {
-	vector2 Pos; // NOTE: Bottom left
-	vector2 Dim;
+	rectangle Rectangle;
 	float TimeLeft;
 	float Red;
 	float Green;

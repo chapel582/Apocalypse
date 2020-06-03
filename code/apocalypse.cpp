@@ -140,31 +140,27 @@ vector2 WorldToScreenDim(world_screen_converter Converter, vector2 WorldDim)
 	return Result;
 }
 
-bool PointInRectangle(
-	vector2 Point, float MinX, float MinY, float MaxX, float MaxY
-)
+bool PointInRectangle(vector2 Point, rectangle Rectangle)
 {
+	vector2 Max = Rectangle.Min + Rectangle.Dim; 
 	return (
-		(Point.X >= MinX && Point.X < MaxX) && 
-		(Point.Y >= MinY && Point.Y < MaxY)
+		(Point.X >= Rectangle.Min.X && Point.X < Max.X) && 
+		(Point.Y >= Rectangle.Min.Y && Point.Y < Max.Y)
 	);
 }
 
 void DrawRectangle(
 	game_offscreen_buffer* BackBuffer, 
-	float MinXF,
-	float MinYF,
-	float MaxXF,
-	float MaxYF,
+	rectangle Rectangle,
 	float Red, 
 	float Green, 
 	float Blue
 )
 {
-	int32_t MinX = RoundFloat32ToInt32(MinXF);
-	int32_t MinY = RoundFloat32ToInt32(MinYF);
-	int32_t MaxX = RoundFloat32ToInt32(MaxXF);
-	int32_t MaxY = RoundFloat32ToInt32(MaxYF);
+	int32_t MinX = RoundFloat32ToInt32(Rectangle.Min.X);
+	int32_t MinY = RoundFloat32ToInt32(Rectangle.Min.Y);
+	int32_t MaxX = RoundFloat32ToInt32(Rectangle.Min.X + Rectangle.Dim.X);
+	int32_t MaxY = RoundFloat32ToInt32(Rectangle.Min.Y + Rectangle.Dim.Y);
 
 	if(MinX < 0)
 	{
@@ -346,8 +342,8 @@ void AlignCardSet(card_set* CardSet)
 		card* Card = CardSet->Cards[Index];
 		if(Card != NULL && Card->Active)
 		{
-			Card->Pos.X = CurrentXPos;
-			Card->Pos.Y = CardSet->YPos;
+			Card->Rectangle.Min.X = CurrentXPos;
+			Card->Rectangle.Min.Y = CardSet->YPos;
 			CurrentXPos += DistanceBetweenCardPos;
 		}
 	}
@@ -410,8 +406,8 @@ void DrawFullHand(
 		ASSERT(Card != NULL);
 		ASSERT(!Card->Active);
 
-		Card->Dim.X = CardWidth;
-		Card->Dim.Y = CardHeight;
+		Card->Rectangle.Dim.X = CardWidth;
+		Card->Rectangle.Dim.Y = CardHeight;
 		Card->TimeLeft = 10.0f;
 		Card->Active = true;
 		Card->Red = 1.0f;
@@ -609,13 +605,7 @@ void GameUpdateAndRender(
 				{
 					if(
 						Card->Active &&
-						PointInRectangle(
-							MouseEventWorldPos,
-							Card->Pos.X,
-							Card->Pos.Y,
-							Card->Pos.X + Card->Dim.X,
-							Card->Pos.Y + Card->Dim.Y
-						)
+						PointInRectangle(MouseEventWorldPos, Card->Rectangle)
 					)
 					{
 						RemoveCardAndAlign(
@@ -680,10 +670,10 @@ void GameUpdateAndRender(
 	// SECTION START: Render
 	DrawRectangle(
 		BackBuffer,
-		0.0f,
-		0.0f,
-		(float) BackBuffer->Width,
-		(float) BackBuffer->Height,
+		MakeRectangle(
+			Vector2(0.0f, 0.0f),
+			Vector2((float) BackBuffer->Width, (float) BackBuffer->Height)
+		),
 		1.0f,
 		0.0f,
 		0.0f
@@ -695,20 +685,18 @@ void GameUpdateAndRender(
 		if(Card->Active)
 		{
 			vector2 WorldTopLeft = Vector2(
-				Card->Pos.X, Card->Pos.Y + Card->Dim.Y
+				Card->Rectangle.Min.X,
+				Card->Rectangle.Min.Y + Card->Rectangle.Dim.Y
 			);
 			vector2 ScreenPos = WorldToScreenPos(
 				GameState->WorldScreenConverter, WorldTopLeft
 			);
 			vector2 ScreenDim = WorldToScreenDim(
-				GameState->WorldScreenConverter, Card->Dim
+				GameState->WorldScreenConverter, Card->Rectangle.Dim
 			);
 			DrawRectangle(
 				BackBuffer,
-				ScreenPos.X,
-				ScreenPos.Y,
-				ScreenPos.X + ScreenDim.X,
-				ScreenPos.Y + ScreenDim.Y,
+				MakeRectangle(ScreenPos, ScreenDim),
 				Card->Red,
 				Card->Green,
 				Card->Blue

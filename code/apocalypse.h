@@ -83,6 +83,19 @@ struct deck
 	int OutOfDeckLength;
 };
 
+deck_card* GetDeckCard(
+	deck_card* DeckCardListHead, int DeckCardListLen, int Index
+)
+{
+	ASSERT(Index < DeckCardListLen);
+	deck_card* DeckCard = DeckCardListHead;
+	for(int Pass = 0; Pass < Index; Pass++)
+	{
+		DeckCard = DeckCard->Next;
+	}
+	return DeckCard;
+}
+
 void InOutSwap(
 	deck* Deck,
 	deck_card* DeckCard,
@@ -96,13 +109,13 @@ void InOutSwap(
 
 	if(OldPrevious != NULL)
 	{
-		OldPrevious->Next = OldNext;		
+		OldPrevious->Next = OldNext;
 	}
 	if(OldNext != NULL)
 	{
 		OldNext->Previous = OldPrevious;
 	}
-	*ToDecrement--;
+	(*ToDecrement)--;
 
 	if(First != NULL)
 	{
@@ -119,7 +132,7 @@ void InOutSwap(
 	}
 
 	DeckCard->Next = First;
-	*ToIncrement++;
+	(*ToIncrement)++;
 }
 
 void InDeckToOutDeck(deck* Deck, deck_card* DeckCard)

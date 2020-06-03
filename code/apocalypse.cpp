@@ -3,6 +3,7 @@
 #include "apocalypse_intrinsics.h"
 
 #include <math.h>
+#include <stdlib.h>
 
 #define Pi32 3.14159265359f
 
@@ -422,7 +423,7 @@ void DrawFullHand(
 		Card->Owner = Player;
 		AddCardToSet(&GameState->Hands[Player], Card);
 
-		OutDeckToInDeck(Deck, CardToDraw);
+		InDeckToOutDeck(Deck, CardToDraw);
 		Card++;
 	}
 	AlignCardSet(&GameState->Hands[Player]);
@@ -441,6 +442,11 @@ void GameUpdateAndRender(
 	game_state* GameState = (game_state*) Memory->PermanentStorage;
 	if(!Memory->IsInitialized)
 	{
+#if !APOCALYPSE_INTERNAL
+		// NOTE: only init rand tools if we're in a release build
+		srand();
+#endif
+
 		// NOTE: zero out memory at start just in case
 		*GameState = {};
 		// NOTE: right now, we assume everything after game state is just in the arena
@@ -512,6 +518,46 @@ void GameUpdateAndRender(
 				}
 				DeckCard->Next = Deck->OutOfDeck;
 			}
+
+			// SECTION START: Shuffle deck
+			for(
+				int PlayerIndex = Player_One;
+				PlayerIndex < Player_Count;
+				PlayerIndex++
+			)
+			{
+				deck* Deck = &GameState->Decks[PlayerIndex];
+
+				while(Deck->OutOfDeckLength > 0)
+				{
+					int DeckCardIndex = rand() % Deck->OutOfDeckLength;
+					deck_card* CardToShuffle = GetDeckCard(
+						Deck->OutOfDeck, Deck->OutOfDeckLength, DeckCardIndex
+					);
+					OutDeckToInDeck(Deck, CardToShuffle);
+				}
+
+				deck_card* DeckCard = &Deck->Cards[0];
+				for(
+					int CardIndex = 1;
+					CardIndex < MAX_CARDS_IN_DECK;
+					CardIndex++
+				)
+				{
+					deck_card* PrevDeckCard = &Deck->Cards[CardIndex - 1];
+					DeckCard = &Deck->Cards[CardIndex];
+					*DeckCard = {};
+					DeckCard->RedCost = CardIndex;
+					DeckCard->GreenCost = 2 * CardIndex;
+					DeckCard->BlueCost = 3 * CardIndex;
+					DeckCard->Next = NULL;
+					DeckCard->Previous = PrevDeckCard;
+					PrevDeckCard->Next = DeckCard;
+					Deck->OutOfDeckLength++;
+				}
+				DeckCard->Next = Deck->OutOfDeck;
+			}
+			// SECTION STOP: Shuffle deck
 		}
 
 		GameState->Hands = PushArray(&GameState->Arena, Player_Count, card_set);

@@ -460,6 +460,8 @@ void GameUpdateAndRender(
 		GameState->SineT = 0;
 		GameState->ToneHz = 256;
 
+		GameState->CameraPos = Vector2(0.0f, 0.0f);
+
 		// NOTE: right now, the conversion assumes that the screen origin and 
 		// CONT: the world origin are on the same place on the x axis
 		world_screen_converter* WorldScreenConverter = (
@@ -730,12 +732,12 @@ void GameUpdateAndRender(
 	{
 		if(Card->Active)
 		{
-			vector2 WorldTopLeft = Vector2(
-				Card->Rectangle.Min.X,
-				Card->Rectangle.Min.Y + Card->Rectangle.Dim.Y
-			);
+			// NOTE: get card's world position relative to camera
+			// CONT: then convert position relative to camera to screen space 
+			vector2 WorldTopLeft = GetTopLeft(Card->Rectangle);
+			vector2 CameraTopLeft = WorldTopLeft - GameState->CameraPos;
 			vector2 ScreenPos = WorldToScreenPos(
-				GameState->WorldScreenConverter, WorldTopLeft
+				GameState->WorldScreenConverter, CameraTopLeft
 			);
 			vector2 ScreenDim = WorldToScreenDim(
 				GameState->WorldScreenConverter, Card->Rectangle.Dim

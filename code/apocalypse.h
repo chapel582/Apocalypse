@@ -167,7 +167,7 @@ void OutDeckToInDeck(deck* Deck, deck_card* DeckCard)
 
 struct rectangle
 {
-	vector2 Min; // NOTE: Bottom left
+	vector2 Min; // NOTE: Bottom left by convention
 	vector2 Dim;
 };
 
@@ -176,6 +176,14 @@ inline rectangle MakeRectangle(vector2 Min, vector2 Dim)
 	rectangle Result;
 	Result.Min = Min;
 	Result.Dim = Dim;
+	return Result;
+}
+
+inline vector2 GetTopLeft(rectangle Rectangle)
+{
+	vector2 Result;
+	Result.X = Rectangle.Min.X;
+	Result.Y = Rectangle.Min.Y + Rectangle.Dim.Y;
 	return Result;
 }
 
@@ -214,7 +222,10 @@ struct game_state
 	mouse_event_type CurrentPrimaryState;
 
 	world_screen_converter WorldScreenConverter;
-	
+	// NOTE: CameraPos is where the bottom left of camera rectangle is in the
+	// CONT: world
+	vector2 CameraPos; 
+
 	card* Cards;
 	int MaxCards;
 	deck* Decks;

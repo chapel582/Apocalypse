@@ -27,6 +27,16 @@ void* PushSize(memory_arena* Arena, size_t SizeToPush)
 	return Result;
 }
 
+inline uint8_t* GetEndOfArena(memory_arena* Arena)
+{
+	return Arena->Base + Arena->TotalSize;
+}
+
+inline void ResetMemArena(memory_arena* Arena)
+{
+	Arena->Used = 0;
+}
+
 struct loaded_bitmap
 {
 	int32_t Width;
@@ -212,14 +222,23 @@ struct card_set
 
 struct game_state
 {
+	// NOTE: Arena is just for permanent things that can/should be determined
+	// CONT: at run time
 	memory_arena Arena;
+	// NOTE: TransientArena is for things that last longer than a frame but 
+	// CONT: can be cleaned up in a big batch. stuff like composite bitmaps
+	memory_arena TransientArena;
+	// NOTE: FrameArena is just for things that will be dead by EOF
+	memory_arena FrameArena;
+	// NOTE: render arena is just for the renderer
+	memory_arena RenderArena;
 
+	// TODO: delete test code below
 	loaded_bitmap TestBitmap;
-	
 	float SineT;
 	int ToneHz;
-
 	mouse_event_type CurrentPrimaryState;
+	// TODO: done with test code here
 
 	world_screen_converter WorldScreenConverter;
 	// NOTE: CameraPos is where the bottom left of camera rectangle is in the

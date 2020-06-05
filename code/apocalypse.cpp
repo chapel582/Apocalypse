@@ -456,6 +456,24 @@ void GameUpdateAndRender(
 			((uint8_t*) Memory->PermanentStorage) + sizeof(game_state)
 		);
 
+		// TODO: do we want to be extra and make sure we pick up that last byte?
+		size_t TransientStorageDivision = Memory->TransientStorageSize / 3;
+		InitMemArena(
+			&GameState->TransientArena,
+			TransientStorageDivision,
+			(uint8_t*) Memory->TransientStorage
+		);
+		InitMemArena(
+			&GameState->RenderArena,
+			TransientStorageDivision,
+			GetEndOfArena(&GameState->TransientArena)
+		);
+		InitMemArena(
+			&GameState->FrameArena,
+			TransientStorageDivision,
+			GetEndOfArena(&GameState->RenderArena)
+		);
+
 		GameState->CurrentPrimaryState = PrimaryUp;
 		GameState->SineT = 0;
 		GameState->ToneHz = 256;
@@ -779,7 +797,9 @@ void GameUpdateAndRender(
 		Row += BackBuffer->Pitch;
 	}
 #endif
+	ResetMemArena(&GameState->RenderArena);
 	// SECTION STOP: Render
+	ResetMemArena(&GameState->FrameArena);
 }
 
 void GameFillSound(game_memory* Memory, game_sound_output_buffer* SoundBuffer)

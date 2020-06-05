@@ -2,153 +2,16 @@
 #include "apocalypse_platform.h"
 #include "apocalypse_intrinsics.h"
 
+#include "apocalypse_render_group.h"
+#include "apocalypse_render_group.cpp"
+
+#include "apocalypse_bitmap.h"
+#include "apocalypse_bitmap.cpp"
+
 #include <math.h>
 #include <stdlib.h>
 
 #define Pi32 3.14159265359f
-
-int32_t RoundFloat32ToInt32(float Input)
-{
-	return (int32_t) (Input + 0.5f);
-}
-
-#pragma pack(push, 1)
-struct bitmap_header
-{
-	uint16_t FileType;
-    uint32_t FileSize;
-    uint16_t Reserved1;
-    uint16_t Reserved2;
-    uint32_t BitmapOffset;
-    uint32_t BitmapSize;
-    int32_t Width;
-    int32_t Height;
-    uint16_t Planes;
-    uint16_t BitsPerPixel;
-    uint32_t Compression;
-    uint32_t SizeOfBitmap;
-    int32_t HorzResolution;
-    int32_t VertResolution;
-    uint32_t ColorsUsed;
-    uint32_t ColorsImportant;
-
-    uint32_t RedMask;
-    uint32_t GreenMask;
-    uint32_t BlueMask;
-};
-#pragma pack(pop)
-
-loaded_bitmap DEBUGLoadBmp(thread_context* Thread, char* FileName)
-{
-	// NOTE: this is not complete BMP loading code. Can't handle negative height
-	// CONT: or compression
-
-	loaded_bitmap Result = {};
-	debug_read_file_result ReadResult = DEBUGPlatformReadEntireFile(
-		Thread, FileName
-	);
-	if(ReadResult.ContentsSize == 0)
-	{
-		goto end;
-	}
-
-	bitmap_header* Header = (bitmap_header*) ReadResult.Contents;
-	uint32_t* Pixels = (uint32_t*) (
-		(uint8_t*) ReadResult.Contents + Header->BitmapOffset
-	);
-	Result.Pixels = Pixels;
-	Result.Width = Header->Width;
-	Result.Height = Header->Height;
-
-	ASSERT(Header->Compression == 3);
-
-	// NOTE: we use the masks to figure out how to transform our pixels into 
-	// CONT: ARGB format
-	uint32_t RedMask = Header->RedMask;
-	uint32_t GreenMask = Header->GreenMask;
-	uint32_t BlueMask = Header->BlueMask;
-	// NOTE: AlphaMask is the bits that aren't in the color channels
-	uint32_t AlphaMask = ~(RedMask | GreenMask | BlueMask);
-
-	// NOTE: need to figure out how much to shift to transform stuff
-	bit_scan_result RedShift = FindLeastSignificantSetBit(RedMask);
-	bit_scan_result GreenShift = FindLeastSignificantSetBit(GreenMask);
-	bit_scan_result BlueShift = FindLeastSignificantSetBit(BlueMask);
-	bit_scan_result AlphaShift = FindLeastSignificantSetBit(AlphaMask);
-
-	ASSERT(RedShift.Found);
-	ASSERT(GreenShift.Found);
-	ASSERT(BlueShift.Found);
-	ASSERT(AlphaShift.Found);
-
-	uint32_t* SourceDest = Pixels;
-	for(int32_t Y = 0; Y < Header->Height; Y++)
-	{
-		for(int32_t X = 0; X < Header->Width; X++)
-		{
-			uint32_t Original = *SourceDest;
-			*SourceDest++ = (
-				(((Original >> AlphaShift.Index) & 0xFF) << 24) |
-				(((Original >> RedShift.Index) & 0xFF) << 16) |
-				(((Original >> GreenShift.Index) & 0xFF) << 8) |
-				((Original >> BlueShift.Index) & 0xFF)
-			);
-		}
-	}
-
-end:
-	return Result;
-}
-
-vector2 ScreenToWorldPos(
-	world_screen_converter Converter, uint32_t X, uint32_t Y
-)
-{
-	vector2 Result = {};
-	Result.X = Converter.ScreenToWorld * X;
-	Result.Y = (
-		(-1.0f * Converter.ScreenToWorld * Y) + Converter.WorldYOffset
-	);
-	return Result;
-}
-
-vector2 WorldToScreenPos(
-	world_screen_converter Converter, vector2 WorldPosition
-)
-{
-	vector2 Result = {};
-	Result.X = Converter.WorldToScreen * WorldPosition.X;
-	Result.Y = (
-		(-1.0f * Converter.WorldToScreen * WorldPosition.Y) + 
-		Converter.ScreenYOffset
-	);
-	return Result;
-}
-
-vector2 ScreenToWorldDim(world_screen_converter Converter, vector2 ScreenDim)
-{
-	vector2 Result = {};
-	Result.X = Converter.ScreenToWorld * ScreenDim.X;
-	Result.Y = Converter.ScreenToWorld * ScreenDim.Y;
-	return Result;
-}
-
-vector2 WorldToScreenDim(world_screen_converter Converter, vector2 WorldDim)
-{
-	vector2 Result = {};
-	Result.X = Converter.WorldToScreen * WorldDim.X;
-	Result.Y = Converter.WorldToScreen * WorldDim.Y;
-	return Result;
-}
-
-bool PointInRectangle(vector2 Point, rectangle Rectangle)
-{
-	vector2 Max = Rectangle.Min + Rectangle.Dim; 
-	return (
-		(Point.X >= Rectangle.Min.X && Point.X < Max.X) && 
-		(Point.Y >= Rectangle.Min.Y && Point.Y < Max.Y)
-	);
-}
 
 void DrawRectangle(
 	game_offscreen_buffer* BackBuffer, 
@@ -411,9 +274,11 @@ void DrawFullHand(
 		Card->Rectangle.Dim.Y = CardHeight;
 		Card->TimeLeft = 10.0f;
 		Card->Active = true;
-		Card->Red = 1.0f;
-		Card->Green = 1.0f;
-		Card->Blue = 1.0f;
+		vector4* Color = &Card->Color;
+		Color->A = 1.0f;
+		Color->R = 1.0f;
+		Color->G = 1.0f;
+		Color->B = 1.0f;
 		
 		deck_card* CardToDraw = Deck->OutOfDeck;
 		ASSERT(CardToDraw != NULL);	
@@ -474,16 +339,15 @@ void GameUpdateAndRender(
 			GetEndOfArena(&GameState->RenderArena)
 		);
 
-		GameState->CurrentPrimaryState = PrimaryUp;
-		GameState->SineT = 0;
-		GameState->ToneHz = 256;
+		render_group* RenderGroup = &GameState->RenderGroup;
+		*RenderGroup = {};
+		RenderGroup->Arena = &GameState->RenderArena;
 
-		GameState->CameraPos = Vector2(0.0f, 0.0f);
-
+		RenderGroup->DefaultBasis.P = Vector3(0.0f, 0.0f, 0.0f);
 		// NOTE: right now, the conversion assumes that the screen origin and 
 		// CONT: the world origin are on the same place on the x axis
 		world_screen_converter* WorldScreenConverter = (
-			&GameState->WorldScreenConverter
+			&RenderGroup->WorldScreenConverter
 		);
 		WorldScreenConverter->ScreenToWorld = 1.0f;
 		WorldScreenConverter->WorldToScreen = (
@@ -494,6 +358,11 @@ void GameUpdateAndRender(
 			WorldScreenConverter->ScreenToWorld * 
 			WorldScreenConverter->ScreenYOffset
 		);
+		RenderGroup->CameraPos = Vector2(0.0f, 0.0f);
+
+		GameState->CurrentPrimaryState = PrimaryUp;
+		GameState->SineT = 0;
+		GameState->ToneHz = 256;
 
 		GameState->MaxCards = Player_Count * CardSet_Count * MAX_CARDS_PER_SET;
 		GameState->Cards = PushArray(
@@ -648,7 +517,9 @@ void GameUpdateAndRender(
 		{
 			// TODO: remove last action wins stuff from 
 			// NOTE: testing platform layer mouse stuff
-			game_mouse_event* MouseEvent = &MouseEvents->Events[MouseEventIndex];
+			game_mouse_event* MouseEvent = (
+				&MouseEvents->Events[MouseEventIndex]
+			);
 
 			if(MouseEvent->UserEventIndex != UserEventIndex)
 			{
@@ -656,7 +527,7 @@ void GameUpdateAndRender(
 			}
 
 			vector2 MouseEventWorldPos = ScreenToWorldPos(
-				GameState->WorldScreenConverter,
+				GameState->RenderGroup.WorldScreenConverter,
 				MouseEvent->XPos,
 				MouseEvent->YPos
 			);
@@ -712,6 +583,8 @@ void GameUpdateAndRender(
 	// SECTION STOP: User input
 
 	// SECTION START: Updating game state
+	// NOTE: not sure if we should finish all updates and then push to the 
+	// CONT: render group
 	{
 		card* Card = &GameState->Cards[0];
 		for(
@@ -727,6 +600,7 @@ void GameUpdateAndRender(
 				{
 					Card->Active = false;
 				}
+				PushRect(&GameState->RenderGroup, Card->Rectangle, Card->Color);
 			}
 			Card++;
 		}
@@ -745,58 +619,40 @@ void GameUpdateAndRender(
 		0.0f
 	);
 
-	card* Card = &GameState->Cards[0];
-	for(int CardIndex = 0; CardIndex < GameState->MaxCards; CardIndex++)
 	{
-		if(Card->Active)
+		render_group* RenderGroup = &GameState->RenderGroup;
+		for(
+			visible_piece* Piece = (visible_piece*) RenderGroup->Arena->Base;
+			Piece < (RenderGroup->LastPiece + 1);
+			Piece++
+		)
 		{
-			// NOTE: get card's world position relative to camera
-			// CONT: then convert position relative to camera to screen space 
-			vector2 WorldTopLeft = GetTopLeft(Card->Rectangle);
-			vector2 CameraTopLeft = WorldTopLeft - GameState->CameraPos;
-			vector2 ScreenPos = WorldToScreenPos(
-				GameState->WorldScreenConverter, CameraTopLeft
-			);
-			vector2 ScreenDim = WorldToScreenDim(
-				GameState->WorldScreenConverter, Card->Rectangle.Dim
-			);
-			DrawRectangle(
-				BackBuffer,
-				MakeRectangle(ScreenPos, ScreenDim),
-				Card->Red,
-				Card->Green,
-				Card->Blue
-			);
+			switch(Piece->Type)
+			{
+				case(PieceType_Rectangle):
+				{
+					DrawRectangle(
+						BackBuffer,
+						MakeRectangle(Piece->Position, Piece->Dim),
+						Piece->Color.R,
+						Piece->Color.G,
+						Piece->Color.B
+					);
+					break;
+				}
+				case(PieceType_Bitmap):
+				{
+					DrawBitmap(
+						BackBuffer,
+						Piece->Bitmap,
+						Piece->Position.X,
+						Piece->Position.Y
+					);
+					break;
+				}
+			}
 		}
-		Card++;
 	}
-
-#if 0
-	DrawBitmap(
-		BackBuffer,
-		&GameState->TestBitmap,
-		BackBuffer->Width / 2.0f,
-		BackBuffer->Height / 2.0f
-	);
-#endif 
-	
-#if 0
-	uint8_t* Row = (uint8_t*) BackBuffer->Memory;
-	for(int Y = 0; Y < BackBuffer->Height; Y++)
-	{
-		uint32_t* Pixel = (uint32_t*) Row;
-		for(int X = 0; X < BackBuffer->Width; X++)
-		{
-			// *Pixel = 0x000000;
-			uint8_t* ColorChannel = (uint8_t*) Pixel;
-			*ColorChannel++ = (uint8_t) (X + GameState->XOffset);
-			*ColorChannel++ = (uint8_t) (Y + GameState->YOffset);
-			*ColorChannel++ = 0;
-			Pixel++;
-		}
-		Row += BackBuffer->Pitch;
-	}
-#endif
 	ResetMemArena(&GameState->RenderArena);
 	// SECTION STOP: Render
 	ResetMemArena(&GameState->FrameArena);

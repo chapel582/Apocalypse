@@ -2,59 +2,10 @@
 
 #include "apocalypse_platform.h"
 #include "apocalypse_vector.h"
-
-struct memory_arena
-{
-	size_t TotalSize;
-	uint8_t* Base;
-	size_t Used;
-};
-
-void InitMemArena(memory_arena* Arena, size_t TotalSize, uint8_t* Base)
-{
-	Arena->TotalSize = TotalSize;
-	Arena->Base = Base;
-	Arena->Used = 0;
-}
-
-#define PushStruct(Arena, Type) (Type*) PushSize(Arena, sizeof(Type))
-#define PushArray(Arena, Count, Type) (Type*) PushSize(Arena, (Count) * sizeof(Type))
-void* PushSize(memory_arena* Arena, size_t SizeToPush)
-{
-	void* Result = Arena->Base + Arena->Used;
-	Arena->Used += SizeToPush;
-	ASSERT(Arena->Used <= Arena->TotalSize);
-	return Result;
-}
-
-inline uint8_t* GetEndOfArena(memory_arena* Arena)
-{
-	return Arena->Base + Arena->TotalSize;
-}
-
-inline void ResetMemArena(memory_arena* Arena)
-{
-	Arena->Used = 0;
-}
-
-struct loaded_bitmap
-{
-	int32_t Width;
-	int32_t Height;
-	uint32_t* Pixels;
-};
-
-struct world_screen_converter
-{
-	float ScreenToWorld;
-	float WorldToScreen;
-	// NOTE: ScreenYOffset is where the screen origin is relative to the 
-	// CONT: World origin but in pixels
-	float ScreenYOffset; 
-	// NOTE: WorldYOffset is where the world origin is relative to the Screen 
-	// CONT: origin but in world units
-	float WorldYOffset;
-};
+#include "apocalypse_rectangle.h"
+#include "apocalypse_memory_arena.h"
+#include "apocalypse_bitmap.h"
+#include "apocalypse_render_group.h"
 
 #define MAX_CARDS_PER_SET 7
 
@@ -175,35 +126,11 @@ void OutDeckToInDeck(deck* Deck, deck_card* DeckCard)
 	);
 }
 
-struct rectangle
-{
-	vector2 Min; // NOTE: Bottom left by convention
-	vector2 Dim;
-};
-
-inline rectangle MakeRectangle(vector2 Min, vector2 Dim)
-{
-	rectangle Result;
-	Result.Min = Min;
-	Result.Dim = Dim;
-	return Result;
-}
-
-inline vector2 GetTopLeft(rectangle Rectangle)
-{
-	vector2 Result;
-	Result.X = Rectangle.Min.X;
-	Result.Y = Rectangle.Min.Y + Rectangle.Dim.Y;
-	return Result;
-}
-
 struct card
 {
 	rectangle Rectangle;
 	float TimeLeft;
-	float Red;
-	float Green;
-	float Blue;
+	vector4 Color;
 	int RedCost;
 	int GreenCost;
 	int BlueCost;
@@ -233,17 +160,14 @@ struct game_state
 	// NOTE: render arena is just for the renderer
 	memory_arena RenderArena;
 
+	render_group RenderGroup;
+
 	// TODO: delete test code below
 	loaded_bitmap TestBitmap;
 	float SineT;
 	int ToneHz;
 	mouse_event_type CurrentPrimaryState;
 	// TODO: done with test code here
-
-	world_screen_converter WorldScreenConverter;
-	// NOTE: CameraPos is where the bottom left of camera rectangle is in the
-	// CONT: world
-	vector2 CameraPos; 
 
 	card* Cards;
 	int MaxCards;

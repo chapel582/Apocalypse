@@ -28,5 +28,10 @@ bit_scan_result FindLeastSignificantSetBit(uint32_t Input)
 	return Result;
 }
 
+int32_t RoundFloat32ToInt32(float Input)
+{
+	return (int32_t) (Input + 0.5f);
+}
+
 #define APOCALYPSE_INTRINSICS_H
 #endif

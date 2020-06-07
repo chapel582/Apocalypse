@@ -25,26 +25,43 @@ struct render_basis
 
 typedef enum 
 {
-	PieceType_Bitmap,
-	PieceType_Rectangle	
-} piece_type_e;
+	EntryType_Clear,
+	EntryType_Bitmap,
+	EntryType_Rectangle	
+} entry_type_e;
 
-struct visible_piece
+struct render_entry_header
+{	
+	entry_type_e Type;
+};
+
+struct render_entry_clear
 {
+	render_entry_header Header;
+	vector4 Color;
+};
+
+struct render_entry_bitmap
+{
+	render_entry_header Header;
 	render_basis* Basis;
 	loaded_bitmap* Bitmap;
-
-	piece_type_e Type;
-
-	vector4 Color;
 	vector2 Position;
+};
+
+struct render_entry_rectangle
+{
+	render_entry_header Header;
+	render_basis* Basis;
+	vector4 Color;
 	vector2 Dim;
+	vector2 Position;
 };
 
 struct render_group
 {
 	memory_arena* Arena;
-	visible_piece* LastPiece;
+	uint8_t* LastEntry;
 	
 	render_basis DefaultBasis;
 	world_screen_converter WorldScreenConverter;

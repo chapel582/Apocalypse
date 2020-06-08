@@ -195,21 +195,6 @@ void GameUpdateAndRender(
 		); 
 		RenderGroup->WorldScreenBasis = &GameState->WorldScreenBasis;
 
-		// NOTE: right now, the conversion assumes that the screen origin and 
-		// CONT: the world origin are on the same place on the x axis
-		// world_screen_converter* WorldScreenConverter = (
-		// 	&RenderGroup->WorldScreenConverter
-		// );
-		// WorldScreenConverter->ScreenToWorld = 1.0f;
-		// WorldScreenConverter->WorldToScreen = (
-		// 	1.0f / WorldScreenConverter->ScreenToWorld
-		// );
-		// WorldScreenConverter->ScreenYOffset = (float) BackBuffer->Height;
-		// WorldScreenConverter->WorldYOffset = (
-		// 	WorldScreenConverter->ScreenToWorld * 
-		// 	WorldScreenConverter->ScreenYOffset
-		// );
-
 		RenderGroup->CameraPos = Vector2(0.0f, 0.0f);
 
 		GameState->CurrentPrimaryState = PrimaryUp;

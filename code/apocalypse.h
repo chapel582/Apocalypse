@@ -161,7 +161,8 @@ struct game_state
 	memory_arena RenderArena;
 
 	render_group RenderGroup;
-
+	basis WorldScreenBasis;
+	
 	// TODO: delete test code below
 	loaded_bitmap TestBitmap;
 	float SineT;

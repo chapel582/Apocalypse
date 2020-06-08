@@ -182,25 +182,34 @@ void GameUpdateAndRender(
 			GetEndOfArena(&GameState->RenderArena)
 		);
 
+		GameState->WorldScreenBasis = MakeBasis(
+			Vector2(0, BackBuffer->Height), Vector2(1, 0), Vector2(0, -1)
+		);
+
 		render_group* RenderGroup = &GameState->RenderGroup;
 		*RenderGroup = {};
 		RenderGroup->Arena = &GameState->RenderArena;
 
-		RenderGroup->DefaultBasis.P = Vector3(0.0f, 0.0f, 0.0f);
+		RenderGroup->DefaultBasis = MakeBasis(
+			Vector2(0, 0), Vector2(1, 0), Vector2(0, 1)
+		); 
+		RenderGroup->WorldScreenBasis = &GameState->WorldScreenBasis;
+
 		// NOTE: right now, the conversion assumes that the screen origin and 
 		// CONT: the world origin are on the same place on the x axis
-		world_screen_converter* WorldScreenConverter = (
-			&RenderGroup->WorldScreenConverter
-		);
-		WorldScreenConverter->ScreenToWorld = 1.0f;
-		WorldScreenConverter->WorldToScreen = (
-			1.0f / WorldScreenConverter->ScreenToWorld
-		);
-		WorldScreenConverter->ScreenYOffset = (float) BackBuffer->Height;
-		WorldScreenConverter->WorldYOffset = (
-			WorldScreenConverter->ScreenToWorld * 
-			WorldScreenConverter->ScreenYOffset
-		);
+		// world_screen_converter* WorldScreenConverter = (
+		// 	&RenderGroup->WorldScreenConverter
+		// );
+		// WorldScreenConverter->ScreenToWorld = 1.0f;
+		// WorldScreenConverter->WorldToScreen = (
+		// 	1.0f / WorldScreenConverter->ScreenToWorld
+		// );
+		// WorldScreenConverter->ScreenYOffset = (float) BackBuffer->Height;
+		// WorldScreenConverter->WorldYOffset = (
+		// 	WorldScreenConverter->ScreenToWorld * 
+		// 	WorldScreenConverter->ScreenYOffset
+		// );
+
 		RenderGroup->CameraPos = Vector2(0.0f, 0.0f);
 
 		GameState->CurrentPrimaryState = PrimaryUp;
@@ -300,9 +309,14 @@ void GameUpdateAndRender(
 		float CardWidth = 60.0f;
 		float CardHeight = 90.0f;
 		float HandTableauMargin = 5.0f;
-		float ScreenWidthInWorld = (
-			WorldScreenConverter->ScreenToWorld * BackBuffer->Width
+		// float ScreenWidthInWorld = (
+		// 	WorldScreenConverter->ScreenToWorld * BackBuffer->Width
+		// );
+		vector2 ScreenDimInWorld = WorldToBasisScale(
+			&GameState->WorldScreenBasis, 
+			Vector2(BackBuffer->Width, BackBuffer->Height)
 		);
+		float ScreenWidthInWorld = ScreenDimInWorld.X;
 		
 		card_set* CardSet = &GameState->Hands[Player_One];
 		CardSet->CardCount = 0;
@@ -313,10 +327,7 @@ void GameUpdateAndRender(
 		CardSet = &GameState->Hands[Player_Two];
 		CardSet->CardCount = 0;
 		CardSet->ScreenWidth = ScreenWidthInWorld;
-		CardSet->YPos = (
-			(WorldScreenConverter->ScreenToWorld * BackBuffer->Height) - 
-			CardHeight 
-		);
+		CardSet->YPos = ScreenDimInWorld.Y - CardHeight;
 		CardSet->CardWidth = CardWidth;
 
 		CardSet = &GameState->Tableaus[Player_One];
@@ -329,9 +340,7 @@ void GameUpdateAndRender(
 		CardSet->CardCount = 0;
 		CardSet->ScreenWidth = ScreenWidthInWorld;
 		CardSet->YPos = (
-			(WorldScreenConverter->ScreenToWorld * BackBuffer->Height) - 
-			(2 * CardHeight) -
-			HandTableauMargin 
+			ScreenDimInWorld.Y - (2 * CardHeight) - HandTableauMargin 
 		);
 		CardSet->CardWidth = CardWidth;
 		
@@ -370,9 +379,7 @@ void GameUpdateAndRender(
 			}
 
 			vector2 MouseEventWorldPos = ScreenToWorldPos(
-				GameState->RenderGroup.WorldScreenConverter,
-				MouseEvent->XPos,
-				MouseEvent->YPos
+				&GameState->WorldScreenBasis, MouseEvent->XPos, MouseEvent->YPos
 			);
 			if(MouseEvent->Type == PrimaryUp)
 			{
@@ -444,7 +451,12 @@ void GameUpdateAndRender(
 				{
 					Card->Active = false;
 				}
-				PushRect(&GameState->RenderGroup, Card->Rectangle, Card->Color);
+				PushRect(
+					&GameState->RenderGroup,
+					GameState->RenderGroup.DefaultBasis,
+					Card->Rectangle,
+					Card->Color
+				);
 			}
 			Card++;
 		}

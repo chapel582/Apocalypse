@@ -3,86 +3,94 @@
 #include "apocalypse_rectangle.h"
 #include "apocalypse_vector.h"
 
-vector2 ScreenToWorldPos(
-	world_screen_converter Converter, uint32_t X, uint32_t Y
-)
+vector2 WorldToBasis(basis* Basis, vector2 Vector)
 {
 	vector2 Result = {};
-	Result.X = Converter.ScreenToWorld * X;
-	Result.Y = (
-		(-1.0f * Converter.ScreenToWorld * Y) + Converter.WorldYOffset
+	vector2 Position = Vector - Basis->Offset;
+	Result = (
+		Position.X * Basis->MatrixColumn1 + 
+		Position.Y * Basis->MatrixColumn2 
 	);
 	return Result;
 }
 
-vector2 WorldToScreenPos(
-	world_screen_converter Converter, vector2 WorldPosition
-)
+vector2 BasisToWorld(basis* Basis, vector2 Vector)
 {
 	vector2 Result = {};
-	Result.X = Converter.WorldToScreen * WorldPosition.X;
-	Result.Y = (
-		(-1.0f * Converter.WorldToScreen * WorldPosition.Y) + 
-		Converter.ScreenYOffset
+	Result = (
+		Vector.X * Basis->Axis1 + 
+		Vector.Y * Basis->Axis2
+	);
+	Result += Basis->Offset;
+	return Result;
+}
+
+vector2 WorldToBasisScale(basis* Basis, vector2 Vector)
+{
+	vector2 Result = {};
+	Result = (
+		Vector.X * Basis->MatrixColumn1 + 
+		Vector.Y * Basis->MatrixColumn2
+	);
+	Result = Abs(Result);
+	return Result;
+}
+
+vector2 BasisToWorldScale(basis* Basis, vector2 Vector)
+{
+	vector2 Result = {};
+	Result = (
+		Vector.X * Basis->Axis1 + 
+		Vector.Y * Basis->Axis2
 	);
 	return Result;
 }
 
-vector2 ScreenToWorldDim(world_screen_converter Converter, vector2 ScreenDim)
+vector2 ScreenToWorldPos(basis* WorldScreenBasis, uint32_t X, uint32_t Y)
 {
-	vector2 Result = {};
-	Result.X = Converter.ScreenToWorld * ScreenDim.X;
-	Result.Y = Converter.ScreenToWorld * ScreenDim.Y;
-	return Result;
+	return BasisToWorld(WorldScreenBasis, Vector2(X, Y));
 }
 
-vector2 WorldToScreenDim(world_screen_converter Converter, vector2 WorldDim)
+vector2 WorldToScreenPos(basis* WorldScreenBasis, vector2 WorldPosition)
 {
-	vector2 Result = {};
-	Result.X = Converter.WorldToScreen * WorldDim.X;
-	Result.Y = Converter.WorldToScreen * WorldDim.Y;
-	return Result;
+	return WorldToBasis(WorldScreenBasis, WorldPosition);
+}
+
+vector2 ScreenToWorldDim(basis* WorldScreenBasis, vector2 ScreenDim)
+{
+	return BasisToWorldScale(WorldScreenBasis, ScreenDim);
+}
+
+vector2 WorldToScreenDim(basis* WorldScreenBasis, vector2 WorldDim)
+{
+	return WorldToBasisScale(WorldScreenBasis, WorldDim);
 }
 
 inline void PushBitmap(
 	render_group* Group, loaded_bitmap* Bitmap, vector2 WorldTopLeft
 )
 {
-	vector2 CameraTopLeft = WorldTopLeft - Group->CameraPos;
-	vector2 ScreenPos = WorldToScreenPos(
-		Group->WorldScreenConverter, CameraTopLeft
-	);
-
 	render_entry_bitmap* Entry = PushStruct(Group->Arena, render_entry_bitmap);
 	Group->LastEntry = (uint8_t*) Entry;
 	Entry->Header.Type = EntryType_Bitmap;
-	Entry->Basis = &Group->DefaultBasis;
+	Entry->Basis = Group->DefaultBasis;
 	Entry->Bitmap = Bitmap;
-	Entry->Position = ScreenPos;
+	Entry->Position = WorldTopLeft;
 }
 
-inline void PushRect(render_group* Group, rectangle Rectangle, vector4 Color)
+inline void PushRect(
+	render_group* Group, basis Basis, rectangle Rectangle, vector4 Color
+)
 {
-	// NOTE: get rectangle's world position relative to camera
-	// CONT: then convert position relative to camera to screen space 
-	vector2 WorldTopLeft = GetTopLeft(Rectangle);
-	vector2 CameraTopLeft = WorldTopLeft - Group->CameraPos;
-	vector2 ScreenPos = WorldToScreenPos(
-		Group->WorldScreenConverter, CameraTopLeft
-	);
-	vector2 ScreenDim = WorldToScreenDim(
-		Group->WorldScreenConverter, Rectangle.Dim
-	);
-
 	render_entry_rectangle* Entry = PushStruct(
 		Group->Arena, render_entry_rectangle
 	);
 	Group->LastEntry = (uint8_t*) Entry;
 	Entry->Header.Type = EntryType_Rectangle;
-	Entry->Basis = &Group->DefaultBasis;
+	Entry->Basis = Basis;
 	Entry->Color = Color;
-	Entry->Dim = ScreenDim;
-	Entry->Position = ScreenPos;
+	Entry->Dim = Rectangle.Dim;
+	Entry->Position = GetTopLeft(Rectangle);
 }
 
 inline void PushClear(render_group* Group, vector4 Color)
@@ -295,9 +303,19 @@ void RenderGroupToOutput(
 				render_entry_rectangle* Entry = (render_entry_rectangle*) (
 					Header
 				);
+				vector2 WorldPos = BasisToWorld(&Entry->Basis, Entry->Position);
+				vector2 CameraTopLeft = WorldPos - RenderGroup->CameraPos;
+
+				vector2 ScreenPos = WorldToBasis(
+					RenderGroup->WorldScreenBasis, CameraTopLeft
+				);
+				vector2 ScreenDim = WorldToScreenDim(
+					RenderGroup->WorldScreenBasis, Entry->Dim
+				);
+
 				DrawRectangle(
 					BackBuffer,
-					MakeRectangle(Entry->Position, Entry->Dim),
+					MakeRectangle(ScreenPos, ScreenDim),
 					Entry->Color.R,
 					Entry->Color.G,
 					Entry->Color.B
@@ -308,11 +326,18 @@ void RenderGroupToOutput(
 			case(EntryType_Bitmap):
 			{
 				render_entry_bitmap* Entry = (render_entry_bitmap*) Header;
+
+				vector2 WorldPos = BasisToWorld(&Entry->Basis, Entry->Position);
+				vector2 CameraTopLeft = WorldPos - RenderGroup->CameraPos;
+				vector2 ScreenPos = WorldToBasis(
+					RenderGroup->WorldScreenBasis, CameraTopLeft
+				);
+
 				DrawBitmap(
 					BackBuffer,
 					Entry->Bitmap,
-					Entry->Position.X,
-					Entry->Position.Y
+					ScreenPos.X,
+					ScreenPos.Y
 				);
 				CurrentAddress += sizeof(*Entry);
 				break;

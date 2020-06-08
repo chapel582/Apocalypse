@@ -1,5 +1,6 @@
 #ifndef APOCALYPSE_VECTOR_H
 
+#include <stdint.h>
 #include <math.h>
 
 // SECTION START: vector2
@@ -14,6 +15,22 @@ inline vector2 Vector2(float X, float Y)
 	vector2 Result = {};
 	Result.X = X;
 	Result.Y = Y;
+	return Result;
+}
+
+inline vector2 Vector2(int32_t X, int32_t Y)
+{
+	vector2 Result = {};
+	Result.X = (float) X;
+	Result.Y = (float) Y;
+	return Result;
+}
+
+inline vector2 Vector2(uint32_t X, uint32_t Y)
+{
+	vector2 Result = {};
+	Result.X = (float) X;
+	Result.Y = (float) Y;
 	return Result;
 }
 
@@ -73,6 +90,14 @@ inline vector2 operator-=(vector2 &A, vector2 B)
 {
 	A = A - B;
 	return A;
+}
+
+inline vector2 Abs(vector2 A)
+{
+	vector2 Result;
+	Result.X = (float) fabs(A.X);
+	Result.Y = (float) fabs(A.Y);
+	return Result;
 }
 
 inline float Inner(vector2 A, vector2 B)

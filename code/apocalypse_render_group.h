@@ -4,20 +4,6 @@
 #include "apocalypse_vector.h"
 #include "apocalypse_bitmap.h"
 
-// TODO: get rid of world_screen_converter and just use basis
-// TODO: hopefully that will also work with mouse clicks
-// struct world_screen_converter
-// {
-// 	float ScreenToWorld;
-// 	float WorldToScreen;
-// 	// NOTE: ScreenYOffset is where the screen origin is relative to the 
-// 	// CONT: World origin but in pixels
-// 	float ScreenYOffset; 
-// 	// NOTE: WorldYOffset is where the world origin is relative to the Screen 
-// 	// CONT: origin but in world units
-// 	float WorldYOffset;
-// };
-
 struct basis
 {
 	// NOTE: the offset of the coordinate system from world's origin
@@ -56,7 +42,8 @@ typedef enum
 {
 	EntryType_Clear,
 	EntryType_Bitmap,
-	EntryType_Rectangle	
+	EntryType_Rectangle,
+	EntryType_CoordinateSystem
 } entry_type_e;
 
 struct render_entry_header
@@ -85,6 +72,12 @@ struct render_entry_rectangle
 	vector4 Color;
 	vector2 Dim;
 	vector2 Position; // NOTE: position in basis
+};
+
+struct render_entry_coordinate_system
+{
+	render_entry_header Header;
+	basis Basis;
 };
 
 struct render_group

@@ -67,13 +67,16 @@ vector2 WorldToScreenDim(basis* WorldScreenBasis, vector2 WorldDim)
 }
 
 inline void PushBitmap(
-	render_group* Group, loaded_bitmap* Bitmap, vector2 WorldTopLeft
+	render_group* Group,
+	basis Basis,
+	loaded_bitmap* Bitmap,
+	vector2 WorldTopLeft
 )
 {
 	render_entry_bitmap* Entry = PushStruct(Group->Arena, render_entry_bitmap);
 	Group->LastEntry = (uint8_t*) Entry;
 	Entry->Header.Type = EntryType_Bitmap;
-	Entry->Basis = Group->DefaultBasis;
+	Entry->Basis = Basis;
 	Entry->Bitmap = Bitmap;
 	Entry->Position = WorldTopLeft;
 }
@@ -99,6 +102,16 @@ inline void PushClear(render_group* Group, vector4 Color)
 	Group->LastEntry = (uint8_t*) Entry;
 	Entry->Header.Type = EntryType_Clear;
 	Entry->Color = Color;
+}
+
+inline void PushCoordinateSystem(render_group* Group, basis Basis)
+{
+	render_entry_coordinate_system* Entry = PushStruct(
+		Group->Arena, render_entry_coordinate_system
+	);
+	Group->LastEntry = (uint8_t*) Entry;
+	Entry->Header.Type = EntryType_CoordinateSystem;
+	Entry->Basis = Basis;
 }
 
 void DrawRectangle(
@@ -277,6 +290,19 @@ void Clear(
 	);
 }
 
+vector2 GetScreenPos(
+	basis* Basis,
+	basis* WorldScreenBasis,
+	vector2 EntryPosition,
+	vector2 CameraPos
+)
+{
+	vector2 WorldPos = BasisToWorld(Basis, EntryPosition);
+	vector2 CameraTopLeft = WorldPos - CameraPos;
+
+	return WorldToBasis(WorldScreenBasis, CameraTopLeft);
+}
+
 void RenderGroupToOutput(
 	render_group* RenderGroup, game_offscreen_buffer* BackBuffer
 )
@@ -303,16 +329,15 @@ void RenderGroupToOutput(
 				render_entry_rectangle* Entry = (render_entry_rectangle*) (
 					Header
 				);
-				vector2 WorldPos = BasisToWorld(&Entry->Basis, Entry->Position);
-				vector2 CameraTopLeft = WorldPos - RenderGroup->CameraPos;
-
-				vector2 ScreenPos = WorldToBasis(
-					RenderGroup->WorldScreenBasis, CameraTopLeft
+				vector2 ScreenPos = GetScreenPos(
+					&Entry->Basis,
+					RenderGroup->WorldScreenBasis,
+					Entry->Position,
+					RenderGroup->CameraPos
 				);
 				vector2 ScreenDim = WorldToScreenDim(
 					RenderGroup->WorldScreenBasis, Entry->Dim
 				);
-
 				DrawRectangle(
 					BackBuffer,
 					MakeRectangle(ScreenPos, ScreenDim),
@@ -327,10 +352,11 @@ void RenderGroupToOutput(
 			{
 				render_entry_bitmap* Entry = (render_entry_bitmap*) Header;
 
-				vector2 WorldPos = BasisToWorld(&Entry->Basis, Entry->Position);
-				vector2 CameraTopLeft = WorldPos - RenderGroup->CameraPos;
-				vector2 ScreenPos = WorldToBasis(
-					RenderGroup->WorldScreenBasis, CameraTopLeft
+				vector2 ScreenPos = GetScreenPos(
+					&Entry->Basis,
+					RenderGroup->WorldScreenBasis,
+					Entry->Position,
+					RenderGroup->CameraPos
 				);
 
 				DrawBitmap(
@@ -338,6 +364,56 @@ void RenderGroupToOutput(
 					Entry->Bitmap,
 					ScreenPos.X,
 					ScreenPos.Y
+				);
+				CurrentAddress += sizeof(*Entry);
+				break;
+			}
+			case(EntryType_CoordinateSystem):
+			{
+				render_entry_coordinate_system* Entry = (
+					(render_entry_coordinate_system*) Header
+				);
+
+				vector2 OriginScreenPos = GetScreenPos(
+					&Entry->Basis,
+					RenderGroup->WorldScreenBasis,
+					Vector2(0, 0),
+					RenderGroup->CameraPos
+				);
+				vector2 Axis1ScreenPos = GetScreenPos(
+					&Entry->Basis,
+					RenderGroup->WorldScreenBasis,
+					Entry->Basis.Axis1,
+					RenderGroup->CameraPos
+				);
+				vector2 Axis2ScreenPos = GetScreenPos(
+					&Entry->Basis,
+					RenderGroup->WorldScreenBasis,
+					Entry->Basis.Axis2,
+					RenderGroup->CameraPos
+				);
+				vector2 RectangleDim = Vector2(10, 10);
+
+				DrawRectangle(
+					BackBuffer,
+					MakeRectangle(OriginScreenPos, RectangleDim),
+					1.0f,
+					1.0f,
+					1.0f
+				);
+				DrawRectangle(
+					BackBuffer,
+					MakeRectangle(Axis1ScreenPos, RectangleDim),
+					1.0f,
+					1.0f,
+					1.0f
+				);
+				DrawRectangle(
+					BackBuffer,
+					MakeRectangle(Axis2ScreenPos, RectangleDim),
+					1.0f,
+					1.0f,
+					1.0f
 				);
 				CurrentAddress += sizeof(*Entry);
 				break;

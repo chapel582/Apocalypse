@@ -294,9 +294,6 @@ void GameUpdateAndRender(
 		float CardWidth = 60.0f;
 		float CardHeight = 90.0f;
 		float HandTableauMargin = 5.0f;
-		// float ScreenWidthInWorld = (
-		// 	WorldScreenConverter->ScreenToWorld * BackBuffer->Width
-		// );
 		vector2 ScreenDimInWorld = WorldToBasisScale(
 			&GameState->WorldScreenBasis, 
 			Vector2(BackBuffer->Width, BackBuffer->Height)
@@ -446,6 +443,24 @@ void GameUpdateAndRender(
 			Card++;
 		}
 	}
+
+#if 1 // NOTE: tests for bitmaps and coordinate systems
+	PushBitmap(
+		&GameState->RenderGroup,
+		GameState->RenderGroup.DefaultBasis,
+		&GameState->TestBitmap,
+		Vector2(100, 300)
+	);
+	PushCoordinateSystem(
+		&GameState->RenderGroup,
+		MakeBasis(
+			Vector2(BackBuffer->Width / 2, BackBuffer->Height / 2),
+			Vector2(10, 0),
+			Vector2(0, 10)
+		)
+	);
+#endif
+
 	// SECTION STOP: Updating game state
 
 	// SECTION START: Render

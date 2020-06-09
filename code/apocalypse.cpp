@@ -11,7 +11,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-#define Pi32 3.14159265359f
+#define PI32 3.14159265359f
 
 bool AddCardToSet(card_set* CardSet, card* Card)
 {
@@ -451,12 +451,17 @@ void GameUpdateAndRender(
 		&GameState->TestBitmap,
 		Vector2(100, 300)
 	);
+	GameState->SineT += DtForFrame;
+	float RotationalPeriod = 3.0f;
+	float Radians = (2 * PI32 * GameState->SineT) / RotationalPeriod;
+	float CosVal = cosf(Radians);
+	float SinVal = sinf(Radians);
 	PushCoordinateSystem(
 		&GameState->RenderGroup,
 		MakeBasis(
 			Vector2(BackBuffer->Width / 2, BackBuffer->Height / 2),
-			Vector2(10, 0),
-			Vector2(0, 10)
+			Vector2(10 * CosVal, 10 * SinVal),
+			Vector2(-10 * SinVal, 10 * CosVal)
 		)
 	);
 #endif
@@ -485,7 +490,7 @@ void GameFillSound(game_memory* Memory, game_sound_output_buffer* SoundBuffer)
 	{
 		float SineValue = sinf(GameState->SineT);
 		int16_t SampleValue = (int16_t) (SineValue * ToneVolume);
-		GameState->SineT += (2.0f * Pi32 * 1.0f) / ((float) WavePeriod);
+		GameState->SineT += (2.0f * PI32 * 1.0f) / ((float) WavePeriod);
 
 		// NOTE: SampleOut writes left and right channels
 		*SampleOut++ = SampleValue;

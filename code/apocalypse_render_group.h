@@ -71,7 +71,6 @@ struct render_entry_rectangle
 	basis Basis; // NOTE: basis in world space
 	vector4 Color;
 	vector2 Dim;
-	vector2 Position; // NOTE: position in basis
 };
 
 struct render_entry_coordinate_system

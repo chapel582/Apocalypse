@@ -114,6 +114,14 @@ inline float Magnitude(vector2 A)
 {
 	return (float) sqrt(MagnitudeSquared(A));
 }
+
+inline vector2 Perpendicular(vector2 A)
+{
+	vector2 Result;
+	Result.X = -A.Y;
+	Result.Y = A.X;
+	return Result;	
+}
 // SECTION STOP: vector2
 
 // SECTION START: vector3

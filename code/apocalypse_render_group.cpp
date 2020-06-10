@@ -81,6 +81,7 @@ inline void PushBitmap(
 	Entry->Position = WorldTopLeft;
 }
 
+// TODO: make a push rect that doesn't require pushing a basis and will make it based on the rect you push
 inline void PushRect(
 	render_group* Group, basis Basis, rectangle Rectangle, vector4 Color
 )
@@ -93,7 +94,6 @@ inline void PushRect(
 	Entry->Basis = Basis;
 	Entry->Color = Color;
 	Entry->Dim = Rectangle.Dim;
-	Entry->Position = GetTopLeft(Rectangle);
 }
 
 inline void PushClear(render_group* Group, vector4 Color)
@@ -178,6 +178,122 @@ void DrawRectangle(
 		for(int X = MinX; X < MaxX; X++)
 		{
 			*Pixel++ = Color;
+		}
+		Row += BackBuffer->Pitch;
+	}
+}
+
+void DrawRectangleSlowly(
+	game_offscreen_buffer* BackBuffer, 
+	vector2 Origin,
+	vector2 XAxis,
+	vector2 YAxis,
+	vector4 ColorV
+)
+{
+	float fMinX = (float) BackBuffer->Width;
+	float fMinY = (float) BackBuffer->Height;
+	float fMaxX = 0;
+	float fMaxY = 0;
+
+	vector2 Points[4] = {
+		Origin,
+		Origin + XAxis,
+		Origin + YAxis,
+		Origin + XAxis + YAxis
+	};
+	for(int Index = 0; Index < ARRAY_COUNT(Points); Index++)
+	{
+		vector2 Point = Points[Index];
+		if(Point.X < fMinX)
+		{
+			fMinX = Point.X;
+		}
+		if(Point.X > fMaxX)
+		{
+			fMaxX = Point.X;
+		}
+
+		if(Point.Y < fMinY)
+		{
+			fMinY = Point.Y;
+		}
+		if(Point.Y > fMaxY)
+		{
+			fMaxY = Point.Y;
+		}
+	}
+
+	int32_t MinX = RoundFloat32ToInt32(fMinX);
+	int32_t MaxX = RoundFloat32ToInt32(fMaxX);
+	int32_t MinY = RoundFloat32ToInt32(fMinY);
+	int32_t MaxY = RoundFloat32ToInt32(fMaxY);
+
+	if(MinX < 0)
+	{
+		MinX = 0;
+	}
+	else if(MinX > BackBuffer->Width)
+	{
+		MinX = BackBuffer->Width;
+	}
+	if(MaxX < 0)
+	{
+		MaxX = 0;
+	}
+	else if(MaxX > BackBuffer->Width)
+	{
+		MaxX = BackBuffer->Width;
+	}
+	if(MinY < 0)
+	{
+		MinY = 0;
+	}
+	else if(MinY > BackBuffer->Height)
+	{
+		MinY = BackBuffer->Height;
+	}
+	if(MaxY < 0)
+	{
+		MaxY = 0;
+	}
+	else if(MaxY > BackBuffer->Height)
+	{
+		MaxY = BackBuffer->Height;
+	}
+
+	uint32_t Color = (
+		(RoundFloat32ToInt32(ColorV.R * 0xFF) << 16) |
+		(RoundFloat32ToInt32(ColorV.G * 0xFF) << 8) |
+		RoundFloat32ToInt32(ColorV.B * 0xFF)
+	);
+
+	vector2 XAxisPerp = Perpendicular(XAxis);
+	vector2 YAxisPerp = Perpendicular(YAxis);
+
+	uint8_t* Row = (
+		((uint8_t*) BackBuffer->Memory) + 
+		MinX * BackBuffer->BytesPerPixel +
+		MinY * BackBuffer->Pitch 
+	);
+	for(int Y = MinY; Y < MaxY; Y++)
+	{
+		uint32_t* Pixel = (uint32_t*) Row; 
+		for(int X = MinX; X < MaxX; X++)
+		{
+			vector2 Point = Vector2(X, Y);
+			float Edge0 = Inner(Point - Origin, XAxisPerp);
+			float Edge1 = Inner(Point - (Origin + XAxis), YAxisPerp);
+			float Edge2 = Inner(
+				Point - (Origin + XAxis + YAxis), -1 * XAxisPerp
+			);
+			float Edge3 = Inner(Point - (Origin + YAxis), -1 * YAxisPerp);
+
+			if((Edge0 < 0) && (Edge1 < 0) && (Edge2 < 0) && (Edge3 < 0))
+			{
+				*Pixel = Color;
+			}
+			Pixel++;
 		}
 		Row += BackBuffer->Pitch;
 	}
@@ -329,21 +445,61 @@ void RenderGroupToOutput(
 				render_entry_rectangle* Entry = (render_entry_rectangle*) (
 					Header
 				);
-				vector2 ScreenPos = GetScreenPos(
+				vector2 OriginScreenPos = GetScreenPos(
 					&Entry->Basis,
 					RenderGroup->WorldScreenBasis,
-					Entry->Position,
+					Vector2(0, 0),
 					RenderGroup->CameraPos
 				);
-				vector2 ScreenDim = WorldToScreenDim(
-					RenderGroup->WorldScreenBasis, Entry->Dim
+
+				vector2 Axis1ScreenPos = GetScreenPos(
+					&Entry->Basis,
+					RenderGroup->WorldScreenBasis,
+					Entry->Dim.X * Entry->Basis.Axis1,
+					RenderGroup->CameraPos
+				);
+				vector2 Axis2ScreenPos = GetScreenPos(
+					&Entry->Basis,
+					RenderGroup->WorldScreenBasis,
+					Entry->Dim.Y * Entry->Basis.Axis2,
+					RenderGroup->CameraPos
+				);
+
+				vector2 Axis1 = Axis1ScreenPos - OriginScreenPos;
+				// Axis1.Y = -1 * Axis1.Y;
+				vector2 Axis2 = Axis2ScreenPos - OriginScreenPos;
+				// Axis2.Y = -1 * Axis2.Y;
+
+				DrawRectangleSlowly(
+					BackBuffer,
+					OriginScreenPos,
+					Axis1,
+					Axis2,
+					Entry->Color
+				);
+
+				vector2 RectangleDim = Vector2(10, 10);
+
+				DrawRectangle(
+					BackBuffer,
+					MakeRectangle(OriginScreenPos, RectangleDim),
+					0.0f,
+					0.0f,
+					1.0f
 				);
 				DrawRectangle(
 					BackBuffer,
-					MakeRectangle(ScreenPos, ScreenDim),
-					Entry->Color.R,
-					Entry->Color.G,
-					Entry->Color.B
+					MakeRectangle(Axis1ScreenPos, RectangleDim),
+					0.0f,
+					0.0f,
+					1.0f
+				);
+				DrawRectangle(
+					BackBuffer,
+					MakeRectangle(Axis2ScreenPos, RectangleDim),
+					0.0f,
+					0.0f,
+					1.0f
 				);
 				CurrentAddress += sizeof(*Entry);
 				break;
@@ -364,56 +520,6 @@ void RenderGroupToOutput(
 					Entry->Bitmap,
 					ScreenPos.X,
 					ScreenPos.Y
-				);
-				CurrentAddress += sizeof(*Entry);
-				break;
-			}
-			case(EntryType_CoordinateSystem):
-			{
-				render_entry_coordinate_system* Entry = (
-					(render_entry_coordinate_system*) Header
-				);
-
-				vector2 OriginScreenPos = GetScreenPos(
-					&Entry->Basis,
-					RenderGroup->WorldScreenBasis,
-					Vector2(0, 0),
-					RenderGroup->CameraPos
-				);
-				vector2 Axis1ScreenPos = GetScreenPos(
-					&Entry->Basis,
-					RenderGroup->WorldScreenBasis,
-					Entry->Basis.Axis1,
-					RenderGroup->CameraPos
-				);
-				vector2 Axis2ScreenPos = GetScreenPos(
-					&Entry->Basis,
-					RenderGroup->WorldScreenBasis,
-					Entry->Basis.Axis2,
-					RenderGroup->CameraPos
-				);
-				vector2 RectangleDim = Vector2(10, 10);
-
-				DrawRectangle(
-					BackBuffer,
-					MakeRectangle(OriginScreenPos, RectangleDim),
-					1.0f,
-					1.0f,
-					1.0f
-				);
-				DrawRectangle(
-					BackBuffer,
-					MakeRectangle(Axis1ScreenPos, RectangleDim),
-					1.0f,
-					1.0f,
-					1.0f
-				);
-				DrawRectangle(
-					BackBuffer,
-					MakeRectangle(Axis2ScreenPos, RectangleDim),
-					1.0f,
-					1.0f,
-					1.0f
 				);
 				CurrentAddress += sizeof(*Entry);
 				break;

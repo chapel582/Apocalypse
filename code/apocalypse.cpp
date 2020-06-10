@@ -435,7 +435,9 @@ void GameUpdateAndRender(
 				}
 				PushRect(
 					&GameState->RenderGroup,
-					GameState->RenderGroup.DefaultBasis,
+					MakeBasis(
+						Card->Rectangle.Min, Vector2(1, 0), Vector2(0, 1)
+					),
 					Card->Rectangle,
 					Card->Color
 				);
@@ -456,13 +458,18 @@ void GameUpdateAndRender(
 	float Radians = (2 * PI32 * GameState->SineT) / RotationalPeriod;
 	float CosVal = cosf(Radians);
 	float SinVal = sinf(Radians);
-	PushCoordinateSystem(
+	PushRect(
 		&GameState->RenderGroup,
 		MakeBasis(
 			Vector2(BackBuffer->Width / 2, BackBuffer->Height / 2),
-			Vector2(10 * CosVal, 10 * SinVal),
-			Vector2(-10 * SinVal, 10 * CosVal)
-		)
+			Vector2(2 * CosVal, 2 * SinVal),
+			Vector2(-2 * SinVal, 2 * CosVal)
+		),
+		MakeRectangle(
+			Vector2(BackBuffer->Width / 2, BackBuffer->Height / 2),
+			Vector2(30.0f, 30.0f)
+		),
+		Vector4(1.0f, 1.0f, 1.0f, 1.0f)
 	);
 #endif
 

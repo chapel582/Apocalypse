@@ -330,7 +330,7 @@ void GameUpdateAndRender(
 		DrawFullHand(GameState, Player_Two, CardWidth, CardHeight);
 
 		GameState->TestBitmap = DEBUGLoadBmp(
-			Thread, "../data/test/tree00.bmp"
+			Thread, "../data/test/test_hero_front_head.bmp"
 		);
 
 		// TODO: this may be more appropriate in the platform layer
@@ -458,29 +458,13 @@ void GameUpdateAndRender(
 		&GameState->RenderGroup,
 		MakeBasis(
 			Vector2(BackBuffer->Width / 2, BackBuffer->Height / 2),
-			2 * Vector2(CosVal, SinVal),
-			2 * Vector2(-1 * SinVal, CosVal)
+			// Vector2(CosVal, SinVal),
+			// Vector2(-1 * SinVal, CosVal)
+			Vector2(1, 0),
+			Vector2(0, 1)
 		),
-		// MakeBasis(
-		// 	Vector2(BackBuffer->Width / 2, BackBuffer->Height / 2),
-		// 	Vector2(1, 0),
-		// 	Vector2(0, 1)
-		// ),
 		&GameState->TestBitmap
 	);
-	// PushRect(
-	// 	&GameState->RenderGroup,
-	// 	MakeBasis(
-	// 		Vector2(BackBuffer->Width / 2, BackBuffer->Height / 2),
-	// 		Vector2(CosVal, SinVal),
-	// 		Vector2(-1 * SinVal, CosVal)
-	// 	),
-	// 	MakeRectangle(
-	// 		Vector2(BackBuffer->Width / 2, BackBuffer->Height / 2),
-	// 		Vector2(60.0f, 60.0f)
-	// 	),
-	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f)
-	// );
 #endif
 
 	// SECTION STOP: Updating game state

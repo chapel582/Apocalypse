@@ -602,28 +602,23 @@ void DrawBitmapSlowly(
 				float SR = Texel.R;
 				float SG = Texel.G;
 				float SB = Texel.B;
-				
-				// float RSA = (SA / 255.0f) * Color.a; 
-				float RSA = SA / 255.0f;
 
-				// NOTE: destination colors and alpha
-				float DA = (float) ((*Pixel >> 24) & 0xFF);
-				float DR = (float) ((*Pixel >> 16) & 0xFF);
-				float DG = (float) ((*Pixel >> 8) & 0xFF);
-				float DB = (float) ((*Pixel >> 0) & 0xFF);
-				float RDA = (DA / 255.0f);
-			
-				float InvRSA = (1.0f - RSA);
-				// TODO: Check this for math errors
-				float A = 255.0f * (RSA + RDA - RSA * RDA);
-				float R = InvRSA * DR + SR;
-				float G = InvRSA * DG + SG;
-				float B = InvRSA * DB + SB;
+				// NOTE: normalize alpha
+				float A = SA / 255.0f;
 
-				*Pixel = (((uint32_t) (A + 0.5f) << 24) |
-						  ((uint32_t) (R + 0.5f) << 16) |
-						  ((uint32_t) (G + 0.5f) << 8) |
-						  ((uint32_t) (B + 0.5f) << 0));
+				float DR = (float) (((*Pixel >> 16) & 0xFF));
+				float DG = (float) (((*Pixel >> 8) & 0xFF));
+				float DB = (float) (((*Pixel) & 0xFF));
+
+				float R = ((1.0f - A) * DR) + (A * SR);
+				float G = ((1.0f - A) * DG) + (A * SG);
+				float B = ((1.0f - A) * DB) + (A * SB);
+
+				*Pixel = (
+					(((uint32_t) (R + 0.5f)) << 16) |
+					(((uint32_t) (G + 0.5f)) << 8) |
+					((uint32_t) (B + 0.5f))
+				);
 			}
 			Pixel++;
 		}

@@ -419,7 +419,7 @@ void GameUpdateAndRender(
 	// SECTION START: Updating game state
 	// NOTE: not sure if we should finish all updates and then push to the 
 	// CONT: render group	
-	PushClear(&GameState->RenderGroup, Vector4(1.0f, 0, 0, 0));
+	PushClear(&GameState->RenderGroup, Vector4(0.5f, 0.5f, 0.5f, 1.0f));
 	{
 		card* Card = &GameState->Cards[0];
 		for(
@@ -451,15 +451,15 @@ void GameUpdateAndRender(
 	}
 
 #if 1 // NOTE: tests for bitmaps and coordinate systems
-	float RotationalPeriod = 5.0f;
-	float Radians = (2 * PI32 * GameState->Time) / RotationalPeriod;
-	float CosVal = cosf(Radians);
-	float SinVal = sinf(Radians);
+	// float RotationalPeriod = 5.0f;
+	// float Radians = (2 * PI32 * GameState->Time) / RotationalPeriod;
+	// float CosVal = cosf(Radians);
+	// float SinVal = sinf(Radians);
 	vector2 Origin = Vector2(0.0f, BackBuffer->Height / 2.0f);
 	vector2 Center = Vector2(
-		(BackBuffer->Width / 2.0f) + 30 * CosVal, BackBuffer->Height / 2.0f
+		(BackBuffer->Width / 2.0f), (BackBuffer->Height / 2.0f)
 	);
-	vector2 XAxis = Vector2(CosVal, SinVal);
+	vector2 XAxis = Vector2(1, 0);
 	vector2 YAxis = Perpendicular(XAxis);
 
 	PushBitmapCentered(

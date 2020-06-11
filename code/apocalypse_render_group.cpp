@@ -76,6 +76,8 @@ inline void PushBitmap(
 	// TODO: we might want a way to push a bitmap while only designating its 
 	// CONT: dimentions in world space
 	// TODO: may want a way to push a centered bitmap
+	// TODO: no way to make bitmap semi-transparent! Add alpha for that if you 
+	// CONT: need it
 	// NOTE: basis offset should be the top left of the unrotated texture
 	render_entry_bitmap* Entry = PushStruct(Group->Arena, render_entry_bitmap);
 	Group->LastEntry = (uint8_t*) Entry;

@@ -85,6 +85,12 @@ loaded_bitmap DEBUGLoadBmp(thread_context* Thread, char* FileName)
 		}
 	}
 
+	// NOTE: pitch is negative so we can start from bottom left of image
+	Result.Pitch = -1 * BYTES_PER_PIXEL * Result.Width;
+	// NOTE: that means we have to offset memory as well
+	Result.Memory = (
+		((uint8_t*) Result.Memory) - Result.Pitch * (Result.Height - 1)
+	);
 end:
 	return Result;
 }

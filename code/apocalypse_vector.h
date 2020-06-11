@@ -257,6 +257,81 @@ inline vector4 Vector4(float X, float Y, float Z, float W)
 	Result.W = W;
 	return Result;
 }
+
+inline vector4 operator*(float A, vector4 B)
+{
+	vector4 Result;
+	Result.X = A * B.X;
+	Result.Y = A * B.Y;
+	Result.Z = A * B.Z;
+	Result.W = A * B.W;
+	return Result;
+}
+
+inline vector4 operator*(vector4 B, float A)
+{
+	vector4 Result;
+	Result.X = A * B.X;
+	Result.Y = A * B.Y;
+	Result.Z = A * B.Z;
+	Result.W = A * B.W;
+	return Result;
+}
+
+inline vector4 operator*=(vector4 &B, float A)
+{
+	B = A * B;
+	return B;
+}
+
+inline vector4 operator-(vector4 A)
+{
+	vector4 Result;
+	Result.X = -1 * A.X;
+	Result.Y = -1 * A.Y;
+	Result.Z = -1 * A.Z;
+	Result.W = -1 * A.W;
+	return Result;
+}
+
+inline vector4 operator+(vector4 A, vector4 B)
+{
+	vector4 Result;
+	Result.X = A.X + B.X;
+	Result.Y = A.Y + B.Y;
+	Result.Z = A.Z + B.Z;
+	Result.W = A.W + B.W;
+	return Result;
+}
+
+inline vector4 operator+=(vector4 &A, vector4 B)
+{
+	A = A + B;
+	return A; 
+}
+
+inline vector4 operator-(vector4 A, vector4 B)
+{
+	vector4 Result;
+	Result.X = A.X - B.X;
+	Result.Y = A.Y - B.Y;
+	Result.Z = A.Z - B.Z;
+	Result.W = A.W - B.W;
+	return Result;
+}
+
+inline vector4 operator-=(vector4 &A, vector4 B)
+{
+	A = A - B;
+	return A;
+}
+
+inline vector4 Lerp(vector4 A, float T, vector4 B)
+{
+    vector4 Result = (1.0f - T) * A + T * B;
+
+    return Result;
+}
 // SECTION STOP vector4
 
 #define APOCALYPSE_VECTOR_H

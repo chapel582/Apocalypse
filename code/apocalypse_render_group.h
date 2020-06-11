@@ -7,8 +7,9 @@
 struct basis
 {
 	// NOTE: the offset of the coordinate system from world's origin
+	// NOTE: it will usually be the top left of the texture/rect 
 	vector2 Offset;
-	// NOTE: the axes as described in world space
+	// NOTE: the axes as described in world space dimesions
 	// NOTE: also for converting FROM this basis
 	vector2 Axis1;
 	vector2 Axis2;
@@ -62,7 +63,6 @@ struct render_entry_bitmap
 	render_entry_header Header;
 	basis Basis; // NOTE: basis in world space
 	loaded_bitmap* Bitmap;
-	vector2 Position; // NOTE: position in basis
 };
 
 struct render_entry_rectangle

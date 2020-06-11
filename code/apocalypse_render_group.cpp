@@ -1,5 +1,6 @@
 #include "apocalypse_render_group.h"
 
+#include "apocalypse_math.h"
 #include "apocalypse_rectangle.h"
 #include "apocalypse_vector.h"
 
@@ -69,16 +70,17 @@ vector2 WorldToScreenDim(basis* WorldScreenBasis, vector2 WorldDim)
 inline void PushBitmap(
 	render_group* Group,
 	basis Basis,
-	loaded_bitmap* Bitmap,
-	vector2 WorldTopLeft
+	loaded_bitmap* Bitmap
 )
 {
+	// TODO: we might want a way to push a bitmap while only designating its 
+	// CONT: in world space
+	// NOTE: basis offset should be the top left of the unrotated texture
 	render_entry_bitmap* Entry = PushStruct(Group->Arena, render_entry_bitmap);
 	Group->LastEntry = (uint8_t*) Entry;
 	Entry->Header.Type = EntryType_Bitmap;
 	Entry->Basis = Basis;
 	Entry->Bitmap = Bitmap;
-	Entry->Position = WorldTopLeft;
 }
 
 // TODO: make a push rect that doesn't require pushing a basis and will make it based on the rect you push
@@ -86,6 +88,7 @@ inline void PushRect(
 	render_group* Group, basis Basis, rectangle Rectangle, vector4 Color
 )
 {
+	// NOTE: Basis should be the top left of the unrotated rect
 	render_entry_rectangle* Entry = PushStruct(
 		Group->Arena, render_entry_rectangle
 	);
@@ -112,6 +115,24 @@ inline void PushCoordinateSystem(render_group* Group, basis Basis)
 	Group->LastEntry = (uint8_t*) Entry;
 	Entry->Header.Type = EntryType_CoordinateSystem;
 	Entry->Basis = Basis;
+}
+
+bool IsInRotatedQuad(
+	vector2 PointOffsetFromOrigin,
+	vector2 Origin,
+	vector2 XAxis,
+	vector2 YAxis,
+	vector2 XAxisPerp,
+	vector2 YAxisPerp
+)
+{
+	float Edge0 = Inner(PointOffsetFromOrigin, -1 * XAxisPerp);
+	float Edge1 = Inner(PointOffsetFromOrigin - XAxis, -1 * YAxisPerp);
+	float Edge2 = Inner(
+		PointOffsetFromOrigin - XAxis - YAxis, XAxisPerp
+	);
+	float Edge3 = Inner(PointOffsetFromOrigin - YAxis, YAxisPerp);
+	return (Edge0 < 0) && (Edge1 < 0) && (Edge2 < 0) && (Edge3 < 0);
 }
 
 void DrawRectangle(
@@ -282,14 +303,17 @@ void DrawRectangleSlowly(
 		for(int X = MinX; X < MaxX; X++)
 		{
 			vector2 Point = Vector2(X, Y);
-			float Edge0 = Inner(Point - Origin, XAxisPerp);
-			float Edge1 = Inner(Point - (Origin + XAxis), YAxisPerp);
-			float Edge2 = Inner(
-				Point - (Origin + XAxis + YAxis), -1 * XAxisPerp
-			);
-			float Edge3 = Inner(Point - (Origin + YAxis), -1 * YAxisPerp);
+			vector2 PointOffsetFromOrigin = Point - Origin;
 
-			if((Edge0 < 0) && (Edge1 < 0) && (Edge2 < 0) && (Edge3 < 0))
+			bool InRotatedQuad = IsInRotatedQuad(
+				PointOffsetFromOrigin,
+				Origin,
+				XAxis,
+				YAxis,
+				XAxisPerp,
+				YAxisPerp
+			);
+			if(InRotatedQuad)
 			{
 				*Pixel = Color;
 			}
@@ -299,6 +323,7 @@ void DrawRectangleSlowly(
 	}
 }
 
+// TODO: delete me
 void DrawBitmap(
 	loaded_bitmap* Buffer,
 	loaded_bitmap* Bitmap,
@@ -389,6 +414,223 @@ void DrawBitmap(
 	}
 }
 
+void DrawBitmapSlowly(
+	loaded_bitmap* Buffer, 
+	vector2 Origin,
+	vector2 XAxis,
+	vector2 YAxis,
+	loaded_bitmap* Texture
+)
+{
+	float fMinX = (float) Buffer->Width;
+	float fMinY = (float) Buffer->Height;
+	float fMaxX = 0;
+	float fMaxY = 0;
+
+	vector2 Points[4] = {
+		Origin,
+		Origin + XAxis,
+		Origin + YAxis,
+		Origin + XAxis + YAxis
+	};
+	for(int Index = 0; Index < ARRAY_COUNT(Points); Index++)
+	{
+		vector2 Point = Points[Index];
+		if(Point.X < fMinX)
+		{
+			fMinX = Point.X;
+		}
+		if(Point.X > fMaxX)
+		{
+			fMaxX = Point.X;
+		}
+
+		if(Point.Y < fMinY)
+		{
+			fMinY = Point.Y;
+		}
+		if(Point.Y > fMaxY)
+		{
+			fMaxY = Point.Y;
+		}
+	}
+
+	int32_t MinX = RoundFloat32ToInt32(fMinX);
+	int32_t MaxX = RoundFloat32ToInt32(fMaxX);
+	int32_t MinY = RoundFloat32ToInt32(fMinY);
+	int32_t MaxY = RoundFloat32ToInt32(fMaxY);
+
+	if(MinX < 0)
+	{
+		MinX = 0;
+	}
+	else if(MinX > Buffer->Width)
+	{
+		MinX = Buffer->Width;
+	}
+	if(MaxX < 0)
+	{
+		MaxX = 0;
+	}
+	else if(MaxX > Buffer->Width)
+	{
+		MaxX = Buffer->Width;
+	}
+	if(MinY < 0)
+	{
+		MinY = 0;
+	}
+	else if(MinY > Buffer->Height)
+	{
+		MinY = Buffer->Height;
+	}
+	if(MaxY < 0)
+	{
+		MaxY = 0;
+	}
+	else if(MaxY > Buffer->Height)
+	{
+		MaxY = Buffer->Height;
+	}
+
+	uint32_t Color = 0xFFFFFFFF;
+
+	float InvXAxisLengthSq = 1.0f / MagnitudeSquared(XAxis);
+	float InvYAxisLengthSq = 1.0f / MagnitudeSquared(YAxis);
+
+	vector2 XAxisPerp = Perpendicular(XAxis);
+	vector2 YAxisPerp = Perpendicular(YAxis);
+
+	uint8_t* Row = (
+		((uint8_t*) Buffer->Memory) + 
+		MinX * BYTES_PER_PIXEL +
+		MinY * Buffer->Pitch 
+	);
+	for(int Y = MinY; Y < MaxY; Y++)
+	{
+		uint32_t* Pixel = (uint32_t*) Row;
+		for(int X = MinX; X < MaxX; X++)
+		{
+			vector2 Point = Vector2(X, Y);
+			vector2 PointOffsetFromOrigin = Point - Origin;
+			bool InRotatedQuad = IsInRotatedQuad(
+				PointOffsetFromOrigin,
+				Origin,
+				XAxis,
+				YAxis,
+				XAxisPerp,
+				YAxisPerp
+			);
+			if(InRotatedQuad)
+			{
+				// NOTE: U and V are determined by normalizing the projection of
+				// CONT: the point to each axis
+				float U = (
+					InvXAxisLengthSq * Inner(PointOffsetFromOrigin, XAxis)
+				);
+				float V = (
+					InvYAxisLengthSq * Inner(PointOffsetFromOrigin, YAxis)
+				);
+
+				// TODO: clamping
+				ASSERT((U >= 0.0f) && (U <= 1.0f));
+				ASSERT((V >= 0.0f) && (V <= 1.0f));
+				// TODO: formalize texture boundaries
+				// NOTE: U and V are then used to find the sample within the 
+				// CONT: texture 
+				float tX = U * ((float)(Texture->Width - 2));
+				float tY = V * ((float)(Texture->Height - 2));
+				
+				int32_t iX = (int32_t) tX;
+				int32_t iY = (int32_t) tY;
+
+				float fX = tX - ((float) iX);
+				float fY = tY - ((float) iY);
+
+				ASSERT((iX >= 0) && (iX < Texture->Width));
+				ASSERT((iY >= 0) && (iY < Texture->Height));
+				
+				uint8_t* TexelPtr = (
+					((uint8_t*) Texture->Memory) + 
+					iY * Texture->Pitch + 
+					iX * sizeof(uint32_t)
+				);
+
+				// NOTE: lerp based on texels below above and to the right
+				uint32_t TexelPtrA = *(uint32_t*) (TexelPtr);
+				uint32_t TexelPtrB = *(uint32_t*) (TexelPtr + sizeof(uint32_t));
+				uint32_t TexelPtrC = *(uint32_t*) (TexelPtr + Texture->Pitch);
+				uint32_t TexelPtrD = *(uint32_t *) (
+					TexelPtr + Texture->Pitch + sizeof(uint32_t)
+				);
+
+				// TODO: Color.a!!
+				vector4 TexelA = {
+					(float)((TexelPtrA >> 16) & 0xFF),
+					(float)((TexelPtrA >> 8) & 0xFF),
+					(float)((TexelPtrA >> 0) & 0xFF),
+					(float)((TexelPtrA >> 24) & 0xFF)
+				};
+				vector4 TexelB = {
+					(float)((TexelPtrB >> 16) & 0xFF),
+					(float)((TexelPtrB >> 8) & 0xFF),
+					(float)((TexelPtrB >> 0) & 0xFF),
+					(float)((TexelPtrB >> 24) & 0xFF)
+				};
+				vector4 TexelC = {
+					(float)((TexelPtrC >> 16) & 0xFF),
+					(float)((TexelPtrC >> 8) & 0xFF),
+					(float)((TexelPtrC >> 0) & 0xFF),
+					(float)((TexelPtrC >> 24) & 0xFF)
+				};
+				vector4 TexelD = {
+					(float)((TexelPtrD >> 16) & 0xFF),
+					(float)((TexelPtrD >> 8) & 0xFF),
+					(float)((TexelPtrD >> 0) & 0xFF),
+					(float)((TexelPtrD >> 24) & 0xFF)
+				};
+
+				// NOTE: Lerp to get the colors between
+				vector4 Texel = Lerp(
+					Lerp(TexelA, fX, TexelB),
+					fY,
+					Lerp(TexelC, fX, TexelD)
+				);
+				
+				// NOTE: source colors and alpha
+				float SA = Texel.A;
+				float SR = Texel.R;
+				float SG = Texel.G;
+				float SB = Texel.B;
+				
+				// float RSA = (SA / 255.0f) * Color.a; 
+				float RSA = SA / 255.0f;
+
+				// NOTE: destination colors and alpha
+				float DA = (float) ((*Pixel >> 24) & 0xFF);
+				float DR = (float) ((*Pixel >> 16) & 0xFF);
+				float DG = (float) ((*Pixel >> 8) & 0xFF);
+				float DB = (float) ((*Pixel >> 0) & 0xFF);
+				float RDA = (DA / 255.0f);
+			
+				float InvRSA = (1.0f - RSA);
+				// TODO: Check this for math errors
+				float A = 255.0f * (RSA + RDA - RSA * RDA);
+				float R = InvRSA * DR + SR;
+				float G = InvRSA * DG + SG;
+				float B = InvRSA * DB + SB;
+
+				*Pixel = (((uint32_t) (A + 0.5f) << 24) |
+						  ((uint32_t) (R + 0.5f) << 16) |
+						  ((uint32_t) (G + 0.5f) << 8) |
+						  ((uint32_t) (B + 0.5f) << 0));
+			}
+			Pixel++;
+		}
+		Row += Buffer->Pitch;
+	}
+}
+
 void Clear(
 	loaded_bitmap* Buffer, 
 	float Red,
@@ -453,24 +695,11 @@ void RenderGroupToOutput(
 					Vector2(0, 0),
 					RenderGroup->CameraPos
 				);
-
-				vector2 Axis1ScreenPos = GetScreenPos(
-					&Entry->Basis,
-					RenderGroup->WorldScreenBasis,
-					Entry->Dim.X * Entry->Basis.Axis1,
-					RenderGroup->CameraPos
+				vector2 Dim = WorldToBasisScale(
+					RenderGroup->WorldScreenBasis, Entry->Dim
 				);
-				vector2 Axis2ScreenPos = GetScreenPos(
-					&Entry->Basis,
-					RenderGroup->WorldScreenBasis,
-					Entry->Dim.Y * Entry->Basis.Axis2,
-					RenderGroup->CameraPos
-				);
-
-				vector2 Axis1 = Axis1ScreenPos - OriginScreenPos;
-				// Axis1.Y = -1 * Axis1.Y;
-				vector2 Axis2 = Axis2ScreenPos - OriginScreenPos;
-				// Axis2.Y = -1 * Axis2.Y;
+				vector2 Axis1 = Dim.X * Entry->Basis.Axis1;
+				vector2 Axis2 = Dim.Y * Entry->Basis.Axis2;
 
 				DrawRectangleSlowly(
 					Target,
@@ -479,30 +708,6 @@ void RenderGroupToOutput(
 					Axis2,
 					Entry->Color
 				);
-
-				vector2 RectangleDim = Vector2(10, 10);
-
-				DrawRectangle(
-					Target,
-					MakeRectangle(OriginScreenPos, RectangleDim),
-					0.0f,
-					0.0f,
-					1.0f
-				);
-				DrawRectangle(
-					Target,
-					MakeRectangle(Axis1ScreenPos, RectangleDim),
-					0.0f,
-					0.0f,
-					1.0f
-				);
-				DrawRectangle(
-					Target,
-					MakeRectangle(Axis2ScreenPos, RectangleDim),
-					0.0f,
-					0.0f,
-					1.0f
-				);
 				CurrentAddress += sizeof(*Entry);
 				break;
 			}
@@ -510,18 +715,26 @@ void RenderGroupToOutput(
 			{
 				render_entry_bitmap* Entry = (render_entry_bitmap*) Header;
 
-				vector2 ScreenPos = GetScreenPos(
+				vector2 OriginScreenPos = GetScreenPos(
 					&Entry->Basis,
 					RenderGroup->WorldScreenBasis,
-					Entry->Position,
+					Vector2(0, 0),
 					RenderGroup->CameraPos
 				);
 
-				DrawBitmap(
+				vector2 Axis1 = (
+					((float) Entry->Bitmap->Width) * Entry->Basis.Axis1
+				);
+				vector2 Axis2 = (
+					((float) Entry->Bitmap->Height) * Entry->Basis.Axis2
+				);
+
+				DrawBitmapSlowly(
 					Target,
-					Entry->Bitmap,
-					ScreenPos.X,
-					ScreenPos.Y
+					OriginScreenPos,
+					Axis1,
+					Axis2,
+					Entry->Bitmap
 				);
 				CurrentAddress += sizeof(*Entry);
 				break;

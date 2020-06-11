@@ -330,7 +330,7 @@ void GameUpdateAndRender(
 		DrawFullHand(GameState, Player_Two, CardWidth, CardHeight);
 
 		GameState->TestBitmap = DEBUGLoadBmp(
-			Thread, "../data/test/test_hero_front_head.bmp"
+			Thread, "../data/test/tree00.bmp"
 		);
 
 		// TODO: this may be more appropriate in the platform layer
@@ -433,10 +433,12 @@ void GameUpdateAndRender(
 				{
 					Card->Active = false;
 				}
+				vector2 Basis = Card->Rectangle.Min;
+				Basis.Y += Card->Rectangle.Dim.Y;
 				PushRect(
 					&GameState->RenderGroup,
 					MakeBasis(
-						Card->Rectangle.Min, Vector2(1, 0), Vector2(0, 1)
+						Basis, Vector2(1, 0), Vector2(0, 1)
 					),
 					Card->Rectangle,
 					Card->Color
@@ -447,30 +449,38 @@ void GameUpdateAndRender(
 	}
 
 #if 1 // NOTE: tests for bitmaps and coordinate systems
-	PushBitmap(
-		&GameState->RenderGroup,
-		GameState->RenderGroup.DefaultBasis,
-		&GameState->TestBitmap,
-		Vector2(100, 300)
-	);
 	GameState->SineT += DtForFrame;
 	float RotationalPeriod = 5.0f;
 	float Radians = (2 * PI32 * GameState->SineT) / RotationalPeriod;
 	float CosVal = cosf(Radians);
 	float SinVal = sinf(Radians);
-	PushRect(
+	PushBitmap(
 		&GameState->RenderGroup,
 		MakeBasis(
 			Vector2(BackBuffer->Width / 2, BackBuffer->Height / 2),
-			Vector2(CosVal, SinVal),
-			Vector2(-1 * SinVal, CosVal)
+			2 * Vector2(CosVal, SinVal),
+			2 * Vector2(-1 * SinVal, CosVal)
 		),
-		MakeRectangle(
-			Vector2(BackBuffer->Width / 2, BackBuffer->Height / 2),
-			Vector2(60.0f, 60.0f)
-		),
-		Vector4(1.0f, 1.0f, 1.0f, 1.0f)
+		// MakeBasis(
+		// 	Vector2(BackBuffer->Width / 2, BackBuffer->Height / 2),
+		// 	Vector2(1, 0),
+		// 	Vector2(0, 1)
+		// ),
+		&GameState->TestBitmap
 	);
+	// PushRect(
+	// 	&GameState->RenderGroup,
+	// 	MakeBasis(
+	// 		Vector2(BackBuffer->Width / 2, BackBuffer->Height / 2),
+	// 		Vector2(CosVal, SinVal),
+	// 		Vector2(-1 * SinVal, CosVal)
+	// 	),
+	// 	MakeRectangle(
+	// 		Vector2(BackBuffer->Width / 2, BackBuffer->Height / 2),
+	// 		Vector2(60.0f, 60.0f)
+	// 	),
+	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f)
+	// );
 #endif
 
 	// SECTION STOP: Updating game state

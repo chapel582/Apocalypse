@@ -45,7 +45,7 @@ loaded_bitmap DEBUGLoadBmp(thread_context* Thread, char* FileName)
 	uint32_t* Pixels = (uint32_t*) (
 		(uint8_t*) ReadResult.Contents + Header->BitmapOffset
 	);
-	Result.Pixels = Pixels;
+	Result.Memory = Pixels;
 	Result.Width = Header->Width;
 	Result.Height = Header->Height;
 

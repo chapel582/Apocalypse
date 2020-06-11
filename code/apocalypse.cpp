@@ -454,7 +454,7 @@ void GameUpdateAndRender(
 		Vector2(100, 300)
 	);
 	GameState->SineT += DtForFrame;
-	float RotationalPeriod = 3.0f;
+	float RotationalPeriod = 5.0f;
 	float Radians = (2 * PI32 * GameState->SineT) / RotationalPeriod;
 	float CosVal = cosf(Radians);
 	float SinVal = sinf(Radians);
@@ -462,12 +462,12 @@ void GameUpdateAndRender(
 		&GameState->RenderGroup,
 		MakeBasis(
 			Vector2(BackBuffer->Width / 2, BackBuffer->Height / 2),
-			Vector2(2 * CosVal, 2 * SinVal),
-			Vector2(-2 * SinVal, 2 * CosVal)
+			Vector2(CosVal, SinVal),
+			Vector2(-1 * SinVal, CosVal)
 		),
 		MakeRectangle(
 			Vector2(BackBuffer->Width / 2, BackBuffer->Height / 2),
-			Vector2(30.0f, 30.0f)
+			Vector2(60.0f, 60.0f)
 		),
 		Vector4(1.0f, 1.0f, 1.0f, 1.0f)
 	);
@@ -476,7 +476,13 @@ void GameUpdateAndRender(
 	// SECTION STOP: Updating game state
 
 	// SECTION START: Render
-	RenderGroupToOutput(&GameState->RenderGroup, BackBuffer);
+	loaded_bitmap DrawBuffer = {};
+	DrawBuffer.Width = BackBuffer->Width;
+	DrawBuffer.Height = BackBuffer->Height;
+	DrawBuffer.Pitch = BackBuffer->Pitch;
+	DrawBuffer.Memory = BackBuffer->Memory;
+
+	RenderGroupToOutput(&GameState->RenderGroup, &DrawBuffer);
 	// SECTION STOP: Render
 	ResetMemArena(&GameState->FrameArena);
 }

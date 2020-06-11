@@ -16,6 +16,8 @@
 #define GIGABYTES(Value) (1024LL * MEGABYTES(Value))
 #define TERABYTES(Value) (1024LL * GIGABYTES(Value))
 
+#define BYTES_PER_PIXEL 4 
+
 inline uint32_t SafeTruncateUInt64(uint64_t Value)
 {
 	ASSERT(Value <= 0xFFFFFFFF);

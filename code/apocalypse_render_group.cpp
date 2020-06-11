@@ -115,7 +115,7 @@ inline void PushCoordinateSystem(render_group* Group, basis Basis)
 }
 
 void DrawRectangle(
-	game_offscreen_buffer* BackBuffer, 
+	loaded_bitmap* Buffer, 
 	rectangle Rectangle,
 	float Red, 
 	float Green, 
@@ -131,33 +131,33 @@ void DrawRectangle(
 	{
 		MinX = 0;
 	}
-	else if(MinX > BackBuffer->Width)
+	else if(MinX > Buffer->Width)
 	{
-		MinX = BackBuffer->Width;
+		MinX = Buffer->Width;
 	}
 	if(MaxX < 0)
 	{
 		MaxX = 0;
 	}
-	else if(MaxX > BackBuffer->Width)
+	else if(MaxX > Buffer->Width)
 	{
-		MaxX = BackBuffer->Width;
+		MaxX = Buffer->Width;
 	}
 	if(MinY < 0)
 	{
 		MinY = 0;
 	}
-	else if(MinY > BackBuffer->Height)
+	else if(MinY > Buffer->Height)
 	{
-		MinY = BackBuffer->Height;
+		MinY = Buffer->Height;
 	}
 	if(MaxY < 0)
 	{
 		MaxY = 0;
 	}
-	else if(MaxY > BackBuffer->Height)
+	else if(MaxY > Buffer->Height)
 	{
-		MaxY = BackBuffer->Height;
+		MaxY = Buffer->Height;
 	}
 
 	uint32_t Color = (
@@ -167,9 +167,9 @@ void DrawRectangle(
 	);
 
 	uint8_t* Row = (
-		((uint8_t*) BackBuffer->Memory) + 
-		MinX * BackBuffer->BytesPerPixel +
-		MinY * BackBuffer->Pitch 
+		((uint8_t*) Buffer->Memory) + 
+		MinX * BYTES_PER_PIXEL +
+		MinY * Buffer->Pitch 
 	);
 
 	for(int Y = MinY; Y < MaxY; Y++)
@@ -179,20 +179,20 @@ void DrawRectangle(
 		{
 			*Pixel++ = Color;
 		}
-		Row += BackBuffer->Pitch;
+		Row += Buffer->Pitch;
 	}
 }
 
 void DrawRectangleSlowly(
-	game_offscreen_buffer* BackBuffer, 
+	loaded_bitmap* Buffer, 
 	vector2 Origin,
 	vector2 XAxis,
 	vector2 YAxis,
 	vector4 ColorV
 )
 {
-	float fMinX = (float) BackBuffer->Width;
-	float fMinY = (float) BackBuffer->Height;
+	float fMinX = (float) Buffer->Width;
+	float fMinY = (float) Buffer->Height;
 	float fMaxX = 0;
 	float fMaxY = 0;
 
@@ -233,33 +233,33 @@ void DrawRectangleSlowly(
 	{
 		MinX = 0;
 	}
-	else if(MinX > BackBuffer->Width)
+	else if(MinX > Buffer->Width)
 	{
-		MinX = BackBuffer->Width;
+		MinX = Buffer->Width;
 	}
 	if(MaxX < 0)
 	{
 		MaxX = 0;
 	}
-	else if(MaxX > BackBuffer->Width)
+	else if(MaxX > Buffer->Width)
 	{
-		MaxX = BackBuffer->Width;
+		MaxX = Buffer->Width;
 	}
 	if(MinY < 0)
 	{
 		MinY = 0;
 	}
-	else if(MinY > BackBuffer->Height)
+	else if(MinY > Buffer->Height)
 	{
-		MinY = BackBuffer->Height;
+		MinY = Buffer->Height;
 	}
 	if(MaxY < 0)
 	{
 		MaxY = 0;
 	}
-	else if(MaxY > BackBuffer->Height)
+	else if(MaxY > Buffer->Height)
 	{
-		MaxY = BackBuffer->Height;
+		MaxY = Buffer->Height;
 	}
 
 	uint32_t Color = (
@@ -272,9 +272,9 @@ void DrawRectangleSlowly(
 	vector2 YAxisPerp = Perpendicular(YAxis);
 
 	uint8_t* Row = (
-		((uint8_t*) BackBuffer->Memory) + 
-		MinX * BackBuffer->BytesPerPixel +
-		MinY * BackBuffer->Pitch 
+		((uint8_t*) Buffer->Memory) + 
+		MinX * BYTES_PER_PIXEL +
+		MinY * Buffer->Pitch 
 	);
 	for(int Y = MinY; Y < MaxY; Y++)
 	{
@@ -295,12 +295,12 @@ void DrawRectangleSlowly(
 			}
 			Pixel++;
 		}
-		Row += BackBuffer->Pitch;
+		Row += Buffer->Pitch;
 	}
 }
 
 void DrawBitmap(
-	game_offscreen_buffer* Buffer,
+	loaded_bitmap* Buffer,
 	loaded_bitmap* Bitmap,
 	float RealX,
 	float RealY,
@@ -345,11 +345,13 @@ void DrawBitmap(
 	// TODO: SourceRow needs to change based on clipping
 	// NOTE: bitmaps are stored upside down
 	// CONT: Bitmap->Width * (Bitmap->Height - 1) means we start at the last row
-	uint32_t* SourceRow = Bitmap->Pixels + Bitmap->Width * (Bitmap->Height - 1);
+	uint32_t* SourceRow = (
+		((uint32_t*) Bitmap->Memory) + Bitmap->Width * (Bitmap->Height - 1)
+	);
 	SourceRow += -SourceOffsetY * Bitmap->Width + SourceOffsetX;
 	uint8_t* DestRow = (
 		(uint8_t*) Buffer->Memory +
-		MinX * Buffer->BytesPerPixel + 
+		MinX * BYTES_PER_PIXEL + 
 		MinY * Buffer->Pitch
 	);
 
@@ -388,17 +390,17 @@ void DrawBitmap(
 }
 
 void Clear(
-	game_offscreen_buffer* BackBuffer, 
+	loaded_bitmap* Buffer, 
 	float Red,
 	float Green, 
 	float Blue
 )
 {
 	DrawRectangle(
-		BackBuffer,
+		Buffer,
 		MakeRectangle(
 			Vector2(0.0f, 0.0f),
-			Vector2((float) BackBuffer->Width, (float) BackBuffer->Height)
+			Vector2((float) Buffer->Width, (float) Buffer->Height)
 		),
 		Red,
 		Green,
@@ -420,7 +422,7 @@ vector2 GetScreenPos(
 }
 
 void RenderGroupToOutput(
-	render_group* RenderGroup, game_offscreen_buffer* BackBuffer
+	render_group* RenderGroup, loaded_bitmap* Target
 )
 {
 	for(
@@ -435,7 +437,7 @@ void RenderGroupToOutput(
 			{
 				render_entry_clear* Entry = (render_entry_clear*) Header;
 				Clear(
-					BackBuffer, Entry->Color.R, Entry->Color.G, Entry->Color.B
+					Target, Entry->Color.R, Entry->Color.G, Entry->Color.B
 				);
 				CurrentAddress += sizeof(*Entry);
 				break;
@@ -471,7 +473,7 @@ void RenderGroupToOutput(
 				// Axis2.Y = -1 * Axis2.Y;
 
 				DrawRectangleSlowly(
-					BackBuffer,
+					Target,
 					OriginScreenPos,
 					Axis1,
 					Axis2,
@@ -481,21 +483,21 @@ void RenderGroupToOutput(
 				vector2 RectangleDim = Vector2(10, 10);
 
 				DrawRectangle(
-					BackBuffer,
+					Target,
 					MakeRectangle(OriginScreenPos, RectangleDim),
 					0.0f,
 					0.0f,
 					1.0f
 				);
 				DrawRectangle(
-					BackBuffer,
+					Target,
 					MakeRectangle(Axis1ScreenPos, RectangleDim),
 					0.0f,
 					0.0f,
 					1.0f
 				);
 				DrawRectangle(
-					BackBuffer,
+					Target,
 					MakeRectangle(Axis2ScreenPos, RectangleDim),
 					0.0f,
 					0.0f,
@@ -516,7 +518,7 @@ void RenderGroupToOutput(
 				);
 
 				DrawBitmap(
-					BackBuffer,
+					Target,
 					Entry->Bitmap,
 					ScreenPos.X,
 					ScreenPos.Y

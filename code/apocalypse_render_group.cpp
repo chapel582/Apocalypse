@@ -69,18 +69,59 @@ vector2 WorldToScreenDim(basis* WorldScreenBasis, vector2 WorldDim)
 
 inline void PushBitmap(
 	render_group* Group,
-	basis Basis,
-	loaded_bitmap* Bitmap
+	loaded_bitmap* Bitmap,
+	basis Basis
 )
 {
 	// TODO: we might want a way to push a bitmap while only designating its 
-	// CONT: in world space
+	// CONT: dimentions in world space
+	// TODO: may want a way to push a centered bitmap
 	// NOTE: basis offset should be the top left of the unrotated texture
 	render_entry_bitmap* Entry = PushStruct(Group->Arena, render_entry_bitmap);
 	Group->LastEntry = (uint8_t*) Entry;
 	Entry->Header.Type = EntryType_Bitmap;
 	Entry->Basis = Basis;
 	Entry->Bitmap = Bitmap;
+}
+
+inline void PushBitmapCentered(
+	render_group* Group,
+	loaded_bitmap* Bitmap,
+	vector2 Center,
+	vector2 XAxis,
+	vector2 YAxis
+)
+{
+	// NOTE: XAxis and YAxis describes the rotation and scaling of the bitmap
+	// CONT: but Y is negated for them, so rotations should be thought of as CW,
+	// CONT: not counter clockwise (e.g. XAxis = {0.707, 0.707} is a 45 degree)
+	// CONT: rotation *clockwise* b/c down is positive for Y in screen space
+
+	// NOTE: We need to offset the center of world space by an amount in screen 
+	// CONT: space in order to keep the bitmap centered
+	vector2 ScreenXAxis = XAxis;
+	ScreenXAxis.Y *= -1.0f;
+	vector2 ScreenYAxis = YAxis;
+	ScreenYAxis.Y *= -1.0f;
+
+	vector2 BitmapDim = WorldToBasisScale(
+		Group->WorldScreenBasis,
+		Vector2(Bitmap->Width, Bitmap->Height)
+	);
+
+	PushBitmap(
+		Group,
+		Bitmap,
+		MakeBasis(
+			(
+				Center - 
+				0.5f * ScreenXAxis * BitmapDim.X - 
+				0.5f * ScreenYAxis * BitmapDim.Y
+			),
+			XAxis,
+			YAxis
+		)
+	);
 }
 
 // TODO: make a push rect that doesn't require pushing a basis and will make it based on the rect you push

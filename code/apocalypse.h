@@ -162,10 +162,11 @@ struct game_state
 
 	render_group RenderGroup;
 	basis WorldScreenBasis;
+
+	float Time;
 	
 	// TODO: delete test code below
 	loaded_bitmap TestBitmap;
-	float SineT;
 	int ToneHz;
 	mouse_event_type CurrentPrimaryState;
 	// TODO: done with test code here

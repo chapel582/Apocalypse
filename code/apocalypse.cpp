@@ -198,7 +198,7 @@ void GameUpdateAndRender(
 		RenderGroup->CameraPos = Vector2(0.0f, 0.0f);
 
 		GameState->CurrentPrimaryState = PrimaryUp;
-		GameState->SineT = 0;
+		GameState->Time = 0;
 		GameState->ToneHz = 256;
 
 		GameState->MaxCards = Player_Count * CardSet_Count * MAX_CARDS_PER_SET;
@@ -330,12 +330,14 @@ void GameUpdateAndRender(
 		DrawFullHand(GameState, Player_Two, CardWidth, CardHeight);
 
 		GameState->TestBitmap = DEBUGLoadBmp(
-			Thread, "../data/test/test_hero_front_head.bmp"
+			Thread, "../data/test/tree00.bmp"
 		);
 
 		// TODO: this may be more appropriate in the platform layer
 		Memory->IsInitialized = true;
 	}
+
+	GameState->Time += DtForFrame;
 
 	// SECTION START: User input
 	// TODO: move to game memory
@@ -416,7 +418,7 @@ void GameUpdateAndRender(
 
 	// SECTION START: Updating game state
 	// NOTE: not sure if we should finish all updates and then push to the 
-	// CONT: render group
+	// CONT: render group	
 	PushClear(&GameState->RenderGroup, Vector4(1.0f, 0, 0, 0));
 	{
 		card* Card = &GameState->Cards[0];
@@ -449,22 +451,28 @@ void GameUpdateAndRender(
 	}
 
 #if 1 // NOTE: tests for bitmaps and coordinate systems
-	GameState->SineT += DtForFrame;
 	float RotationalPeriod = 5.0f;
-	float Radians = (2 * PI32 * GameState->SineT) / RotationalPeriod;
+	float Radians = (2 * PI32 * GameState->Time) / RotationalPeriod;
 	float CosVal = cosf(Radians);
 	float SinVal = sinf(Radians);
+	vector2 Origin = Vector2(0.0f, BackBuffer->Height / 2.0f);
+	vector2 Center = Vector2(
+		(BackBuffer->Width / 2.0f) + 30 * CosVal, BackBuffer->Height / 2.0f
+	);
+	vector2 XAxis = Vector2(CosVal, SinVal);
+	vector2 YAxis = Perpendicular(XAxis);
+
+	PushBitmapCentered(
+		&GameState->RenderGroup,
+		&GameState->TestBitmap,
+		Center,
+		XAxis,
+		YAxis
+	);
 	PushBitmap(
 		&GameState->RenderGroup,
-		MakeBasis(
-			Vector2(
-				(BackBuffer->Width / 2.0f) + 50.0f * CosVal,
-				BackBuffer->Height / 2.0f
-			),
-			Vector2(CosVal, SinVal),
-			Vector2(-1 * SinVal, CosVal)
-		),
-		&GameState->TestBitmap
+		&GameState->TestBitmap,
+		MakeBasis(Origin, XAxis, YAxis)
 	);
 #endif
 

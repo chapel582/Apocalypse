@@ -457,11 +457,12 @@ void GameUpdateAndRender(
 	PushBitmap(
 		&GameState->RenderGroup,
 		MakeBasis(
-			Vector2(BackBuffer->Width / 2, BackBuffer->Height / 2),
-			// Vector2(CosVal, SinVal),
-			// Vector2(-1 * SinVal, CosVal)
-			Vector2(1, 0),
-			Vector2(0, 1)
+			Vector2(
+				(BackBuffer->Width / 2.0f) + 50.0f * CosVal,
+				BackBuffer->Height / 2.0f
+			),
+			Vector2(CosVal, SinVal),
+			Vector2(-1 * SinVal, CosVal)
 		),
 		&GameState->TestBitmap
 	);

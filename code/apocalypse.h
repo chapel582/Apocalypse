@@ -169,6 +169,12 @@ struct game_state
 	loaded_bitmap TestBitmap;
 	int ToneHz;
 	mouse_event_type CurrentPrimaryState;
+	loaded_bitmap TestDiffuse;
+	loaded_bitmap TestNormal;
+	int EnvMapWidth;
+	int EnvMapHeight;
+	// NOTE: 0 is bottom, 1 is middle, 2 is top
+	environment_map EnvMaps[3];
 	// TODO: done with test code here
 
 	card* Cards;

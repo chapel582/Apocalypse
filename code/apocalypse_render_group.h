@@ -4,6 +4,11 @@
 #include "apocalypse_vector.h"
 #include "apocalypse_bitmap.h"
 
+struct environment_map
+{
+	loaded_bitmap Lod[4];
+};
+
 struct basis
 {
 	// NOTE: the offset of the coordinate system from world's origin
@@ -62,7 +67,14 @@ struct render_entry_bitmap
 {
 	render_entry_header Header;
 	basis Basis; // NOTE: basis in world space
+	vector4 Color;
+	
 	loaded_bitmap* Bitmap;
+	loaded_bitmap* NormalMap;
+
+	environment_map* Top;
+	environment_map* Middle;
+	environment_map* Bottom;
 };
 
 struct render_entry_rectangle

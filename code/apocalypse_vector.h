@@ -112,7 +112,7 @@ inline float MagnitudeSquared(vector2 A)
 
 inline float Magnitude(vector2 A)
 {
-	return (float) sqrt(MagnitudeSquared(A));
+	return sqrtf(MagnitudeSquared(A));
 }
 
 inline vector2 Perpendicular(vector2 A)
@@ -121,6 +121,14 @@ inline vector2 Perpendicular(vector2 A)
 	Result.X = -A.Y;
 	Result.Y = A.X;
 	return Result;	
+}
+
+inline vector2 Hadamard(vector2 A, vector2 B)
+{
+	vector2 Result;
+	Result.X = A.X * B.X;
+	Result.Y = A.Y * B.Y;
+	return Result;
 }
 // SECTION STOP: vector2
 
@@ -225,7 +233,28 @@ inline float MagnitudeSquared(vector3 A)
 
 inline float Magnitude(vector3 A)
 {
-	return (float) sqrt(MagnitudeSquared(A));
+	return sqrtf(MagnitudeSquared(A));
+}
+
+inline vector3 Normalize(vector3 A)
+{
+	return (1.0f / Magnitude(A)) * A; 
+}
+
+inline vector3 Lerp(vector3 A, float T, vector3 B)
+{
+    vector3 Result = (1.0f - T) * A + T * B;
+
+    return Result;
+}
+
+inline vector3 Hadamard(vector3 A, vector3 B)
+{
+	vector3 Result;
+	Result.X = A.X * B.X;
+	Result.Y = A.Y * B.Y;
+	Result.Z = A.Z * B.Z;
+	return Result;
 }
 // SECTION STOP: vector3
 
@@ -246,6 +275,16 @@ union vector4
 		float B;
 		float A;
 	};
+	struct
+	{
+		vector3 Rgb;
+		float A;
+	};
+	struct
+	{
+		vector3 Xyz;
+		float W;
+	};
 };
 
 inline vector4 Vector4(float X, float Y, float Z, float W)
@@ -254,6 +293,16 @@ inline vector4 Vector4(float X, float Y, float Z, float W)
 	Result.X = X;
 	Result.Y = Y;
 	Result.Z = Z;
+	Result.W = W;
+	return Result;
+}
+
+inline vector4 ToVector4(vector3 Vector3, float W)
+{
+	vector4 Result;
+	Result.X = Vector3.X;
+	Result.Y = Vector3.Y;
+	Result.Z = Vector3.Z;
 	Result.W = W;
 	return Result;
 }
@@ -331,6 +380,16 @@ inline vector4 Lerp(vector4 A, float T, vector4 B)
     vector4 Result = (1.0f - T) * A + T * B;
 
     return Result;
+}
+
+inline vector4 Hadamard(vector4 A, vector4 B)
+{
+	vector4 Result;
+	Result.X = A.X * B.X;
+	Result.Y = A.Y * B.Y;
+	Result.Z = A.Z * B.Z;
+	Result.W = A.W * B.W;
+	return Result;
 }
 // SECTION STOP vector4
 

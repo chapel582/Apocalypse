@@ -1,6 +1,8 @@
 #include "apocalypse_bitmap.h"
 #include "apocalypse_platform.h"
 
+#include <string.h>
+
 #pragma pack(push, 1)
 struct bitmap_header
 {
@@ -92,5 +94,22 @@ loaded_bitmap DEBUGLoadBmp(thread_context* Thread, char* FileName)
 		((uint8_t*) Result.Memory) - Result.Pitch * (Result.Height - 1)
 	);
 end:
+	return Result;
+}
+
+size_t GetBitmapSize(int32_t Width, int32_t Height)
+{
+	return Width * Height * BYTES_PER_PIXEL;
+}
+
+loaded_bitmap MakeEmptyBitmap(void* Memory, int32_t Width, int32_t Height)
+{
+	loaded_bitmap Result = {};
+	Result.Width = Width;
+	Result.Height = Height;
+	Result.Pitch = Result.Width * BYTES_PER_PIXEL;
+	Result.Memory = Memory;
+
+	memset(Result.Memory, 0, GetBitmapSize(Result.Width, Result.Height));
 	return Result;
 }

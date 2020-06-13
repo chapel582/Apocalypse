@@ -70,7 +70,12 @@ vector2 WorldToScreenDim(basis* WorldScreenBasis, vector2 WorldDim)
 inline void PushBitmap(
 	render_group* Group,
 	loaded_bitmap* Bitmap,
-	basis Basis
+	basis Basis,
+	vector4 Color,
+	loaded_bitmap* NormalMap,
+	environment_map* Top,
+	environment_map* Middle,
+	environment_map* Bottom
 )
 {
 	// TODO: we might want a way to push a bitmap while only designating its 
@@ -84,6 +89,11 @@ inline void PushBitmap(
 	Entry->Header.Type = EntryType_Bitmap;
 	Entry->Basis = Basis;
 	Entry->Bitmap = Bitmap;
+	Entry->Color = Color;
+	Entry->NormalMap = NormalMap;
+	Entry->Top = Top;
+	Entry->Middle = Middle;
+	Entry->Bottom = Bottom;
 }
 
 inline void PushBitmapCentered(
@@ -91,7 +101,12 @@ inline void PushBitmapCentered(
 	loaded_bitmap* Bitmap,
 	vector2 Center,
 	vector2 XAxis,
-	vector2 YAxis
+	vector2 YAxis,
+	vector4 Color,
+	loaded_bitmap* NormalMap,
+	environment_map* Top,
+	environment_map* Middle,
+	environment_map* Bottom
 )
 {
 	// NOTE: XAxis and YAxis describes the rotation and scaling of the bitmap
@@ -122,7 +137,12 @@ inline void PushBitmapCentered(
 			),
 			XAxis,
 			YAxis
-		)
+		),
+		Color,
+		NormalMap,
+		Top,
+		Middle,
+		Bottom
 	);
 }
 
@@ -181,9 +201,7 @@ bool IsInRotatedQuad(
 void DrawRectangle(
 	loaded_bitmap* Buffer, 
 	rectangle Rectangle,
-	float Red, 
-	float Green, 
-	float Blue
+	vector4 vColor 
 )
 {
 	int32_t MinX = RoundFloat32ToInt32(Rectangle.Min.X);
@@ -225,9 +243,10 @@ void DrawRectangle(
 	}
 
 	uint32_t Color = (
-		(RoundFloat32ToInt32(Red * 0xFF) << 16) |
-		(RoundFloat32ToInt32(Green * 0xFF) << 8) |
-		RoundFloat32ToInt32(Blue * 0xFF)
+		(RoundFloat32ToInt32(vColor.R * 0xFF) << 16) |
+		(RoundFloat32ToInt32(vColor.G * 0xFF) << 8) |
+		(RoundFloat32ToInt32(vColor.B * 0xFF)) |
+		(RoundFloat32ToInt32(vColor.A * 0xFF) << 24) 
 	);
 
 	uint8_t* Row = (
@@ -457,18 +476,124 @@ void DrawBitmap(
 	}
 }
 
+inline vector4 Unpack4x8(uint32_t Packed)
+{
+	return Vector4(
+		(float) ((Packed >> 16) & 0xFF),
+		(float) ((Packed >> 8) & 0xFF),
+		(float) (Packed & 0xFF),
+		(float) ((Packed >> 24) & 0xFF)
+	);
+}
+
+struct bilinear_sample
+{
+    uint32_t A, B, C, D;
+};
+
+inline bilinear_sample BilinearSample(
+	loaded_bitmap* Texture, int32_t X, int32_t Y
+)
+{
+    bilinear_sample Result;
+    
+    uint8_t* TexelPtr = (
+    	((uint8_t*)Texture->Memory) + Y * Texture->Pitch + X * sizeof(uint32_t)
+    );
+    Result.A = *(uint32_t*) (TexelPtr);
+    Result.B = *(uint32_t*) (TexelPtr + sizeof(uint32_t));
+    Result.C = *(uint32_t*) (TexelPtr + Texture->Pitch);
+    Result.D = *(uint32_t*) (TexelPtr + Texture->Pitch + sizeof(uint32_t));
+
+    return Result;
+}
+
+inline vector4 BilinearBlend(
+	loaded_bitmap* Texture, int32_t X, int32_t Y, float LerpX, float LerpY
+)
+{
+	// NOTE: lerp based on texels below above and to the right
+	bilinear_sample Sample = BilinearSample(Texture, X, Y);
+
+	// TODO: Color.a!!
+	vector4 TexelA = Unpack4x8(Sample.A);
+	vector4 TexelB = Unpack4x8(Sample.B);
+	vector4 TexelC = Unpack4x8(Sample.C);
+	vector4 TexelD = Unpack4x8(Sample.D);
+
+	// NOTE: Lerp to estimate the new value
+	vector4 Texel = Lerp(
+		Lerp(TexelA, LerpX, TexelB),
+		LerpY,
+		Lerp(TexelC, LerpX, TexelD)
+	);
+	return Texel;
+}
+
+inline vector3 SampleEnvironmentMap(
+	vector2 ScreenSpaceUv, vector3 Normal, float Roughness, environment_map* Map
+)
+{
+	uint32_t LodIndex = (
+		(uint32_t) ((Roughness * ((float) (ARRAY_COUNT(Map->Lod)) - 1) + 0.5f))
+	);
+    ASSERT(LodIndex < ARRAY_COUNT(Map->Lod));
+
+    loaded_bitmap* Lod = &Map->Lod[LodIndex];
+
+    // TODO(casey): Do intersection math to determine where we should be!
+    float tX = (Lod->Width / 2) + Normal.X * ((float) (Lod->Width / 2));
+    float tY = (Lod->Height / 2) + Normal.Y * ((float) (Lod->Height / 2));
+    
+    int32_t X = (int32_t) tX;
+    int32_t Y = (int32_t) tY;
+
+    float fX = tX - (float) X;
+    float fY = tY - (float) Y;
+
+    ASSERT((X >= 0) && (X < Lod->Width));
+    ASSERT((Y >= 0) && (Y < Lod->Height));
+
+    vector3 Result = BilinearBlend(Lod, X, Y, fX, fY).Xyz;
+    return Result;
+}
+
+
+inline vector4 UnscaleAndBiasNormal(vector4 Normal)
+{
+    vector4 Result;
+
+    float Inv255 = 1.0f / 255.0f;
+
+    Result.X = -1.0f + 2.0f * (Inv255 * Normal.X);
+    Result.Y = -1.0f + 2.0f * (Inv255 * Normal.Y);
+    Result.Z = -1.0f + 2.0f*(Inv255 * Normal.Z);
+
+    Result.W = Inv255 * Normal.W;
+
+    return(Result);
+}
+
 void DrawBitmapSlowly(
 	loaded_bitmap* Buffer, 
 	vector2 Origin,
 	vector2 XAxis,
 	vector2 YAxis,
-	loaded_bitmap* Texture
+	loaded_bitmap* Texture,
+	vector4 Color,
+	loaded_bitmap* NormalMap,
+	environment_map* Top,
+	environment_map* Middle,
+	environment_map* Bottom
 )
 {
 	float fMinX = (float) Buffer->Width;
 	float fMinY = (float) Buffer->Height;
 	float fMaxX = 0;
 	float fMaxY = 0;
+
+	float InvWidthMax = 1.0f / ((float) Buffer->Width);
+	float InvHeightMax = 1.0f / ((float) Buffer->Height);
 
 	vector2 Points[4] = {
 		Origin,
@@ -536,8 +661,6 @@ void DrawBitmapSlowly(
 		MaxY = Buffer->Height;
 	}
 
-	uint32_t Color = 0xFFFFFFFF;
-
 	float InvXAxisLengthSq = 1.0f / MagnitudeSquared(XAxis);
 	float InvYAxisLengthSq = 1.0f / MagnitudeSquared(YAxis);
 
@@ -568,6 +691,9 @@ void DrawBitmapSlowly(
 			{
 				// NOTE: U and V are determined by normalizing the projection of
 				// CONT: the point to each axis
+				vector2 ScreenSpaceUv = {
+					InvWidthMax * (float) X, InvHeightMax * (float) Y
+				};
 				float U = (
 					InvXAxisLengthSq * Inner(PointOffsetFromOrigin, XAxis)
 				);
@@ -592,72 +718,90 @@ void DrawBitmapSlowly(
 
 				ASSERT((iX >= 0) && (iX < Texture->Width));
 				ASSERT((iY >= 0) && (iY < Texture->Height));
-				
-				uint8_t* TexelPtr = (
-					((uint8_t*) Texture->Memory) + 
-					iY * Texture->Pitch + 
-					iX * sizeof(uint32_t)
-				);
 
-				// NOTE: lerp based on texels below above and to the right
-				uint32_t TexelPtrA = *(uint32_t*) (TexelPtr);
-				uint32_t TexelPtrB = *(uint32_t*) (TexelPtr + sizeof(uint32_t));
-				uint32_t TexelPtrC = *(uint32_t*) (TexelPtr + Texture->Pitch);
-				uint32_t TexelPtrD = *(uint32_t *) (
-					TexelPtr + Texture->Pitch + sizeof(uint32_t)
-				);
+				vector4 Texel = BilinearBlend(Texture, iX, iY, fX, fY);
+				float NormalTexelAlpha = Texel.A / 255.0f;
 
-				// TODO: Color.a!!
-				vector4 TexelA = {
-					(float)((TexelPtrA >> 16) & 0xFF),
-					(float)((TexelPtrA >> 8) & 0xFF),
-					(float)((TexelPtrA >> 0) & 0xFF),
-					(float)((TexelPtrA >> 24) & 0xFF)
-				};
-				vector4 TexelB = {
-					(float)((TexelPtrB >> 16) & 0xFF),
-					(float)((TexelPtrB >> 8) & 0xFF),
-					(float)((TexelPtrB >> 0) & 0xFF),
-					(float)((TexelPtrB >> 24) & 0xFF)
-				};
-				vector4 TexelC = {
-					(float)((TexelPtrC >> 16) & 0xFF),
-					(float)((TexelPtrC >> 8) & 0xFF),
-					(float)((TexelPtrC >> 0) & 0xFF),
-					(float)((TexelPtrC >> 24) & 0xFF)
-				};
-				vector4 TexelD = {
-					(float)((TexelPtrD >> 16) & 0xFF),
-					(float)((TexelPtrD >> 8) & 0xFF),
-					(float)((TexelPtrD >> 0) & 0xFF),
-					(float)((TexelPtrD >> 24) & 0xFF)
-				};
+				if(NormalMap)
+                {
+                    bilinear_sample NormalSample = BilinearSample(
+                    	NormalMap, iX, iY
+                    );
 
-				// NOTE: Lerp to get the colors between
-				vector4 Texel = Lerp(
-					Lerp(TexelA, fX, TexelB),
-					fY,
-					Lerp(TexelC, fX, TexelD)
-				);
+                    vector4 NormalA = Unpack4x8(NormalSample.A);
+                    vector4 NormalB = Unpack4x8(NormalSample.B);
+                    vector4 NormalC = Unpack4x8(NormalSample.C);
+                    vector4 NormalD = Unpack4x8(NormalSample.D);
+
+                    vector4 Normal = Lerp(
+                    	Lerp(NormalA, fX, NormalB),
+						fY,
+                        Lerp(NormalC, fX, NormalD)
+                    );
+
+                    Normal = UnscaleAndBiasNormal(Normal);
+                    // TODO: Do we really need to do this?
+                    Normal.Xyz = Normalize(Normal.Xyz);
+
+                    // TODO: ? Actually compute a bounce based on the viewer direction
+
+                    // NOTE: Y element determines which map to use for lighting
+                    environment_map* FarMap = 0;
+                    float TEnvMap = Normal.Y;
+                    float TFarMap = 0.0f;
+                    if(TEnvMap < -0.5f)
+                    {
+                        FarMap = Bottom;
+                        TFarMap = -1.0f - 2.0f * TEnvMap;
+                    }
+                    else if(TEnvMap > 0.5f)
+                    {
+                        FarMap = Top;
+                        TFarMap = 2.0f * (TEnvMap - 0.5f);
+                    }
+
+                    vector3 LightColor = {0, 0, 0}; 
+                    // SampleEnvironmentMap(ScreenSpaceUV, Normal.xyz, Normal.w, Middle);
+                    if(FarMap)
+                    {
+                        vector3 FarMapColor = SampleEnvironmentMap(
+                        	ScreenSpaceUv, Normal.Xyz, Normal.W, FarMap
+                        );
+                        LightColor = Lerp(LightColor, TFarMap, FarMapColor);
+                    }
+
+                    // TODO: ? Actually do a lighting model computation here
+                
+                    Texel.Rgb = Lerp(Texel.Rgb, NormalTexelAlpha, LightColor);
+                }
+
+				Texel = Hadamard(Texel, Color);
+				// TODO: what's the point of the clamping?
+				// Texel.R = Clamp01(Texel.R);
+				// Texel.G = Clamp01(Texel.G);
+				// Texel.B = Clamp01(Texel.B); 
 				
 				// NOTE: source colors and alpha
-				float SA = Texel.A;
 				float SR = Texel.R;
 				float SG = Texel.G;
 				float SB = Texel.B;
-
-				// NOTE: normalize alpha
-				float A = SA / 255.0f;
 
 				float DR = (float) (((*Pixel >> 16) & 0xFF));
 				float DG = (float) (((*Pixel >> 8) & 0xFF));
 				float DB = (float) (((*Pixel) & 0xFF));
 
-				float R = ((1.0f - A) * DR) + (A * SR);
-				float G = ((1.0f - A) * DG) + (A * SG);
-				float B = ((1.0f - A) * DB) + (A * SB);
+				float R = (
+					((1.0f - NormalTexelAlpha) * DR) + (NormalTexelAlpha * SR)
+				);
+				float G = (
+					((1.0f - NormalTexelAlpha) * DG) + (NormalTexelAlpha * SG)
+				);
+				float B = (
+					((1.0f - NormalTexelAlpha) * DB) + (NormalTexelAlpha * SB)
+				);
 
 				*Pixel = (
+					(((uint32_t) 0xFF) << 24) | 
 					(((uint32_t) (R + 0.5f)) << 16) |
 					(((uint32_t) (G + 0.5f)) << 8) |
 					((uint32_t) (B + 0.5f))
@@ -669,12 +813,7 @@ void DrawBitmapSlowly(
 	}
 }
 
-void Clear(
-	loaded_bitmap* Buffer, 
-	float Red,
-	float Green, 
-	float Blue
-)
+void Clear(loaded_bitmap* Buffer, vector4 Color)
 {
 	DrawRectangle(
 		Buffer,
@@ -682,9 +821,7 @@ void Clear(
 			Vector2(0.0f, 0.0f),
 			Vector2((float) Buffer->Width, (float) Buffer->Height)
 		),
-		Red,
-		Green,
-		Blue
+		Color
 	);
 }
 
@@ -717,7 +854,10 @@ void RenderGroupToOutput(
 			{
 				render_entry_clear* Entry = (render_entry_clear*) Header;
 				Clear(
-					Target, Entry->Color.R, Entry->Color.G, Entry->Color.B
+					Target, 
+					Vector4(
+						Entry->Color.R, Entry->Color.G, Entry->Color.B, 1.0f
+					)
 				);
 				CurrentAddress += sizeof(*Entry);
 				break;
@@ -772,7 +912,12 @@ void RenderGroupToOutput(
 					OriginScreenPos,
 					Axis1,
 					Axis2,
-					Entry->Bitmap
+					Entry->Bitmap,
+					Entry->Color,
+					Entry->NormalMap,
+					Entry->Top,
+					Entry->Middle,
+					Entry->Bottom
 				);
 				CurrentAddress += sizeof(*Entry);
 				break;

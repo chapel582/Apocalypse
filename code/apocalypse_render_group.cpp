@@ -771,7 +771,7 @@ void DrawBitmapSlowly(
                     }
 
                     // TODO: ? Actually do a lighting model computation here
-                
+                	// CONT: in order to determine how much to blend
                     Texel.Rgb = Lerp(Texel.Rgb, NormalTexelAlpha, LightColor);
                 }
 

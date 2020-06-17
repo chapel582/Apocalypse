@@ -488,24 +488,24 @@ inline vector4 Unpack4x8(uint32_t Packed)
 
 struct bilinear_sample
 {
-    uint32_t A, B, C, D;
+	uint32_t A, B, C, D;
 };
 
 inline bilinear_sample BilinearSample(
 	loaded_bitmap* Texture, int32_t X, int32_t Y
 )
 {
-    bilinear_sample Result;
-    
-    uint8_t* TexelPtr = (
-    	((uint8_t*)Texture->Memory) + Y * Texture->Pitch + X * sizeof(uint32_t)
-    );
-    Result.A = *(uint32_t*) (TexelPtr);
-    Result.B = *(uint32_t*) (TexelPtr + sizeof(uint32_t));
-    Result.C = *(uint32_t*) (TexelPtr + Texture->Pitch);
-    Result.D = *(uint32_t*) (TexelPtr + Texture->Pitch + sizeof(uint32_t));
+	bilinear_sample Result;
+	
+	uint8_t* TexelPtr = (
+		((uint8_t*)Texture->Memory) + Y * Texture->Pitch + X * sizeof(uint32_t)
+	);
+	Result.A = *(uint32_t*) (TexelPtr);
+	Result.B = *(uint32_t*) (TexelPtr + sizeof(uint32_t));
+	Result.C = *(uint32_t*) (TexelPtr + Texture->Pitch);
+	Result.D = *(uint32_t*) (TexelPtr + Texture->Pitch + sizeof(uint32_t));
 
-    return Result;
+	return Result;
 }
 
 inline vector4 BilinearBlend(
@@ -531,47 +531,59 @@ inline vector4 BilinearBlend(
 }
 
 inline vector3 SampleEnvironmentMap(
-	vector2 ScreenSpaceUv, vector3 Normal, float Roughness, environment_map* Map
+	vector2 ScreenSpaceUv,
+	vector3 SampleDirection,
+	float Roughness,
+	environment_map* Map
 )
 {
 	uint32_t LodIndex = (
 		(uint32_t) ((Roughness * ((float) (ARRAY_COUNT(Map->Lod)) - 1) + 0.5f))
 	);
-    ASSERT(LodIndex < ARRAY_COUNT(Map->Lod));
+	ASSERT(LodIndex < ARRAY_COUNT(Map->Lod));
 
-    loaded_bitmap* Lod = &Map->Lod[LodIndex];
+	loaded_bitmap* Lod = &Map->Lod[LodIndex];
 
-    // TODO(casey): Do intersection math to determine where we should be!
-    float tX = (Lod->Width / 2) + Normal.X * ((float) (Lod->Width / 2));
-    float tY = (Lod->Height / 2) + Normal.Y * ((float) (Lod->Height / 2));
-    
-    int32_t X = (int32_t) tX;
-    int32_t Y = (int32_t) tY;
+	ASSERT(SampleDirection.Y > 0.0f);
+	float DistanceFromMapInZ = 1.0f;
+	// TODO: should we do a more formal conversion here?
+	float DistanceFromMapInScreenSpace = 0.01f * DistanceFromMapInZ;
+	float Constant = DistanceFromMapInScreenSpace / SampleDirection.Y;
+	vector2 Offset = Constant * Vector2(SampleDirection.X, SampleDirection.Z);
+	vector2 Uv = ScreenSpaceUv + Offset;
 
-    float fX = tX - (float) X;
-    float fY = tY - (float) Y;
+	Uv.X = Clamp01(Uv.X);
+	Uv.Y = Clamp01(Uv.Y);
 
-    ASSERT((X >= 0) && (X < Lod->Width));
-    ASSERT((Y >= 0) && (Y < Lod->Height));
+	float tX = Uv.X * ((float) (Lod->Width - 2));
+	float tY = Uv.Y * ((float) (Lod->Height - 2));
+	
+	int32_t X = (int32_t) tX;
+	int32_t Y = (int32_t) tY;
+	ASSERT((X >= 0) && (X < Lod->Width));
+	ASSERT((Y >= 0) && (Y < Lod->Height));
 
-    vector3 Result = BilinearBlend(Lod, X, Y, fX, fY).Xyz;
-    return Result;
+	float fX = tX - (float) X;
+	float fY = tY - (float) Y;
+
+	vector3 Result = BilinearBlend(Lod, X, Y, fX, fY).Xyz;
+	return Result;
 }
 
 
 inline vector4 UnscaleAndBiasNormal(vector4 Normal)
 {
-    vector4 Result;
+	vector4 Result;
 
-    float Inv255 = 1.0f / 255.0f;
+	float Inv255 = 1.0f / 255.0f;
 
-    Result.X = -1.0f + 2.0f * (Inv255 * Normal.X);
-    Result.Y = -1.0f + 2.0f * (Inv255 * Normal.Y);
-    Result.Z = -1.0f + 2.0f*(Inv255 * Normal.Z);
+	Result.X = -1.0f + 2.0f * (Inv255 * Normal.X);
+	Result.Y = -1.0f + 2.0f * (Inv255 * Normal.Y);
+	Result.Z = -1.0f + 2.0f*(Inv255 * Normal.Z);
 
-    Result.W = Inv255 * Normal.W;
+	Result.W = Inv255 * Normal.W;
 
-    return(Result);
+	return(Result);
 }
 
 void DrawBitmapSlowly(
@@ -723,57 +735,66 @@ void DrawBitmapSlowly(
 				float NormalTexelAlpha = Texel.A / 255.0f;
 
 				if(NormalMap)
-                {
-                    bilinear_sample NormalSample = BilinearSample(
-                    	NormalMap, iX, iY
-                    );
+				{
+					bilinear_sample NormalSample = BilinearSample(
+						NormalMap, iX, iY
+					);
 
-                    vector4 NormalA = Unpack4x8(NormalSample.A);
-                    vector4 NormalB = Unpack4x8(NormalSample.B);
-                    vector4 NormalC = Unpack4x8(NormalSample.C);
-                    vector4 NormalD = Unpack4x8(NormalSample.D);
+					vector4 NormalA = Unpack4x8(NormalSample.A);
+					vector4 NormalB = Unpack4x8(NormalSample.B);
+					vector4 NormalC = Unpack4x8(NormalSample.C);
+					vector4 NormalD = Unpack4x8(NormalSample.D);
 
-                    vector4 Normal = Lerp(
-                    	Lerp(NormalA, fX, NormalB),
+					vector4 Normal = Lerp(
+						Lerp(NormalA, fX, NormalB),
 						fY,
-                        Lerp(NormalC, fX, NormalD)
-                    );
+						Lerp(NormalC, fX, NormalD)
+					);
 
-                    Normal = UnscaleAndBiasNormal(Normal);
-                    // TODO: Do we really need to do this?
-                    Normal.Xyz = Normalize(Normal.Xyz);
+					Normal = UnscaleAndBiasNormal(Normal);
+					// TODO: Do we really need to do this?
+					Normal.Xyz = Normalize(Normal.Xyz);
 
-                    // TODO: ? Actually compute a bounce based on the viewer direction
+					// NOTE: the vector to the "eye" is assumed to be {0, 0, 1}
+					// CONT: this is reasonable since Y determines which env 
+					// CONT: map to use and x,z determine how to look up into
+					// CONT: the map
+					// CONT: therefore, the bounce direction equation is a 
+					// CONT: simplified version of the reflection across the 
+					// CONT: normal: -v + 2 * Inner(v, Normal) * Normal 
+					vector3 BounceDirection = 2.0f * Normal.Z * Normal.Xyz;
+					BounceDirection.Z -= 1.0f;
 
-                    // NOTE: Y element determines which map to use for lighting
-                    environment_map* FarMap = 0;
-                    float TEnvMap = Normal.Y;
-                    float TFarMap = 0.0f;
-                    if(TEnvMap < -0.5f)
-                    {
-                        FarMap = Bottom;
-                        TFarMap = -1.0f - 2.0f * TEnvMap;
-                    }
-                    else if(TEnvMap > 0.5f)
-                    {
-                        FarMap = Top;
-                        TFarMap = 2.0f * (TEnvMap - 0.5f);
-                    }
+					// NOTE: Y element determines which map to use for lighting
+					environment_map* FarMap = 0;
+					float TEnvMap = BounceDirection.Y;
+					float TFarMap = 0.0f;
+					if(TEnvMap < -0.5f)
+					{
+						FarMap = Bottom;
+						TFarMap = -1.0f - 2.0f * TEnvMap;
+						BounceDirection.Y = -BounceDirection.Y;
+					}
+					else if(TEnvMap > 0.5f)
+					{
+						FarMap = Top;
+						TFarMap = 2.0f * (TEnvMap - 0.5f);
+					}
 
-                    vector3 LightColor = {0, 0, 0}; 
-                    // SampleEnvironmentMap(ScreenSpaceUV, Normal.xyz, Normal.w, Middle);
-                    if(FarMap)
-                    {
-                        vector3 FarMapColor = SampleEnvironmentMap(
-                        	ScreenSpaceUv, Normal.Xyz, Normal.W, FarMap
-                        );
-                        LightColor = Lerp(LightColor, TFarMap, FarMapColor);
-                    }
+					vector3 LightColor = {0, 0, 0}; 
+					// SampleEnvironmentMap(ScreenSpaceUV, Normal.xyz, Normal.w, Middle);
+					if(FarMap)
+					{
+						vector3 FarMapColor = SampleEnvironmentMap(
+							ScreenSpaceUv, BounceDirection, Normal.W, FarMap
+						);
+						LightColor = Lerp(LightColor, TFarMap, FarMapColor);
+					}
 
-                    // TODO: ? Actually do a lighting model computation here
-                	// CONT: in order to determine how much to blend
-                    Texel.Rgb = Lerp(Texel.Rgb, NormalTexelAlpha, LightColor);
-                }
+					// TODO: ? Actually do a lighting model computation here
+					// CONT: in order to determine how much to blend
+					Texel.Rgb = Lerp(Texel.Rgb, NormalTexelAlpha, LightColor);
+				}
 
 				Texel = Hadamard(Texel, Color);
 				// TODO: what's the point of the clamping?

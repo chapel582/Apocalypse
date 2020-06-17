@@ -40,7 +40,7 @@ void MakeSphereNormalMap(loaded_bitmap* Bitmap, float Roughness)
 			float Ny = 2.0f * BitmapUV.Y - 1.0f;
 
 			float RootTerm = 1.0f - Nx * Nx - Ny * Ny;
-			vector3 Normal = {0, 0, 1};
+			vector3 Normal = {0, 0.707106781188f, 0.707106781188f};
 			float Nz = 0.0f;
 			if(RootTerm >= 0.0f)
 			{
@@ -560,9 +560,9 @@ void GameUpdateAndRender(
 	}
 
 #if 1 // NOTE: tests for bitmaps and coordinate systems
-	// float RotationalPeriod = 5.0f;
-	// float Radians = (2 * PI32 * GameState->Time) / RotationalPeriod;
-	// float CosVal = cosf(Radians);
+	float RotationalPeriod = 2.0f;
+	float Radians = (2 * PI32 * GameState->Time) / RotationalPeriod;
+	float CosVal = cosf(Radians);
 	// float SinVal = sinf(Radians);
 
 	vector3 MapColor[] =
@@ -677,7 +677,7 @@ void GameUpdateAndRender(
 	PushBitmapCentered(
 		&GameState->RenderGroup,
 		&GameState->TestDiffuse,
-		Center,
+		Center + (100.0f * Vector2(CosVal, 0.0f)),
 		XAxis,
 		YAxis,
 		Vector4(1.0f, 1.0f, 1.0f, 1.0f),

@@ -15,10 +15,10 @@ struct basis
 	// NOTE: it will usually be the top left of the texture/rect 
 	vector2 Offset;
 	// NOTE: the axes as described in world space dimesions
-	// NOTE: also for converting FROM this basis
+	// NOTE: also for converting TO this basis
 	vector2 Axis1;
 	vector2 Axis2;
-	// NOTE: for converting TO this basis
+	// NOTE: for converting FROM this basis
 	vector2 MatrixColumn1;
 	vector2 MatrixColumn2;
 };

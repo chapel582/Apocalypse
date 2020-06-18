@@ -183,10 +183,20 @@ void DrawFullHand(
 		Card->TimeLeft = 10.0f;
 		Card->Active = true;
 		vector4* Color = &Card->Color;
-		Color->A = 1.0f;
-		Color->R = 1.0f;
-		Color->G = 1.0f;
-		Color->B = 1.0f;
+		if(Player == Player_One)
+		{
+			Color->A = 1.0f;
+			Color->R = 1.0f;
+			Color->G = 0.0f;
+			Color->B = 0.0f;
+		}
+		else
+		{
+			Color->A = 1.0f;
+			Color->R = 0.0f;
+			Color->G = 0.0f;
+			Color->B = 1.0f;
+		}
 		
 		deck_card* CardToDraw = Deck->OutOfDeck;
 		ASSERT(CardToDraw != NULL);	

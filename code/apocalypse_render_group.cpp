@@ -9,8 +9,8 @@ vector2 WorldToBasis(basis* Basis, vector2 Vector)
 	vector2 Result = {};
 	vector2 Position = Vector - Basis->Offset;
 	Result = (
-		Position.X * Basis->MatrixColumn1 + 
-		Position.Y * Basis->MatrixColumn2 
+		Position.X * Basis->Axis1 + 
+		Position.Y * Basis->Axis2 
 	);
 	return Result;
 }
@@ -19,8 +19,8 @@ vector2 BasisToWorld(basis* Basis, vector2 Vector)
 {
 	vector2 Result = {};
 	Result = (
-		Vector.X * Basis->Axis1 + 
-		Vector.Y * Basis->Axis2
+		Vector.X * Basis->MatrixColumn1 + 
+		Vector.Y * Basis->MatrixColumn2
 	);
 	Result += Basis->Offset;
 	return Result;
@@ -30,8 +30,8 @@ vector2 WorldToBasisScale(basis* Basis, vector2 Vector)
 {
 	vector2 Result = {};
 	Result = (
-		Vector.X * Basis->MatrixColumn1 + 
-		Vector.Y * Basis->MatrixColumn2
+		Vector.X * Basis->Axis1 + 
+		Vector.Y * Basis->Axis2
 	);
 	Result = Abs(Result);
 	return Result;
@@ -41,8 +41,8 @@ vector2 BasisToWorldScale(basis* Basis, vector2 Vector)
 {
 	vector2 Result = {};
 	Result = (
-		Vector.X * Basis->Axis1 + 
-		Vector.Y * Basis->Axis2
+		Vector.X * Basis->MatrixColumn1 + 
+		Vector.Y * Basis->MatrixColumn2
 	);
 	return Result;
 }

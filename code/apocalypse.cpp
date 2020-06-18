@@ -14,7 +14,9 @@
 #define PI32 3.14159265359f
 
 // SECTION START: Temporary or Misc. code
-void MakeSphereNormalMap(loaded_bitmap* Bitmap, float Roughness)
+void MakeSphereNormalMap(
+	loaded_bitmap* Bitmap, float Roughness, float Cx = 1.0f, float Cy = 1.0f
+)
 {
 	float InvWidth = 1.0f / ((float) (Bitmap->Width - 1));
 	float InvHeight = 1.0f / ((float) (Bitmap->Height - 1));
@@ -36,8 +38,8 @@ void MakeSphereNormalMap(loaded_bitmap* Bitmap, float Roughness)
 			vector2 BitmapUV = {InvWidth * (float) X, InvHeight * (float)Y};
 
 			// NOTE: range is (-1, 1)
-			float Nx = 2.0f * BitmapUV.X - 1.0f;
-			float Ny = 2.0f * BitmapUV.Y - 1.0f;
+			float Nx = Cx * (2.0f * BitmapUV.X - 1.0f);
+			float Ny = Cy * (2.0f * BitmapUV.Y - 1.0f);
 
 			float RootTerm = 1.0f - Nx * Nx - Ny * Ny;
 			vector3 Normal = {0, 0.707106781188f, 0.707106781188f};
@@ -415,7 +417,7 @@ void GameUpdateAndRender(
 				GameState->TestDiffuse.Width, 
 				GameState->TestDiffuse.Height
 			);
-			MakeSphereNormalMap(&GameState->TestNormal, 0.0f);
+			MakeSphereNormalMap(&GameState->TestNormal, 0.0f, 0.0f, 1.0f);
 
 			GameState->EnvMapWidth = 512;
 			GameState->EnvMapHeight = 256;
@@ -563,7 +565,7 @@ void GameUpdateAndRender(
 	float RotationalPeriod = 2.0f;
 	float Radians = (2 * PI32 * GameState->Time) / RotationalPeriod;
 	float CosVal = cosf(Radians);
-	// float SinVal = sinf(Radians);
+	float SinVal = sinf(Radians);
 
 	vector3 MapColor[] =
 	{
@@ -630,7 +632,7 @@ void GameUpdateAndRender(
 	vector2 Center = Vector2(
 		(BackBuffer->Width / 2.0f), (BackBuffer->Height / 2.0f)
 	);
-	vector2 XAxis = Vector2(1, 0);
+	vector2 XAxis = Vector2(CosVal, SinVal);
 	vector2 YAxis = Perpendicular(XAxis);
 
 	// NOTE: push the three enviornment maps

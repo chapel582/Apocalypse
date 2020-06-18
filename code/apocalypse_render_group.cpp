@@ -486,6 +486,32 @@ inline vector4 Unpack4x8(uint32_t Packed)
 	);
 }
 
+inline vector4 Srgb255ToLinear1(vector4 C)
+{
+	vector4 Result;
+
+	float Inv255 = 1.0f / 255.0f;
+
+	Result.R = (float) pow(Inv255 * C.R, 2);
+	Result.G = (float) pow(Inv255 * C.G, 2);
+	Result.B = (float) pow(Inv255 * C.B, 2);
+	Result.A = Inv255 * C.A;
+
+	return Result;
+}
+
+inline vector4 Linear1ToSrgb255(vector4 C)
+{
+	vector4 Result;
+
+	Result.R = 255.0f * sqrtf(C.R);
+	Result.G = 255.0f * sqrtf(C.G);
+	Result.B = 255.0f * sqrtf(C.B);
+	Result.A = 255.0f * C.A;
+
+	return Result;
+}
+
 struct bilinear_sample
 {
 	uint32_t A, B, C, D;
@@ -521,6 +547,12 @@ inline vector4 BilinearBlend(
 	vector4 TexelC = Unpack4x8(Sample.C);
 	vector4 TexelD = Unpack4x8(Sample.D);
 
+	// NOTE: normalized texel colors
+	TexelA = Srgb255ToLinear1(TexelA);
+	TexelB = Srgb255ToLinear1(TexelB);
+	TexelC = Srgb255ToLinear1(TexelC);
+	TexelD = Srgb255ToLinear1(TexelD);
+
 	// NOTE: Lerp to estimate the new value
 	vector4 Texel = Lerp(
 		Lerp(TexelA, LerpX, TexelB),
@@ -534,9 +566,23 @@ inline vector3 SampleEnvironmentMap(
 	vector2 ScreenSpaceUv,
 	vector3 SampleDirection,
 	float Roughness,
-	environment_map* Map
+	environment_map* Map,
+	float DistanceFromMapInZ
 )
 {
+	/* NOTE:
+		ScreenSpaceUV tells us where the ray is being cast _from_ in
+		normalized screen coordinates.
+
+		SampleDirection tells us what direction the cast is going -
+		it does not have to be normalized.
+
+		Roughness says which LODs of Map we sample from.
+
+		DistanceFromMapInZ says how far the map is from the sample point in Z, 
+		given in meters.
+    */
+
 	uint32_t LodIndex = (
 		(uint32_t) ((Roughness * ((float) (ARRAY_COUNT(Map->Lod)) - 1) + 0.5f))
 	);
@@ -544,10 +590,11 @@ inline vector3 SampleEnvironmentMap(
 
 	loaded_bitmap* Lod = &Map->Lod[LodIndex];
 
-	ASSERT(SampleDirection.Y > 0.0f);
-	float DistanceFromMapInZ = 1.0f;
-	// TODO: should we do a more formal conversion here?
-	float DistanceFromMapInScreenSpace = 0.01f * DistanceFromMapInZ;
+	// TODO: do a more formal conversion here
+	float ScreenSpacePerUnit = 0.01f;
+	float DistanceFromMapInScreenSpace = (
+		ScreenSpacePerUnit * DistanceFromMapInZ
+	);
 	float Constant = DistanceFromMapInScreenSpace / SampleDirection.Y;
 	vector2 Offset = Constant * Vector2(SampleDirection.X, SampleDirection.Z);
 	vector2 Uv = ScreenSpaceUv + Offset;
@@ -606,6 +653,13 @@ void DrawBitmapSlowly(
 
 	float InvWidthMax = 1.0f / ((float) Buffer->Width);
 	float InvHeightMax = 1.0f / ((float) Buffer->Height);
+
+	float XAxisLength = Magnitude(XAxis);
+	float YAxisLength = Magnitude(YAxis);
+	// NOTE: NxAxis and NyAxis are projections of each axis across the other
+	vector2 NxAxis = (YAxisLength / XAxisLength) * XAxis;
+	vector2 NyAxis = (XAxisLength / YAxisLength) * YAxis;
+	float NzScale = 0.5f * (XAxisLength + YAxisLength);
 
 	vector2 Points[4] = {
 		Origin,
@@ -732,7 +786,7 @@ void DrawBitmapSlowly(
 				ASSERT((iY >= 0) && (iY < Texture->Height));
 
 				vector4 Texel = BilinearBlend(Texture, iX, iY, fX, fY);
-				float NormalTexelAlpha = Texel.A / 255.0f;
+				float NormalTexelAlpha = Texel.A;
 
 				if(NormalMap)
 				{
@@ -753,6 +807,9 @@ void DrawBitmapSlowly(
 
 					Normal = UnscaleAndBiasNormal(Normal);
 					// TODO: Do we really need to do this?
+
+					Normal.Xy = Normal.X * NxAxis + Normal.Y * NyAxis;
+					Normal.Z = NzScale;
 					Normal.Xyz = Normalize(Normal.Xyz);
 
 					// NOTE: the vector to the "eye" is assumed to be {0, 0, 1}
@@ -765,15 +822,21 @@ void DrawBitmapSlowly(
 					vector3 BounceDirection = 2.0f * Normal.Z * Normal.Xyz;
 					BounceDirection.Z -= 1.0f;
 
+					// TODO: Eventually we need to support two mappings,
+					// CONT: one for top-down view (which we don't do now) and 
+					// CONT: one for sideways, which is what's happening here.
+					BounceDirection.Z = -1 * BounceDirection.Z;
+
 					// NOTE: Y element determines which map to use for lighting
 					environment_map* FarMap = 0;
+					float DistanceFromMapInZ = 2.0f;
 					float TEnvMap = BounceDirection.Y;
 					float TFarMap = 0.0f;
 					if(TEnvMap < -0.5f)
 					{
 						FarMap = Bottom;
 						TFarMap = -1.0f - 2.0f * TEnvMap;
-						BounceDirection.Y = -BounceDirection.Y;
+						DistanceFromMapInZ = -1 * DistanceFromMapInZ;
 					}
 					else if(TEnvMap > 0.5f)
 					{
@@ -786,7 +849,11 @@ void DrawBitmapSlowly(
 					if(FarMap)
 					{
 						vector3 FarMapColor = SampleEnvironmentMap(
-							ScreenSpaceUv, BounceDirection, Normal.W, FarMap
+							ScreenSpaceUv,
+							BounceDirection,
+							Normal.W,
+							FarMap,
+							DistanceFromMapInZ
 						);
 						LightColor = Lerp(LightColor, TFarMap, FarMapColor);
 					}
@@ -798,14 +865,15 @@ void DrawBitmapSlowly(
 
 				Texel = Hadamard(Texel, Color);
 				// TODO: what's the point of the clamping?
-				// Texel.R = Clamp01(Texel.R);
-				// Texel.G = Clamp01(Texel.G);
-				// Texel.B = Clamp01(Texel.B); 
+				Texel.R = Clamp01(Texel.R);
+				Texel.G = Clamp01(Texel.G);
+				Texel.B = Clamp01(Texel.B); 
 				
 				// NOTE: source colors and alpha
-				float SR = Texel.R;
-				float SG = Texel.G;
-				float SB = Texel.B;
+				vector4 IntTexel = Linear1ToSrgb255(Texel);
+				float SR = IntTexel.R;
+				float SG = IntTexel.G;
+				float SB = IntTexel.B;
 
 				float DR = (float) (((*Pixel >> 16) & 0xFF));
 				float DG = (float) (((*Pixel >> 8) & 0xFF));

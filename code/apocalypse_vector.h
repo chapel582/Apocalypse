@@ -133,11 +133,19 @@ inline vector2 Hadamard(vector2 A, vector2 B)
 // SECTION STOP: vector2
 
 // SECTION START: vector3
-struct vector3
+union vector3
 {
-	float X;
-	float Y;
-	float Z;
+	struct
+	{
+		float X;
+		float Y;
+		float Z;
+	};
+	struct
+	{
+		vector2 Xy;
+		float Z;
+	};
 };
 
 inline vector3 Vector3(float X, float Y, float Z)
@@ -284,6 +292,24 @@ union vector4
 	{
 		vector3 Xyz;
 		float W;
+	};
+	struct
+	{
+		vector2 Xy;
+		float Z;
+		float W;
+	};
+	struct
+	{
+		float X;
+		vector2 Yz;
+		float W;
+	};
+	struct
+	{
+		float X;
+		float Y;
+		vector2 Zw;
 	};
 };
 

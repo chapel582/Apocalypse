@@ -427,7 +427,7 @@ void GameUpdateAndRender(
 				GameState->TestDiffuse.Width, 
 				GameState->TestDiffuse.Height
 			);
-			MakeSphereNormalMap(&GameState->TestNormal, 0.0f, 0.0f, 1.0f);
+			MakeSphereNormalMap(&GameState->TestNormal, 0.0f);
 
 			GameState->EnvMapWidth = 512;
 			GameState->EnvMapHeight = 256;
@@ -698,18 +698,18 @@ void GameUpdateAndRender(
 		&GameState->EnvMaps[1],
 		&GameState->EnvMaps[0]
 	);
-	// PushBitmapCentered(
-	// 	&GameState->RenderGroup,
-	// 	&GameState->TestBitmap,
-	// 	Center,
-	// 	XAxis,
-	// 	YAxis,
-	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-	// 	NULL,
-	// 	NULL,
-	// 	NULL,
-	// 	NULL
-	// );
+	PushBitmapCentered(
+		&GameState->RenderGroup,
+		&GameState->TestBitmap,
+		Center,
+		XAxis,
+		YAxis,
+		Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+		NULL,
+		NULL,
+		NULL,
+		NULL
+	);
 	// PushBitmap(
 	// 	&GameState->RenderGroup,
 	// 	&GameState->TestBitmap,

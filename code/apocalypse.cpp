@@ -68,6 +68,58 @@ void MakeSphereNormalMap(
 		Row += Bitmap->Pitch;
 	}
 }
+
+void MakeSphereDiffuseMap(
+	loaded_bitmap* Bitmap, float Cx = 1.0f, float Cy = 1.0f
+)
+{
+	float InvWidth = 1.0f / ((float) (Bitmap->Width - 1));
+	float InvHeight = 1.0f / ((float) (Bitmap->Height - 1));
+	
+	uint8_t* Row = (uint8_t*) Bitmap->Memory;
+	for(
+		int32_t Y = 0;
+		Y < Bitmap->Height;
+		Y++
+	)
+	{
+		uint32_t* Pixel = (uint32_t*) Row;
+		for(
+			int32_t X = 0;
+			X < Bitmap->Width;
+			X++
+		)
+		{
+			vector2 BitmapUV = {InvWidth * (float) X, InvHeight * (float)Y};
+
+			// NOTE: range is (-1, 1)
+			float Nx = Cx * (2.0f * BitmapUV.X - 1.0f);
+			float Ny = Cy * (2.0f * BitmapUV.Y - 1.0f);
+
+			float RootTerm = 1.0f - Nx * Nx - Ny * Ny;
+			float Alpha;
+			if(RootTerm >= 0.0f)
+			{
+				Alpha = 255.0f;
+			}
+			else
+			{
+				Alpha = 0.0f;
+			}
+			
+			vector4 Color = {0.0f, 0.0f, 0.0f, Alpha};
+
+			*Pixel++ = (
+				(((uint32_t) (Color.A + 0.5f)) << 24) |
+				(((uint32_t) (Color.R + 0.5f)) << 16) |
+				(((uint32_t) (Color.G + 0.5f)) << 8) |
+				(((uint32_t) (Color.B + 0.5f)) << 0)
+			);
+		}
+
+		Row += Bitmap->Pitch;
+	}
+}
 // SECTION END: Temporary or Misc. code
 
 loaded_bitmap MakeEmptyBitmap(
@@ -411,17 +463,7 @@ void GameUpdateAndRender(
 			GameState->TestDiffuse = MakeEmptyBitmap(
 				&GameState->TransientArena, 256, 256
 			);
-			DrawRectangle(
-				&GameState->TestDiffuse, 
-				MakeRectangle(
-					Vector2(0, 0),
-					Vector2(
-						GameState->TestDiffuse.Width,
-						GameState->TestDiffuse.Height
-					)
-				),
-				Vector4(0.5f, 0.5f, 0.5f, 1.0f)
-			);
+			MakeSphereDiffuseMap(&GameState->TestDiffuse);
 			GameState->TestNormal = MakeEmptyBitmap(
 				&GameState->TransientArena, 
 				GameState->TestDiffuse.Width, 

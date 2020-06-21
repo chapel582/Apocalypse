@@ -51,6 +51,7 @@ loaded_bitmap DEBUGLoadBmp(thread_context* Thread, char* FileName)
 	Result.Width = Header->Width;
 	Result.Height = Header->Height;
 
+	ASSERT(Result.Height > 0);
 	ASSERT(Header->Compression == 3);
 
 	// NOTE: we use the masks to figure out how to transform our pixels into 
@@ -87,12 +88,14 @@ loaded_bitmap DEBUGLoadBmp(thread_context* Thread, char* FileName)
 		}
 	}
 
-	// NOTE: pitch is negative so we can start from bottom left of image
+	Result.Pitch = BYTES_PER_PIXEL * Result.Width;
+#if 0
+	// TODO: add this back in to handle top-down bitmaps
 	Result.Pitch = -1 * BYTES_PER_PIXEL * Result.Width;
-	// NOTE: that means we have to offset memory as well
 	Result.Memory = (
 		((uint8_t*) Result.Memory) - Result.Pitch * (Result.Height - 1)
 	);
+#endif
 end:
 	return Result;
 }

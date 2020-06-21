@@ -310,7 +310,7 @@ void GameUpdateAndRender(
 		);
 
 		GameState->WorldScreenBasis = MakeBasis(
-			Vector2(0, BackBuffer->Height), Vector2(1, 0), Vector2(0, -1)
+			Vector2(0, 0), Vector2(1, 0), Vector2(0, 1)
 		);
 
 		render_group* RenderGroup = &GameState->RenderGroup;
@@ -599,7 +599,6 @@ void GameUpdateAndRender(
 					Card->Active = false;
 				}
 				vector2 Basis = Card->Rectangle.Min;
-				Basis.Y += Card->Rectangle.Dim.Y;
 				PushRect(
 					&GameState->RenderGroup,
 					MakeBasis(
@@ -684,62 +683,62 @@ void GameUpdateAndRender(
 	vector2 Center = Vector2(
 		(BackBuffer->Width / 2.0f), (BackBuffer->Height / 2.0f)
 	);
-	vector2 XAxis = Vector2(CosVal, SinVal);
+	vector2 XAxis = Vector2(1, 0);
 	vector2 YAxis = Perpendicular(XAxis);
 
 	// NOTE: push the three enviornment maps
-	vector2 MapTopLeft = Vector2(0.0f, (float) BackBuffer->Height);
-	vector2 MapXAxis = Vector2(0.55f, 0.0f);
-	vector2 MapYAxis = Perpendicular(MapXAxis);
-	PushBitmap(
-		&GameState->RenderGroup,
-		&GameState->EnvMaps[2].Lod[0],
-		MakeBasis(MapTopLeft, MapXAxis, MapYAxis),
-		Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-		NULL,
-		NULL,
-		NULL,
-		NULL
-	);
-	MapTopLeft += Vector2(
-		(float) GameState->EnvMaps[2].Lod[0].Width * MapXAxis.X, 0.0f
-	); 
-	PushBitmap(
-		&GameState->RenderGroup,
-		&GameState->EnvMaps[1].Lod[0],
-		MakeBasis(MapTopLeft, MapXAxis, MapYAxis),
-		Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-		NULL,
-		NULL,
-		NULL,
-		NULL
-	);
-	MapTopLeft += Vector2(
-		(float) GameState->EnvMaps[1].Lod[0].Width * MapXAxis.X, 0.0f
-	); 
-	PushBitmap(
-		&GameState->RenderGroup,
-		&GameState->EnvMaps[0].Lod[0],
-		MakeBasis(MapTopLeft, MapXAxis, MapYAxis),
-		Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-		NULL,
-		NULL,
-		NULL,
-		NULL
-	);
+	// vector2 MapTopLeft = Vector2(0.0f, (float) BackBuffer->Height);
+	// vector2 MapXAxis = Vector2(0.55f, 0.0f);
+	// vector2 MapYAxis = Perpendicular(MapXAxis);
+	// PushBitmap(
+	// 	&GameState->RenderGroup,
+	// 	&GameState->EnvMaps[2].Lod[0],
+	// 	MakeBasis(MapTopLeft, MapXAxis, MapYAxis),
+	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+	// 	NULL,
+	// 	NULL,
+	// 	NULL,
+	// 	NULL
+	// );
+	// MapTopLeft += Vector2(
+	// 	(float) GameState->EnvMaps[2].Lod[0].Width * MapXAxis.X, 0.0f
+	// ); 
+	// PushBitmap(
+	// 	&GameState->RenderGroup,
+	// 	&GameState->EnvMaps[1].Lod[0],
+	// 	MakeBasis(MapTopLeft, MapXAxis, MapYAxis),
+	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+	// 	NULL,
+	// 	NULL,
+	// 	NULL,
+	// 	NULL
+	// );
+	// MapTopLeft += Vector2(
+	// 	(float) GameState->EnvMaps[1].Lod[0].Width * MapXAxis.X, 0.0f
+	// ); 
+	// PushBitmap(
+	// 	&GameState->RenderGroup,
+	// 	&GameState->EnvMaps[0].Lod[0],
+	// 	MakeBasis(MapTopLeft, MapXAxis, MapYAxis),
+	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+	// 	NULL,
+	// 	NULL,
+	// 	NULL,
+	// 	NULL
+	// );
 
-	PushBitmapCentered(
-		&GameState->RenderGroup,
-		&GameState->TestDiffuse,
-		Center + (100.0f * Vector2(CosVal, 0.0f)),
-		XAxis,
-		YAxis,
-		Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-		&GameState->TestNormal,
-		&GameState->EnvMaps[2],
-		&GameState->EnvMaps[1],
-		&GameState->EnvMaps[0]
-	);
+	// PushBitmapCentered(
+	// 	&GameState->RenderGroup,
+	// 	&GameState->TestDiffuse,
+	// 	Center + (100.0f * Vector2(CosVal, 0.0f)),
+	// 	XAxis,
+	// 	YAxis,
+	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+	// 	&GameState->TestNormal,
+	// 	&GameState->EnvMaps[2],
+	// 	&GameState->EnvMaps[1],
+	// 	&GameState->EnvMaps[0]
+	// );
 	PushBitmapCentered(
 		&GameState->RenderGroup,
 		&GameState->TestBitmap,
@@ -752,16 +751,24 @@ void GameUpdateAndRender(
 		NULL,
 		NULL
 	);
-	// PushBitmap(
-	// 	&GameState->RenderGroup,
-	// 	&GameState->TestBitmap,
-	// 	MakeBasis(Origin, XAxis, YAxis),
-	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-	// 	NULL,
-	// 	NULL,
-	// 	NULL,
-	// 	NULL
-	// );
+	PushRect(
+		&GameState->RenderGroup,
+		MakeBasis(
+			Center, Vector2(1, 0), Vector2(0, 1)
+		),
+		MakeRectangle(Vector2(Center.X, Center.Y), Vector2(50.0f, 50.0f)),
+		Vector4(1.0f, 1.0f, 1.0f, 1.0f)
+	);
+	PushBitmap(
+		&GameState->RenderGroup,
+		&GameState->TestBitmap,
+		MakeBasis(Origin, XAxis, YAxis),
+		Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+		NULL,
+		NULL,
+		NULL,
+		NULL
+	);
 #endif
 
 	// SECTION STOP: Updating game state

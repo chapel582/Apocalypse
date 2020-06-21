@@ -4,6 +4,18 @@
 #include "apocalypse_vector.h"
 #include "apocalypse_bitmap.h"
 
+/* NOTE:
+	1) Everywhere outside the renderer, Y _always_ goes upward, and X to the 
+	right
+
+	2) All bitmaps including the render target are assumed to be bottom up 
+	(meaning that the first row pointer points to the bottom-most row when 
+	viewed on screen)
+
+	3) Unless otherwise specified, all inputs to the renderer are in world 
+	units, NOT pixels. Anything that is in pixel values will be explicitly 
+	marked as such.  
+*/
 struct environment_map
 {
 	loaded_bitmap Lod[4];

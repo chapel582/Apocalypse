@@ -117,9 +117,9 @@ inline void PushBitmapCentered(
 	// NOTE: We need to offset the center of world space by an amount in screen 
 	// CONT: space in order to keep the bitmap centered
 	vector2 ScreenXAxis = XAxis;
-	ScreenXAxis.Y *= -1.0f;
+	// ScreenXAxis.Y *= -1.0f;
 	vector2 ScreenYAxis = YAxis;
-	ScreenYAxis.Y *= -1.0f;
+	// ScreenYAxis.Y *= -1.0f;
 
 	vector2 BitmapDim = WorldToBasisScale(
 		Group->WorldScreenBasis,

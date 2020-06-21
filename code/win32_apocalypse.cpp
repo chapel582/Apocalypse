@@ -561,12 +561,8 @@ int CALLBACK WinMain(
 			GlobalBackBuffer.Info.bmiHeader.biSize = (
 				sizeof(GlobalBackBuffer.Info.bmiHeader)
 			);
-			GlobalBackBuffer.Info.bmiHeader.biWidth = (
-				GlobalBackBuffer.Width
-			);
-			GlobalBackBuffer.Info.bmiHeader.biHeight = (
-				-GlobalBackBuffer.Height
-			);
+			GlobalBackBuffer.Info.bmiHeader.biWidth = GlobalBackBuffer.Width;
+			GlobalBackBuffer.Info.bmiHeader.biHeight = GlobalBackBuffer.Height;
 			GlobalBackBuffer.Info.bmiHeader.biPlanes = 1;
 			GlobalBackBuffer.Info.bmiHeader.biBitCount = 32;
 			GlobalBackBuffer.Info.bmiHeader.biCompression = BI_RGB;

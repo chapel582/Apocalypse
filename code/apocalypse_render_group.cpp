@@ -790,6 +790,11 @@ void DrawBitmapSlowly(
 
 				if(NormalMap)
 				{
+					// NOTE: the lighting code does not completely work, 
+					// CONT: but does work for 
+					// CONT: texture maps of CONSTANT color
+					// CONT: it probably needs to be completely redone if you 
+					// CONT: have any patterns on the light
 					bilinear_sample NormalSample = BilinearSample(
 						NormalMap, iX, iY
 					);

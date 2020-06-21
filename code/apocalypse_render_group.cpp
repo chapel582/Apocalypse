@@ -182,7 +182,6 @@ inline void PushCoordinateSystem(render_group* Group, basis Basis)
 
 bool IsInRotatedQuad(
 	vector2 PointOffsetFromOrigin,
-	vector2 Origin,
 	vector2 XAxis,
 	vector2 YAxis,
 	vector2 XAxisPerp,
@@ -369,7 +368,6 @@ void DrawRectangleSlowly(
 
 			bool InRotatedQuad = IsInRotatedQuad(
 				PointOffsetFromOrigin,
-				Origin,
 				XAxis,
 				YAxis,
 				XAxisPerp,
@@ -747,7 +745,6 @@ void DrawBitmapSlowly(
 			vector2 PointOffsetFromOrigin = Point - Origin;
 			bool InRotatedQuad = IsInRotatedQuad(
 				PointOffsetFromOrigin,
-				Origin,
 				XAxis,
 				YAxis,
 				XAxisPerp,

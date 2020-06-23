@@ -458,7 +458,7 @@ void GameUpdateAndRender(
 
 		{
 			GameState->TestBitmap = DEBUGLoadBmp(
-				Thread, "../data/test/tree00.bmp"
+				Thread, "../data/test/test_card.bmp"
 			);
 			GameState->TestDiffuse = MakeEmptyBitmap(
 				&GameState->TransientArena, 256, 256
@@ -749,14 +749,6 @@ void GameUpdateAndRender(
 		NULL,
 		NULL,
 		NULL
-	);
-	PushRect(
-		&GameState->RenderGroup,
-		MakeBasis(
-			Center, Vector2(1, 0), Vector2(0, 1)
-		),
-		MakeRectangle(Vector2(Center.X, Center.Y), Vector2(50.0f, 50.0f)),
-		Vector4(1.0f, 1.0f, 1.0f, 1.0f)
 	);
 	PushBitmap(
 		&GameState->RenderGroup,

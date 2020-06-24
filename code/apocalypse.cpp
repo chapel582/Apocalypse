@@ -599,13 +599,25 @@ void GameUpdateAndRender(
 					Card->Active = false;
 				}
 				vector2 Basis = Card->Rectangle.Min;
-				PushRect(
+				// PushRect(
+				// 	&GameState->RenderGroup,
+				// 	MakeBasis(
+				// 		Basis, Vector2(1, 0), Vector2(0, 1)
+				// 	),
+				// 	Card->Rectangle,
+				// 	Card->Color
+				// );
+				PushSizedBitmap(
 					&GameState->RenderGroup,
-					MakeBasis(
-						Basis, Vector2(1, 0), Vector2(0, 1)
-					),
-					Card->Rectangle,
-					Card->Color
+					&GameState->TestBitmap,
+					GetCenter(Card->Rectangle),
+					Vector2(Card->Rectangle.Dim.X, 0.0f),
+					Vector2(0.0f, Card->Rectangle.Dim.Y),
+					Card->Color,
+					NULL,
+					NULL,
+					NULL,
+					NULL
 				);
 			}
 			Card++;
@@ -738,22 +750,22 @@ void GameUpdateAndRender(
 	// 	&GameState->EnvMaps[1],
 	// 	&GameState->EnvMaps[0]
 	// );
-	float WidthOverHeight = (
-		((float) GameState->TestBitmap.Width) / ((float) GameState->TestBitmap.Height)
-	);
-	float Height = 100.0f;
-	PushSizedBitmap(
-		&GameState->RenderGroup,
-		&GameState->TestBitmap,
-		Center,
-		WidthOverHeight * Height * XAxis,
-		Height * YAxis,
-		Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-		NULL,
-		NULL,
-		NULL,
-		NULL
-	);
+	// float WidthOverHeight = (
+	// 	((float) GameState->TestBitmap.Width) / ((float) GameState->TestBitmap.Height)
+	// );
+	// float Height = 100.0f;
+	// PushSizedBitmap(
+	// 	&GameState->RenderGroup,
+	// 	&GameState->TestBitmap,
+	// 	Center,
+	// 	WidthOverHeight * Height * XAxis,
+	// 	Height * YAxis,
+	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+	// 	NULL,
+	// 	NULL,
+	// 	NULL,
+	// 	NULL
+	// );
 	// PushBitmap(
 	// 	&GameState->RenderGroup,
 	// 	&GameState->TestBitmap,

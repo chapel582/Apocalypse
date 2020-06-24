@@ -22,6 +22,11 @@ inline vector2 GetTopLeft(rectangle Rectangle)
 	return Result;
 }
 
+inline vector2 GetCenter(rectangle Rectangle)
+{
+	return Rectangle.Min + (0.5f * Rectangle.Dim);
+}
+
 bool PointInRectangle(vector2 Point, rectangle Rectangle)
 {
 	vector2 Max = Rectangle.Min + Rectangle.Dim; 

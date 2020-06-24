@@ -738,28 +738,32 @@ void GameUpdateAndRender(
 	// 	&GameState->EnvMaps[1],
 	// 	&GameState->EnvMaps[0]
 	// );
-	PushBitmapCentered(
+	float WidthOverHeight = (
+		((float) GameState->TestBitmap.Width) / ((float) GameState->TestBitmap.Height)
+	);
+	float Height = 100.0f;
+	PushSizedBitmap(
 		&GameState->RenderGroup,
 		&GameState->TestBitmap,
 		Center,
-		XAxis,
-		YAxis,
+		WidthOverHeight * Height * XAxis,
+		Height * YAxis,
 		Vector4(1.0f, 1.0f, 1.0f, 1.0f),
 		NULL,
 		NULL,
 		NULL,
 		NULL
 	);
-	PushBitmap(
-		&GameState->RenderGroup,
-		&GameState->TestBitmap,
-		MakeBasis(Origin, XAxis, YAxis),
-		Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-		NULL,
-		NULL,
-		NULL,
-		NULL
-	);
+	// PushBitmap(
+	// 	&GameState->RenderGroup,
+	// 	&GameState->TestBitmap,
+	// 	MakeBasis(Origin, XAxis, YAxis),
+	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+	// 	NULL,
+	// 	NULL,
+	// 	NULL,
+	// 	NULL
+	// );
 #endif
 
 	// SECTION STOP: Updating game state

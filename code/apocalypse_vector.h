@@ -56,6 +56,11 @@ inline vector2 operator*=(vector2 &B, float A)
 	return B;
 }
 
+inline vector2 operator/(vector2 B, float A)
+{
+	return (1 / A) * B;
+}
+
 inline vector2 operator-(vector2 A)
 {
 	vector2 Result;
@@ -188,6 +193,11 @@ inline vector3 operator*=(vector3 &B, float A)
 {
 	B = A * B;
 	return B;
+}
+
+inline vector3 operator/(vector3 B, float A)
+{
+	return (1 / A) * B;
 }
 
 inline vector3 operator-(vector3 A)

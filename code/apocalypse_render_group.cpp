@@ -117,9 +117,7 @@ inline void PushBitmapCentered(
 	// NOTE: We need to offset the center of world space by an amount in screen 
 	// CONT: space in order to keep the bitmap centered
 	vector2 ScreenXAxis = XAxis;
-	// ScreenXAxis.Y *= -1.0f;
 	vector2 ScreenYAxis = YAxis;
-	// ScreenYAxis.Y *= -1.0f;
 
 	vector2 BitmapDim = WorldToBasisScale(
 		Group->WorldScreenBasis,
@@ -138,6 +136,53 @@ inline void PushBitmapCentered(
 			XAxis,
 			YAxis
 		),
+		Color,
+		NormalMap,
+		Top,
+		Middle,
+		Bottom
+	);
+}
+
+inline void PushSizedBitmap(
+	render_group* Group,
+	loaded_bitmap* Bitmap,
+	vector2 Center,
+	vector2 SizedXAxis,
+	vector2 SizedYAxis,
+	vector4 Color,
+	loaded_bitmap* NormalMap,
+	environment_map* Top,
+	environment_map* Middle,
+	environment_map* Bottom
+)
+{
+	// NOTE: this is for when you know the dimensions that you want the bitmap
+	// CONT: to be in world space already, rather than scaling it
+	vector2 BmpWorldDim = ScreenToWorldDim(
+		Group->WorldScreenBasis, Vector2(Bitmap->Width, Bitmap->Height)
+	);
+
+	/* NOTE: 
+		XAxis / BmpWorldDim.X (as with Y) works b/c this is a reduction of the 
+		following
+
+		1. Get BMP dim with no scaling in world space
+		2. Find ratio of axis magnitude to bmp dim 
+		(this ratio tells us how much to actually scale the bmp along each axis)
+		3. Normalize axis
+		4. Multiply normalized axis by ratio to get percentage scaling on each
+		axis
+
+		Clearly, the normalized axis is (axis / mag) and the ratio is 
+		(mag / bmp dim). We can cancel the magnitudes and save the calculation
+	*/
+	PushBitmapCentered(
+		Group,
+		Bitmap,
+		Center,
+		SizedXAxis / BmpWorldDim.X,
+		SizedYAxis / BmpWorldDim.Y,
 		Color,
 		NormalMap,
 		Top,

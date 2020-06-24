@@ -399,14 +399,15 @@ void Win32WriteMouseEvent(
 	game_mouse_events* MouseEvents,
 	LPARAM LParam,
 	mouse_event_type Type,
-	user_event_index* UserEventIndex 
+	user_event_index* UserEventIndex,
+	uint32_t ScreenHeight
 )
 {
 	game_mouse_event* MouseEvent = &MouseEvents->Events[MouseEvents->Length];
 	MouseEvent->UserEventIndex = *UserEventIndex;
 	*UserEventIndex += 1;
 	MouseEvent->XPos = LParam & 0xFFFF;
-	MouseEvent->YPos = (LParam & 0xFFFF0000) >> 16;
+	MouseEvent->YPos = ScreenHeight - ((LParam & 0xFFFF0000) >> 16);
 	MouseEvent->Type = Type;
 	MouseEvents->Length++;
 	ASSERT(
@@ -697,7 +698,8 @@ int CALLBACK WinMain(
 								&MouseEvents,
 								Message.lParam,
 								PrimaryDown,
-								&UserEventIndex
+								&UserEventIndex,
+								GlobalBackBuffer.Height
 							);
 							break;
 						}
@@ -707,7 +709,8 @@ int CALLBACK WinMain(
 								&MouseEvents,
 								Message.lParam,
 								PrimaryUp,
-								&UserEventIndex
+								&UserEventIndex,
+								GlobalBackBuffer.Height
 							);
 							break;
 						}
@@ -717,7 +720,8 @@ int CALLBACK WinMain(
 								&MouseEvents,
 								Message.lParam,
 								SecondaryDown,
-								&UserEventIndex
+								&UserEventIndex,
+								GlobalBackBuffer.Height
 							);
 							break;
 						}
@@ -727,7 +731,8 @@ int CALLBACK WinMain(
 								&MouseEvents,
 								Message.lParam,
 								SecondaryUp,
-								&UserEventIndex
+								&UserEventIndex,
+								GlobalBackBuffer.Height
 							);
 							break;
 						}
@@ -737,7 +742,8 @@ int CALLBACK WinMain(
 								&MouseEvents,
 								Message.lParam,
 								MouseMove,
-								&UserEventIndex
+								&UserEventIndex,
+								GlobalBackBuffer.Height
 							);
 							break;
 						}

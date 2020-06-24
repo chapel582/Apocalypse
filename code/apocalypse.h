@@ -161,7 +161,8 @@ struct game_state
 	memory_arena RenderArena;
 
 	render_group RenderGroup;
-	basis WorldScreenBasis;
+	basis WorldToCamera;
+	basis CameraToScreen;
 
 	float Time;
 	

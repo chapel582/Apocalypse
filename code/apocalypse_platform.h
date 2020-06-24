@@ -89,8 +89,8 @@ typedef uint16_t user_event_index;
 struct game_mouse_event
 {
 	user_event_index UserEventIndex;
-	int XPos;
-	int YPos;
+	int XPos; // NOTE: should be xpos from bottom left
+	int YPos; // NOTE: should be xpos from bottom left
 	mouse_event_type Type;
 };
 

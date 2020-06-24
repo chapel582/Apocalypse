@@ -309,8 +309,18 @@ void GameUpdateAndRender(
 			GetEndOfArena(&GameState->RenderArena)
 		);
 
-		GameState->WorldScreenBasis = MakeBasis(
-			Vector2(0, 0), Vector2(1, 0), Vector2(0, 1)
+		GameState->WorldToCamera = MakeBasis(
+			Vector2(BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f),
+			Vector2(1.0f, 0.0f),
+			Vector2(0.0f, 1.0f)
+		);
+		GameState->CameraToScreen = MakeBasis(
+			Vector2(
+				-1.0f * BackBuffer->Width / 2.0f,
+				-1.0f * BackBuffer->Height / 2.0f
+			),
+			Vector2(1, 0),
+			Vector2(0, 1)
 		);
 
 		render_group* RenderGroup = &GameState->RenderGroup;
@@ -320,9 +330,8 @@ void GameUpdateAndRender(
 		RenderGroup->DefaultBasis = MakeBasis(
 			Vector2(0, 0), Vector2(1, 0), Vector2(0, 1)
 		); 
-		RenderGroup->WorldScreenBasis = &GameState->WorldScreenBasis;
-
-		RenderGroup->CameraPos = Vector2(0.0f, 0.0f);
+		RenderGroup->WorldToCamera = &GameState->WorldToCamera;
+		RenderGroup->CameraToScreen = &GameState->CameraToScreen;
 
 		GameState->CurrentPrimaryState = PrimaryUp;
 		GameState->Time = 0;
@@ -421,8 +430,9 @@ void GameUpdateAndRender(
 		float CardWidth = 60.0f;
 		float CardHeight = 90.0f;
 		float HandTableauMargin = 5.0f;
-		vector2 ScreenDimInWorld = WorldToBasisScale(
-			&GameState->WorldScreenBasis, 
+		// NOTE: transform assumes screen and camera are 1:1
+		vector2 ScreenDimInWorld = TransformVectorToBasis(
+			&GameState->WorldToCamera,
 			Vector2(BackBuffer->Width, BackBuffer->Height)
 		);
 		float ScreenWidthInWorld = ScreenDimInWorld.X;
@@ -525,8 +535,12 @@ void GameUpdateAndRender(
 				break;
 			}
 
-			vector2 MouseEventWorldPos = ScreenToWorldPos(
-				&GameState->WorldScreenBasis, MouseEvent->XPos, MouseEvent->YPos
+			vector2 MouseEventWorldPos = TransformPosFromBasis(
+				&GameState->WorldToCamera,
+				TransformPosFromBasis(
+					&GameState->CameraToScreen, 
+					Vector2(MouseEvent->XPos, MouseEvent->YPos)
+				)
 			);
 			if(MouseEvent->Type == PrimaryUp)
 			{
@@ -581,7 +595,13 @@ void GameUpdateAndRender(
 
 	// SECTION START: Updating game state
 	// NOTE: not sure if we should finish all updates and then push to the 
-	// CONT: render group	
+	// CONT: render group
+	float ScaleValue = cosf((2 * PI32 / 5.0f) * GameState->Time);
+	GameState->WorldToCamera = MakeBasis(
+		Vector2(BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f),
+		ScaleValue * Vector2(1.0f, 0.0f),
+		ScaleValue * Vector2(0.0f, 1.0f)
+	);
 	PushClear(&GameState->RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
 	{
 		card* Card = &GameState->Cards[0];
@@ -598,15 +618,6 @@ void GameUpdateAndRender(
 				{
 					Card->Active = false;
 				}
-				vector2 Basis = Card->Rectangle.Min;
-				// PushRect(
-				// 	&GameState->RenderGroup,
-				// 	MakeBasis(
-				// 		Basis, Vector2(1, 0), Vector2(0, 1)
-				// 	),
-				// 	Card->Rectangle,
-				// 	Card->Color
-				// );
 				PushSizedBitmap(
 					&GameState->RenderGroup,
 					&GameState->TestBitmap,
@@ -625,66 +636,66 @@ void GameUpdateAndRender(
 	}
 
 #if 1 // NOTE: tests for bitmaps
-	vector3 MapColor[] =
-	{
-		{1, 0, 0},
-		{0, 1, 0},
-		{0, 0, 1},
-	};
-	for(
-		uint32_t MapIndex = 0;
-		MapIndex < ARRAY_COUNT(GameState->EnvMaps);
-		MapIndex++
-	)
-	{
-		environment_map* Map = GameState->EnvMaps + MapIndex;
-		loaded_bitmap* Lod = Map->Lod + 0;
-		// DrawRectangle(
-		// 	Lod,
-		// 	MakeRectangle(
-		// 		Vector2(0, 0), Vector2(Lod->Width, Lod->Height)
-		// 	),
-		// 	ToVector4(MapColor[MapIndex], 1.0f)
-		// );
-		bool RowCheckerOn = false;
-		int32_t CheckerWidth = 16;
-		int32_t CheckerHeight = 16;
-		for(
-			int32_t Y = 0;
-			Y < Lod->Height;
-			Y += CheckerHeight
-		)
-		{
-			bool CheckerOn = RowCheckerOn;
-			for(
-				int32_t X = 0;
-				X < Lod->Width;
-				X += CheckerWidth
-			)
-			{
-				vector4 Color;
-				if(CheckerOn)
-				{
-					Color = ToVector4(MapColor[MapIndex], 1.0f);
-				}
-				else
-				{
-					Color = Vector4(0, 0, 0, 1);
+	// vector3 MapColor[] =
+	// {
+	// 	{1, 0, 0},
+	// 	{0, 1, 0},
+	// 	{0, 0, 1},
+	// };
+	// for(
+	// 	uint32_t MapIndex = 0;
+	// 	MapIndex < ARRAY_COUNT(GameState->EnvMaps);
+	// 	MapIndex++
+	// )
+	// {
+	// 	environment_map* Map = GameState->EnvMaps + MapIndex;
+	// 	loaded_bitmap* Lod = Map->Lod + 0;
+	// 	// DrawRectangle(
+	// 	// 	Lod,
+	// 	// 	MakeRectangle(
+	// 	// 		Vector2(0, 0), Vector2(Lod->Width, Lod->Height)
+	// 	// 	),
+	// 	// 	ToVector4(MapColor[MapIndex], 1.0f)
+	// 	// );
+	// 	bool RowCheckerOn = false;
+	// 	int32_t CheckerWidth = 16;
+	// 	int32_t CheckerHeight = 16;
+	// 	for(
+	// 		int32_t Y = 0;
+	// 		Y < Lod->Height;
+	// 		Y += CheckerHeight
+	// 	)
+	// 	{
+	// 		bool CheckerOn = RowCheckerOn;
+	// 		for(
+	// 			int32_t X = 0;
+	// 			X < Lod->Width;
+	// 			X += CheckerWidth
+	// 		)
+	// 		{
+	// 			vector4 Color;
+	// 			if(CheckerOn)
+	// 			{
+	// 				Color = ToVector4(MapColor[MapIndex], 1.0f);
+	// 			}
+	// 			else
+	// 			{
+	// 				Color = Vector4(0, 0, 0, 1);
 
-				}
-				vector2 MinP = Vector2(X, Y);
-				DrawRectangle(
-					Lod,
-					MakeRectangle(
-						MinP, Vector2(CheckerWidth, CheckerHeight)
-					),
-					Color
-				);
-				CheckerOn = !CheckerOn;
-			}
-			RowCheckerOn = !RowCheckerOn;
-		}
-	}
+	// 			}
+	// 			vector2 MinP = Vector2(X, Y);
+	// 			DrawRectangle(
+	// 				Lod,
+	// 				MakeRectangle(
+	// 					MinP, Vector2(CheckerWidth, CheckerHeight)
+	// 				),
+	// 				Color
+	// 			);
+	// 			CheckerOn = !CheckerOn;
+	// 		}
+	// 		RowCheckerOn = !RowCheckerOn;
+	// 	}
+	// }
 
 	float RotationalPeriod = 2.0f;
 	float Radians = (2 * PI32 * GameState->Time) / RotationalPeriod;
@@ -750,26 +761,60 @@ void GameUpdateAndRender(
 	// 	&GameState->EnvMaps[1],
 	// 	&GameState->EnvMaps[0]
 	// );
-	// float WidthOverHeight = (
-	// 	((float) GameState->TestBitmap.Width) / ((float) GameState->TestBitmap.Height)
-	// );
-	// float Height = 100.0f;
-	// PushSizedBitmap(
+	// PushBitmap(
 	// 	&GameState->RenderGroup,
 	// 	&GameState->TestBitmap,
-	// 	Center,
-	// 	WidthOverHeight * Height * XAxis,
-	// 	Height * YAxis,
+	// 	MakeBasis(
+	// 		Center + Vector2(-100.0f, -100.0f),
+	// 		Vector2(0.25f, 0.0f),
+	// 		Vector2(0.0f, 0.25f)
+	// 	),
 	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f),
 	// 	NULL,
 	// 	NULL,
 	// 	NULL,
 	// 	NULL
 	// );
+
+	// PushCenteredBitmap(
+	// 	&GameState->RenderGroup,
+	// 	&GameState->TestBitmap,
+	// 	Center,
+	// 	0.25f * Vector2(.707f, .707f),
+	// 	0.25f * Vector2(-.707f, .707f),
+	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+	// 	NULL,
+	// 	NULL,
+	// 	NULL,
+	// 	NULL
+	// );
+	float WidthOverHeight = (
+		((float) GameState->TestBitmap.Width) / ((float) GameState->TestBitmap.Height)
+	);
+	float Height = 540.0f;
+	PushSizedBitmap(
+		&GameState->RenderGroup,
+		&GameState->TestBitmap,
+		Center,
+		WidthOverHeight * Height * XAxis,
+		Height * YAxis,
+		Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+		NULL,
+		NULL,
+		NULL,
+		NULL
+	);
+
+	PushRect(
+		&GameState->RenderGroup,
+		MakeBasis(Vector2(0, 0), Vector2(1, 0), Vector2(0, 1)),
+		MakeRectangle(Vector2(0, 0), Vector2(25, 25)),
+		Vector4(1.0f, 1.0f, 1.0f, 1.0f)
+	);
 	// PushBitmap(
 	// 	&GameState->RenderGroup,
 	// 	&GameState->TestBitmap,
-	// 	MakeBasis(Origin, XAxis, YAxis),
+	// 	MakeBasis(Center, XAxis, YAxis),
 	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f),
 	// 	NULL,
 	// 	NULL,

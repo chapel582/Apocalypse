@@ -37,8 +37,8 @@ struct win32_window_dimension
 
 struct win32_offscreen_buffer
 {
-	int Width;
-	int Height;
+	uint32_t Width;
+	uint32_t Height;
 	int Pitch;
 	int BytesPerPixel;
 	void* Memory;

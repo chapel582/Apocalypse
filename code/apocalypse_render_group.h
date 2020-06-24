@@ -23,10 +23,13 @@ struct environment_map
 
 struct basis
 {
-	// NOTE: the offset of the coordinate system from world's origin
-	// NOTE: it will usually be the top left of the texture/rect 
+	// NOTE: if you use a basis for scaling all elements in a scene 
+	// CONT: (e.g. camera space), the elements will also rotate
+	// TODO: fix this? 
+
+	// NOTE: the offset of the coordinate system from original space
 	vector2 Offset;
-	// NOTE: the axes as described in world space dimesions
+	// NOTE: the axes as described in the original space's dimesions
 	// NOTE: also for converting TO this basis
 	vector2 Axis1;
 	vector2 Axis2;
@@ -108,11 +111,11 @@ struct render_group
 	memory_arena* Arena;
 	uint8_t* LastEntry;
 	
-	basis DefaultBasis;
-	basis* WorldScreenBasis;
-	// NOTE: CameraPos is where the bottom left of camera rectangle is in the
-	// CONT: world
-	vector2 CameraPos;
+	basis DefaultBasis; // TODO: see if this is needed
+	// NOTE: camera basis is helpful so we can center the scaling of the world
+	// CONT: somewhere besides the screen origin 
+	basis* WorldToCamera;
+	basis* CameraToScreen;
 };
 
 #define APOCALYPSE_RENDER_GROUP_H

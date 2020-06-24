@@ -4,40 +4,17 @@
 #include "apocalypse_rectangle.h"
 #include "apocalypse_vector.h"
 
-vector2 WorldToBasis(basis* Basis, vector2 Vector)
-{
-	vector2 Result = {};
-	vector2 Position = Vector - Basis->Offset;
-	Result = (
-		Position.X * Basis->Axis1 + 
-		Position.Y * Basis->Axis2 
-	);
-	return Result;
-}
-
-vector2 BasisToWorld(basis* Basis, vector2 Vector)
-{
-	vector2 Result = {};
-	Result = (
-		Vector.X * Basis->MatrixColumn1 + 
-		Vector.Y * Basis->MatrixColumn2
-	);
-	Result += Basis->Offset;
-	return Result;
-}
-
-vector2 WorldToBasisScale(basis* Basis, vector2 Vector)
+vector2 TransformVectorToBasis(basis* Basis, vector2 Vector)
 {
 	vector2 Result = {};
 	Result = (
 		Vector.X * Basis->Axis1 + 
 		Vector.Y * Basis->Axis2
 	);
-	Result = Abs(Result);
 	return Result;
 }
 
-vector2 BasisToWorldScale(basis* Basis, vector2 Vector)
+vector2 TransformVectorFromBasis(basis* Basis, vector2 Vector)
 {
 	vector2 Result = {};
 	Result = (
@@ -47,24 +24,40 @@ vector2 BasisToWorldScale(basis* Basis, vector2 Vector)
 	return Result;
 }
 
+vector2 TransformPosToBasis(basis* Basis, vector2 Vector)
+{
+	vector2 Result = {};
+	vector2 Position = Vector - Basis->Offset;
+	Result = TransformVectorToBasis(Basis, Position);
+	return Result;
+}
+
+vector2 TransformPosFromBasis(basis* Basis, vector2 Vector)
+{
+	vector2 Result = {};
+	Result = TransformVectorFromBasis(Basis, Vector);
+	Result += Basis->Offset;
+	return Result;
+}
+
 vector2 ScreenToWorldPos(basis* WorldScreenBasis, uint32_t X, uint32_t Y)
 {
-	return BasisToWorld(WorldScreenBasis, Vector2(X, Y));
+	return TransformPosToBasis(WorldScreenBasis, Vector2(X, Y));
 }
 
 vector2 WorldToScreenPos(basis* WorldScreenBasis, vector2 WorldPosition)
 {
-	return WorldToBasis(WorldScreenBasis, WorldPosition);
+	return TransformPosFromBasis(WorldScreenBasis, WorldPosition);
 }
 
 vector2 ScreenToWorldDim(basis* WorldScreenBasis, vector2 ScreenDim)
 {
-	return BasisToWorldScale(WorldScreenBasis, ScreenDim);
+	return TransformVectorToBasis(WorldScreenBasis, ScreenDim);
 }
 
 vector2 WorldToScreenDim(basis* WorldScreenBasis, vector2 WorldDim)
 {
-	return WorldToBasisScale(WorldScreenBasis, WorldDim);
+	return TransformVectorFromBasis(WorldScreenBasis, WorldDim);
 }
 
 inline void PushBitmap(
@@ -96,7 +89,7 @@ inline void PushBitmap(
 	Entry->Bottom = Bottom;
 }
 
-inline void PushBitmapCentered(
+inline void PushCenteredBitmap(
 	render_group* Group,
 	loaded_bitmap* Bitmap,
 	vector2 Center,
@@ -109,18 +102,16 @@ inline void PushBitmapCentered(
 	environment_map* Bottom
 )
 {
-	// NOTE: XAxis and YAxis describes the rotation and scaling of the bitmap
-	// CONT: but Y is negated for them, so rotations should be thought of as CW,
-	// CONT: not counter clockwise (e.g. XAxis = {0.707, 0.707} is a 45 degree)
-	// CONT: rotation *clockwise* b/c down is positive for Y in screen space
+	// NOTE: rotation is CCW e.g. Xaxis = {0.707, 0.707}  
+	// CONT: and YAxis = {-.707, 0.707} is 45 degrees CW 
 
-	// NOTE: We need to offset the center of world space by an amount in screen 
-	// CONT: space in order to keep the bitmap centered
-	vector2 ScreenXAxis = XAxis;
-	vector2 ScreenYAxis = YAxis;
+	// NOTE: We need to offset the center of world space by the bmp dimensions 
+	// CONT: translated to world space and scaled according to our axes
+	vector2 CameraXAxis = XAxis;
+	vector2 CameraYAxis = YAxis;
 
-	vector2 BitmapDim = WorldToBasisScale(
-		Group->WorldScreenBasis,
+	vector2 BitmapDim = TransformVectorFromBasis(
+		Group->WorldToCamera,
 		Vector2(Bitmap->Width, Bitmap->Height)
 	);
 
@@ -130,8 +121,8 @@ inline void PushBitmapCentered(
 		MakeBasis(
 			(
 				Center - 
-				0.5f * ScreenXAxis * BitmapDim.X - 
-				0.5f * ScreenYAxis * BitmapDim.Y
+				(0.5f * CameraXAxis * BitmapDim.X) - 
+				(0.5f * CameraYAxis * BitmapDim.Y)
 			),
 			XAxis,
 			YAxis
@@ -159,8 +150,18 @@ inline void PushSizedBitmap(
 {
 	// NOTE: this is for when you know the dimensions that you want the bitmap
 	// CONT: to be in world space already, rather than scaling it
-	vector2 BmpWorldDim = ScreenToWorldDim(
-		Group->WorldScreenBasis, Vector2(Bitmap->Width, Bitmap->Height)
+	// TODO: remove this commented out code
+	// vector2 BmpWorldDim = ScreenToWorldDim(
+	// 	Group->WorldScreenBasis, Vector2(Bitmap->Width, Bitmap->Height)
+	// );
+	vector2 BmpWorldDim = TransformVectorFromBasis(
+		Group->CameraToScreen, Vector2(Bitmap->Width, Bitmap->Height)
+	);
+	vector2 CameraXAxis = TransformVectorToBasis(
+		Group->WorldToCamera, SizedXAxis
+	);
+	vector2 CameraYAxis = TransformVectorToBasis(
+		Group->WorldToCamera, SizedYAxis
 	);
 
 	/* NOTE: 
@@ -177,12 +178,12 @@ inline void PushSizedBitmap(
 		Clearly, the normalized axis is (axis / mag) and the ratio is 
 		(mag / bmp dim). We can cancel the magnitudes and save the calculation
 	*/
-	PushBitmapCentered(
+	PushCenteredBitmap(
 		Group,
 		Bitmap,
 		Center,
-		SizedXAxis / BmpWorldDim.X,
-		SizedYAxis / BmpWorldDim.Y,
+		CameraXAxis / BmpWorldDim.X,
+		CameraYAxis / BmpWorldDim.Y,
 		Color,
 		NormalMap,
 		Top,
@@ -810,8 +811,8 @@ void DrawBitmapSlowly(
 				);
 
 				// TODO: clamping
-				ASSERT((U >= 0.0f) && (U <= 1.0f));
-				ASSERT((V >= 0.0f) && (V <= 1.0f));
+				// ASSERT((U >= 0.0f) && (U <= 1.0f));
+				// ASSERT((V >= 0.0f) && (V <= 1.0f));
 				// TODO: formalize texture boundaries
 				// NOTE: U and V are then used to find the sample within the 
 				// CONT: texture 
@@ -961,17 +962,33 @@ void Clear(loaded_bitmap* Buffer, vector4 Color)
 	);
 }
 
-vector2 GetScreenPos(
-	basis* Basis,
-	basis* WorldScreenBasis,
-	vector2 EntryPosition,
-	vector2 CameraPos
+struct screen_pos_dim
+{
+	vector2 Pos;
+	vector2 XAxis;
+	vector2 YAxis;
+};
+
+screen_pos_dim GetScreenPosDim(
+	basis* Basis, basis* WorldToCamera, basis* CameraToScreen
 )
 {
-	vector2 WorldPos = BasisToWorld(Basis, EntryPosition);
-	vector2 CameraTopLeft = WorldPos - CameraPos;
+	// vector2 WorldPos = TransformPosFromBasis(Basis, EntryPosition);
+	// vector2 CameraTopLeft = WorldPos - CameraPos;
 
-	return WorldToBasis(WorldScreenBasis, CameraTopLeft);
+	// return TransformPosToBasis(WorldScreenBasis, CameraTopLeft);
+	screen_pos_dim Result = {};
+
+	vector2 CameraSpacePos = TransformPosToBasis(WorldToCamera, Basis->Offset);
+	Result.Pos = TransformPosToBasis(CameraToScreen, CameraSpacePos);
+
+	vector2 CameraAxis = TransformVectorToBasis(WorldToCamera, Basis->Axis1);
+	Result.XAxis = TransformVectorToBasis(CameraToScreen, CameraAxis);
+
+	CameraAxis = TransformVectorToBasis(WorldToCamera, Basis->Axis2);
+	Result.YAxis = TransformVectorToBasis(CameraToScreen, CameraAxis);
+
+	return Result;
 }
 
 void RenderGroupToOutput(
@@ -1003,23 +1020,29 @@ void RenderGroupToOutput(
 				render_entry_rectangle* Entry = (render_entry_rectangle*) (
 					Header
 				);
-				vector2 OriginScreenPos = GetScreenPos(
+				// vector2 OriginScreenPos = GetScreenPos(
+				// 	&Entry->Basis,
+				// 	RenderGroup->WorldScreenBasis,
+				// 	Vector2(0, 0),
+				// 	RenderGroup->CameraPos
+				// );
+				// vector2 Dim = TransformVectorToBasis(
+				// 	RenderGroup->WorldScreenBasis, Entry->Dim
+				// );
+				// vector2 Axis1 = Dim.X * Entry->Basis.Axis1;
+				// vector2 Axis2 = Dim.Y * Entry->Basis.Axis2;
+
+				screen_pos_dim ScreenPosDim = GetScreenPosDim(
 					&Entry->Basis,
-					RenderGroup->WorldScreenBasis,
-					Vector2(0, 0),
-					RenderGroup->CameraPos
+					RenderGroup->WorldToCamera,
+					RenderGroup->CameraToScreen
 				);
-				vector2 Dim = WorldToBasisScale(
-					RenderGroup->WorldScreenBasis, Entry->Dim
-				);
-				vector2 Axis1 = Dim.X * Entry->Basis.Axis1;
-				vector2 Axis2 = Dim.Y * Entry->Basis.Axis2;
 
 				DrawRectangleSlowly(
 					Target,
-					OriginScreenPos,
-					Axis1,
-					Axis2,
+					ScreenPosDim.Pos,
+					Entry->Dim.X * ScreenPosDim.XAxis,
+					Entry->Dim.Y * ScreenPosDim.YAxis,
 					Entry->Color
 				);
 				CurrentAddress += sizeof(*Entry);
@@ -1029,25 +1052,23 @@ void RenderGroupToOutput(
 			{
 				render_entry_bitmap* Entry = (render_entry_bitmap*) Header;
 
-				vector2 OriginScreenPos = GetScreenPos(
+				screen_pos_dim ScreenPosDim = GetScreenPosDim(
 					&Entry->Basis,
-					RenderGroup->WorldScreenBasis,
-					Vector2(0, 0),
-					RenderGroup->CameraPos
+					RenderGroup->WorldToCamera,
+					RenderGroup->CameraToScreen
 				);
-
-				vector2 Axis1 = (
-					((float) Entry->Bitmap->Width) * Entry->Basis.Axis1
+				vector2 XAxis = (
+					((float) Entry->Bitmap->Width) * ScreenPosDim.XAxis
 				);
-				vector2 Axis2 = (
-					((float) Entry->Bitmap->Height) * Entry->Basis.Axis2
+				vector2 YAxis = (
+					((float) Entry->Bitmap->Height) * ScreenPosDim.YAxis
 				);
 
 				DrawBitmapSlowly(
 					Target,
-					OriginScreenPos,
-					Axis1,
-					Axis2,
+					ScreenPosDim.Pos,
+					XAxis,
+					YAxis,
 					Entry->Bitmap,
 					Entry->Color,
 					Entry->NormalMap,

@@ -789,6 +789,7 @@ void DrawBitmapSlowly(
 		uint32_t* Pixel = (uint32_t*) Row;
 		for(int X = MinX; X < MaxX; X++)
 		{
+			BEGIN_TIMED_BLOCK(TestPixel);
 			vector2 Point = Vector2(X, Y);
 			vector2 PointOffsetFromOrigin = Point - Origin;
 			bool InRotatedQuad = IsInRotatedQuad(
@@ -802,6 +803,7 @@ void DrawBitmapSlowly(
 			{
 				// NOTE: U and V are determined by normalizing the projection of
 				// CONT: the point to each axis
+				BEGIN_TIMED_BLOCK(FillPixel);
 				vector2 ScreenSpaceUv = {
 					InvWidthMax * (float) X, InvHeightMax * (float) Y
 				};
@@ -945,8 +947,10 @@ void DrawBitmapSlowly(
 					(((uint32_t) (G + 0.5f)) << 8) |
 					((uint32_t) (B + 0.5f))
 				);
+				END_TIMED_BLOCK(FillPixel);
 			}
 			Pixel++;
+			END_TIMED_BLOCK(TestPixel);
 		}
 		Row += Buffer->Pitch;
 	}

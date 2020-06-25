@@ -1,5 +1,9 @@
 #ifndef APOCALYPSE_PLATFORM_H
 
+#if _MSC_VER
+#include <intrin.h>
+#endif
+
 #include <stdint.h>
 
 #if APOCALYPSE_SLOW
@@ -45,7 +49,32 @@ void DEBUGPlatformFreeFileMemory(thread_context* Thread, void* Memory);
 bool DEBUGPlatformWriteEntireFile(
 	thread_context* Thread, char* FileName, void* Memory, uint32_t MemorySize
 );
-#endif 
+
+enum
+{
+	DebugCycleCounter_GameUpdateAndRender,
+	DebugCycleCounter_RenderGroupToOutput,
+	DebugCycleCounter_DrawBitmapSlowly,
+	DebugCycleCounter_TestPixel,
+	DebugCycleCounter_FillPixel,
+	DebugCycleCounter_Count
+};
+
+struct debug_cycle_counter
+{
+	uint64_t CycleCount;
+	uint32_t HitCount;
+};
+extern struct game_memory* DebugGlobalMemory;
+#if _MSC_VER
+#define BEGIN_TIMED_BLOCK(ID) uint64_t StartCycleCount##ID = __rdtsc(); 
+#define END_TIMED_BLOCK(ID) DebugGlobalMemory->Counters[DebugCycleCounter_##ID].CycleCount += __rdtsc() - StartCycleCount##ID; ++DebugGlobalMemory->Counters[DebugCycleCounter_##ID].HitCount;
+#else
+#define BEGIN_TIMED_BLOCK(ID) 
+#define END_TIMED_BLOCK(ID)
+#endif
+
+#endif // NOTE: APOCALYPSE_INTERNAL
 
 struct game_memory
 {
@@ -56,6 +85,10 @@ struct game_memory
 
 	size_t TransientStorageSize;
 	void* TransientStorage;
+
+#if APOCALYPSE_INTERNAL
+	debug_cycle_counter Counters[DebugCycleCounter_Count];
+#endif
 };
 
 struct game_offscreen_buffer

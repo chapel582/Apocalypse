@@ -264,6 +264,10 @@ void DrawFullHand(
 	AlignCardSet(&GameState->Hands[Player]);
 }
 
+#if APOCALYPSE_INTERNAL
+game_memory* DebugGlobalMemory;
+#endif 
+
 void GameUpdateAndRender(
 	thread_context* Thread,
 	game_memory* Memory,
@@ -273,6 +277,12 @@ void GameUpdateAndRender(
 	float DtForFrame
 )
 {
+#if APOCALYPSE_INTERNAL
+	DebugGlobalMemory = Memory;
+#endif 
+
+	BEGIN_TIMED_BLOCK(GameUpdateAndRender);
+
 	ASSERT(sizeof(game_state) <= Memory->PermanentStorageSize);
 	game_state* GameState = (game_state*) Memory->PermanentStorage;
 	if(!Memory->IsInitialized)
@@ -835,6 +845,8 @@ void GameUpdateAndRender(
 	RenderGroupToOutput(&GameState->RenderGroup, &DrawBuffer);
 	// SECTION STOP: Render
 	ResetMemArena(&GameState->FrameArena);
+
+	END_TIMED_BLOCK(GameUpdateAndRender);
 }
 
 void GameFillSound(game_memory* Memory, game_sound_output_buffer* SoundBuffer)

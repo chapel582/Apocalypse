@@ -690,6 +690,8 @@ void DrawBitmapSlowly(
 	environment_map* Bottom
 )
 {
+	BEGIN_TIMED_BLOCK(DrawBitmapSlowly);
+
 	float fMinX = (float) Buffer->Width;
 	float fMinY = (float) Buffer->Height;
 	float fMaxX = 0;
@@ -948,6 +950,8 @@ void DrawBitmapSlowly(
 		}
 		Row += Buffer->Pitch;
 	}
+
+	END_TIMED_BLOCK(DrawBitmapSlowly);
 }
 
 void Clear(loaded_bitmap* Buffer, vector4 Color)
@@ -995,6 +999,7 @@ void RenderGroupToOutput(
 	render_group* RenderGroup, loaded_bitmap* Target
 )
 {
+	BEGIN_TIMED_BLOCK(RenderGroupToOutput);
 	for(
 		uint8_t* CurrentAddress = RenderGroup->Arena->Base;
 		CurrentAddress <= (RenderGroup->LastEntry);
@@ -1086,4 +1091,5 @@ void RenderGroupToOutput(
 		}
 	}
 	ResetMemArena(RenderGroup->Arena);
+	END_TIMED_BLOCK(RenderGroupToOutput);
 }

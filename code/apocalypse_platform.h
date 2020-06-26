@@ -54,7 +54,7 @@ enum
 {
 	DebugCycleCounter_GameUpdateAndRender,
 	DebugCycleCounter_RenderGroupToOutput,
-	DebugCycleCounter_DrawBitmapSlowly,
+	DebugCycleCounter_DrawBitmapQuickly,
 	DebugCycleCounter_TestPixel,
 	DebugCycleCounter_FillPixel,
 	DebugCycleCounter_Count

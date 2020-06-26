@@ -477,19 +477,16 @@ void GameUpdateAndRender(
 		DrawFullHand(GameState, Player_Two, CardWidth, CardHeight);
 
 		{
-			GameState->TestBitmap = DEBUGLoadBmp(
+			GameState->TestCard = DEBUGLoadBmp(
 				Thread, "../data/test/test_card.bmp"
 			);
-			GameState->TestDiffuse = MakeEmptyBitmap(
-				&GameState->TransientArena, 256, 256
+			GameState->TestBitmap = DEBUGLoadBmp(
+				Thread, "../data/test/tree00.bmp"
 			);
-			MakeSphereDiffuseMap(&GameState->TestDiffuse);
-			GameState->TestNormal = MakeEmptyBitmap(
-				&GameState->TransientArena, 
-				GameState->TestDiffuse.Width, 
-				GameState->TestDiffuse.Height
+			GameState->TestBackground = DEBUGLoadBmp(
+				Thread, "../data/test/test_background.bmp"
 			);
-			MakeSphereNormalMap(&GameState->TestNormal, 0.0f);
+
 
 			GameState->EnvMapWidth = 512;
 			GameState->EnvMapHeight = 256;
@@ -606,13 +603,26 @@ void GameUpdateAndRender(
 	// SECTION START: Updating game state
 	// NOTE: not sure if we should finish all updates and then push to the 
 	// CONT: render group
-	float ScaleValue = cosf((2 * PI32 / 5.0f) * GameState->Time);
-	GameState->WorldToCamera = MakeBasis(
-		Vector2(BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f),
-		ScaleValue * Vector2(1.0f, 0.0f),
-		ScaleValue * Vector2(0.0f, 1.0f)
-	);
+	// TODO: remove scaling test code
+	// float ScaleValue = cosf((2 * PI32 / 5.0f) * GameState->Time);
+	// GameState->WorldToCamera = MakeBasis(
+	// 	Vector2(BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f),
+	// 	ScaleValue * Vector2(1.0f, 0.0f),
+	// 	ScaleValue * Vector2(0.0f, 1.0f)
+	// );
 	PushClear(&GameState->RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
+	PushSizedBitmap(
+		&GameState->RenderGroup,
+		&GameState->TestBackground,
+		Vector2((BackBuffer->Width / 2.0f), (BackBuffer->Height / 2.0f)),
+		Vector2(BackBuffer->Width, 0),
+		Vector2(0, BackBuffer->Height),
+		Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+		NULL,
+		NULL,
+		NULL,
+		NULL
+	);
 	{
 		card* Card = &GameState->Cards[0];
 		for(
@@ -630,7 +640,7 @@ void GameUpdateAndRender(
 				}
 				PushSizedBitmap(
 					&GameState->RenderGroup,
-					&GameState->TestBitmap,
+					&GameState->TestCard,
 					GetCenter(Card->Rectangle),
 					Vector2(Card->Rectangle.Dim.X, 0.0f),
 					Vector2(0.0f, Card->Rectangle.Dim.Y),
@@ -646,67 +656,6 @@ void GameUpdateAndRender(
 	}
 
 #if 1 // NOTE: tests for bitmaps
-	// vector3 MapColor[] =
-	// {
-	// 	{1, 0, 0},
-	// 	{0, 1, 0},
-	// 	{0, 0, 1},
-	// };
-	// for(
-	// 	uint32_t MapIndex = 0;
-	// 	MapIndex < ARRAY_COUNT(GameState->EnvMaps);
-	// 	MapIndex++
-	// )
-	// {
-	// 	environment_map* Map = GameState->EnvMaps + MapIndex;
-	// 	loaded_bitmap* Lod = Map->Lod + 0;
-	// 	// DrawRectangle(
-	// 	// 	Lod,
-	// 	// 	MakeRectangle(
-	// 	// 		Vector2(0, 0), Vector2(Lod->Width, Lod->Height)
-	// 	// 	),
-	// 	// 	ToVector4(MapColor[MapIndex], 1.0f)
-	// 	// );
-	// 	bool RowCheckerOn = false;
-	// 	int32_t CheckerWidth = 16;
-	// 	int32_t CheckerHeight = 16;
-	// 	for(
-	// 		int32_t Y = 0;
-	// 		Y < Lod->Height;
-	// 		Y += CheckerHeight
-	// 	)
-	// 	{
-	// 		bool CheckerOn = RowCheckerOn;
-	// 		for(
-	// 			int32_t X = 0;
-	// 			X < Lod->Width;
-	// 			X += CheckerWidth
-	// 		)
-	// 		{
-	// 			vector4 Color;
-	// 			if(CheckerOn)
-	// 			{
-	// 				Color = ToVector4(MapColor[MapIndex], 1.0f);
-	// 			}
-	// 			else
-	// 			{
-	// 				Color = Vector4(0, 0, 0, 1);
-
-	// 			}
-	// 			vector2 MinP = Vector2(X, Y);
-	// 			DrawRectangle(
-	// 				Lod,
-	// 				MakeRectangle(
-	// 					MinP, Vector2(CheckerWidth, CheckerHeight)
-	// 				),
-	// 				Color
-	// 			);
-	// 			CheckerOn = !CheckerOn;
-	// 		}
-	// 		RowCheckerOn = !RowCheckerOn;
-	// 	}
-	// }
-
 	float RotationalPeriod = 2.0f;
 	float Radians = (2 * PI32 * GameState->Time) / RotationalPeriod;
 	float CosVal = cosf(Radians);
@@ -718,96 +667,12 @@ void GameUpdateAndRender(
 	vector2 XAxis = Vector2(CosVal, SinVal);
 	vector2 YAxis = Perpendicular(XAxis);
 
-	// NOTE: push the three enviornment maps
-	// vector2 MapTopLeft = Vector2(0.0f, (float) BackBuffer->Height);
-	// vector2 MapXAxis = Vector2(0.55f, 0.0f);
-	// vector2 MapYAxis = Perpendicular(MapXAxis);
-	// PushBitmap(
-	// 	&GameState->RenderGroup,
-	// 	&GameState->EnvMaps[2].Lod[0],
-	// 	MakeBasis(MapTopLeft, MapXAxis, MapYAxis),
-	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-	// 	NULL,
-	// 	NULL,
-	// 	NULL,
-	// 	NULL
-	// );
-	// MapTopLeft += Vector2(
-	// 	(float) GameState->EnvMaps[2].Lod[0].Width * MapXAxis.X, 0.0f
-	// ); 
-	// PushBitmap(
-	// 	&GameState->RenderGroup,
-	// 	&GameState->EnvMaps[1].Lod[0],
-	// 	MakeBasis(MapTopLeft, MapXAxis, MapYAxis),
-	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-	// 	NULL,
-	// 	NULL,
-	// 	NULL,
-	// 	NULL
-	// );
-	// MapTopLeft += Vector2(
-	// 	(float) GameState->EnvMaps[1].Lod[0].Width * MapXAxis.X, 0.0f
-	// ); 
-	// PushBitmap(
-	// 	&GameState->RenderGroup,
-	// 	&GameState->EnvMaps[0].Lod[0],
-	// 	MakeBasis(MapTopLeft, MapXAxis, MapYAxis),
-	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-	// 	NULL,
-	// 	NULL,
-	// 	NULL,
-	// 	NULL
-	// );
-
-	// PushBitmapCentered(
-	// 	&GameState->RenderGroup,
-	// 	&GameState->TestDiffuse,
-	// 	Center + (100.0f * Vector2(CosVal, 0.0f)),
-	// 	XAxis,
-	// 	YAxis,
-	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-	// 	&GameState->TestNormal,
-	// 	&GameState->EnvMaps[2],
-	// 	&GameState->EnvMaps[1],
-	// 	&GameState->EnvMaps[0]
-	// );
-	// PushBitmap(
-	// 	&GameState->RenderGroup,
-	// 	&GameState->TestBitmap,
-	// 	MakeBasis(
-	// 		Center + Vector2(-100.0f, -100.0f),
-	// 		Vector2(0.25f, 0.0f),
-	// 		Vector2(0.0f, 0.25f)
-	// 	),
-	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-	// 	NULL,
-	// 	NULL,
-	// 	NULL,
-	// 	NULL
-	// );
-
-	// PushCenteredBitmap(
-	// 	&GameState->RenderGroup,
-	// 	&GameState->TestBitmap,
-	// 	Center,
-	// 	0.25f * Vector2(.707f, .707f),
-	// 	0.25f * Vector2(-.707f, .707f),
-	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-	// 	NULL,
-	// 	NULL,
-	// 	NULL,
-	// 	NULL
-	// );
-	float WidthOverHeight = (
-		((float) GameState->TestBitmap.Width) / ((float) GameState->TestBitmap.Height)
-	);
-	float Height = 540.0f;
-	PushSizedBitmap(
+	PushCenteredBitmap(
 		&GameState->RenderGroup,
 		&GameState->TestBitmap,
 		Center,
-		WidthOverHeight * Height * XAxis,
-		Height * YAxis,
+		XAxis,
+		YAxis,
 		Vector4(1.0f, 1.0f, 1.0f, 1.0f),
 		NULL,
 		NULL,
@@ -821,16 +686,6 @@ void GameUpdateAndRender(
 		MakeRectangle(Vector2(0, 0), Vector2(25, 25)),
 		Vector4(1.0f, 1.0f, 1.0f, 1.0f)
 	);
-	// PushBitmap(
-	// 	&GameState->RenderGroup,
-	// 	&GameState->TestBitmap,
-	// 	MakeBasis(Center, XAxis, YAxis),
-	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-	// 	NULL,
-	// 	NULL,
-	// 	NULL,
-	// 	NULL
-	// );
 #endif
 
 	// SECTION STOP: Updating game state

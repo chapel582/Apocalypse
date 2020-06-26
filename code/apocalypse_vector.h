@@ -12,7 +12,7 @@ struct vector2
 
 inline vector2 Vector2(float X, float Y)
 {
-	vector2 Result = {};
+	vector2 Result;
 	Result.X = X;
 	Result.Y = Y;
 	return Result;
@@ -20,7 +20,7 @@ inline vector2 Vector2(float X, float Y)
 
 inline vector2 Vector2(int32_t X, int32_t Y)
 {
-	vector2 Result = {};
+	vector2 Result;
 	Result.X = (float) X;
 	Result.Y = (float) Y;
 	return Result;
@@ -28,7 +28,7 @@ inline vector2 Vector2(int32_t X, int32_t Y)
 
 inline vector2 Vector2(uint32_t X, uint32_t Y)
 {
-	vector2 Result = {};
+	vector2 Result;
 	Result.X = (float) X;
 	Result.Y = (float) Y;
 	return Result;
@@ -155,7 +155,7 @@ union vector3
 
 inline vector3 Vector3(float X, float Y, float Z)
 {
-	vector3 Result = {};
+	vector3 Result;
 	Result.X = X;
 	Result.Y = Y;
 	Result.Z = Z;
@@ -164,7 +164,7 @@ inline vector3 Vector3(float X, float Y, float Z)
 
 inline vector3 Vector3(vector3 V, float Z)
 {
-	vector3 Result = {};
+	vector3 Result;
 	Result.X = V.X;
 	Result.Y = V.Y;
 	Result.Z = Z;
@@ -325,7 +325,7 @@ union vector4
 
 inline vector4 Vector4(float X, float Y, float Z, float W)
 {
-	vector4 Result = {};
+	vector4 Result;
 	Result.X = X;
 	Result.Y = Y;
 	Result.Z = Z;

@@ -168,6 +168,8 @@ struct game_state
 	
 	// TODO: delete test code below
 	loaded_bitmap TestBitmap;
+	loaded_bitmap TestCard;
+	loaded_bitmap TestBackground;
 	int ToneHz;
 	mouse_event_type CurrentPrimaryState;
 	loaded_bitmap TestDiffuse;

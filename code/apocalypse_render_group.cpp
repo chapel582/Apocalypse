@@ -776,22 +776,26 @@ void DrawBitmapQuickly(
 				SourceColor.G = (float) ((((*Pixel >> 8) & 0xFF)) / 255.0f);
 				SourceColor.B = (float) ((((*Pixel) & 0xFF)) / 255.0f);
 
-				vector4 FinalColor = (
+				vector4 NormalFinalColor = (
 					(OneMinusNormalizedAlpha * SourceColor) + 
 					(NormalizedAlpha * Texel)
 				);
-				ASSERT(FinalColor.R >= 0.0f && FinalColor.R <= 1.0f);
-				ASSERT(FinalColor.G >= 0.0f && FinalColor.G <= 1.0f);
-				ASSERT(FinalColor.B >= 0.0f && FinalColor.B <= 1.0f);
-				float R = 255.0f * FinalColor.R;
-				float G = 255.0f * FinalColor.G;
-				float B = 255.0f * FinalColor.B;
+				ASSERT(
+					NormalFinalColor.R >= 0.0f && NormalFinalColor.R <= 1.0f
+				);
+				ASSERT(
+					NormalFinalColor.G >= 0.0f && NormalFinalColor.G <= 1.0f
+				);
+				ASSERT(
+					NormalFinalColor.B >= 0.0f && NormalFinalColor.B <= 1.0f
+				);
+				vector4 FinalColor = NormalColorToRgb255(NormalFinalColor);
 
 				*Pixel = (
 					(((uint32_t) 0xFF) << 24) | 
-					(((uint32_t) (R + 0.5f)) << 16) |
-					(((uint32_t) (G + 0.5f)) << 8) |
-					((uint32_t) (B + 0.5f))
+					(((uint32_t) (FinalColor.R + 0.5f)) << 16) |
+					(((uint32_t) (FinalColor.G + 0.5f)) << 8) |
+					((uint32_t) (FinalColor.B + 0.5f))
 				);
 				END_TIMED_BLOCK(FillPixel);
 			}

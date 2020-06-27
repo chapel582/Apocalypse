@@ -530,6 +530,17 @@ inline vector4 Unpack4x8(uint32_t Packed)
 	);
 }
 
+inline __m128 VectorizedUnpack4x8(uint32_t Packed)
+{
+	__m128 Result;
+	float* Element = (float*) &Result;
+	*Element++ = (float) ((Packed >> 16) & 0xFF);
+	*Element++ = (float) ((Packed >> 8) & 0xFF);
+	*Element++ = (float) (Packed & 0xFF);
+	*Element++ = (float) ((Packed >> 24) & 0xFF);
+	return Result;
+}
+
 inline vector4 Rgb255ToNormalColor(vector4 C)
 {
 	vector4 Result;
@@ -585,6 +596,7 @@ TODO:
 	env map.
 */
 
+#define GET_FLOAT_FROM_MM128(Variable, Index) (*(((float*) Variable) + Index))
 void DrawBitmapQuickly(
 	loaded_bitmap* Buffer, 
 	vector2 Origin,
@@ -595,6 +607,12 @@ void DrawBitmapQuickly(
 )
 {
 	BEGIN_TIMED_BLOCK(DrawBitmapQuickly);
+
+	__m128 WideOne = _mm_set1_ps(1.0f);
+	__m128 WideZero = _mm_set1_ps(0.0f);
+	__m128 Wide255 = _mm_set1_ps(255.0f);
+	__m128 WideInv255 = _mm_set1_ps(1.0f / 255.0f);
+	__m128 WideColor = *((__m128*) &Color);
 
 	float fMinX = (float) Buffer->Width;
 	float fMinY = (float) Buffer->Height;
@@ -723,6 +741,10 @@ void DrawBitmapQuickly(
 
 				float fX = tX - ((float) iX);
 				float fY = tY - ((float) iY);
+				__m128 WideFX = _mm_set1_ps(fX);
+				__m128 OneMinusFX = _mm_sub_ps(WideOne, WideFX);
+				__m128 WideFY = _mm_set1_ps(fY);
+				__m128 OneMinusFY = _mm_sub_ps(WideOne, WideFY);
 
 				ASSERT((iX >= 0) && (iX < Texture->Width));
 				ASSERT((iY >= 0) && (iY < Texture->Height));
@@ -742,60 +764,66 @@ void DrawBitmapQuickly(
 				);
 
 				// TODO: Color.a!!
-				vector4 TexelA = Unpack4x8(SampleA);
-				vector4 TexelB = Unpack4x8(SampleB);
-				vector4 TexelC = Unpack4x8(SampleC);
-				vector4 TexelD = Unpack4x8(SampleD);
+				__m128 TexelA = VectorizedUnpack4x8(SampleA);
+				__m128 TexelB = VectorizedUnpack4x8(SampleB);
+				__m128 TexelC = VectorizedUnpack4x8(SampleC);
+				__m128 TexelD = VectorizedUnpack4x8(SampleD);
 
 				// NOTE: normalized texel colors
-				TexelA = Rgb255ToNormalColor(TexelA);
-				TexelB = Rgb255ToNormalColor(TexelB);
-				TexelC = Rgb255ToNormalColor(TexelC);
-				TexelD = Rgb255ToNormalColor(TexelD);
+				TexelA = _mm_mul_ps(TexelA, WideInv255);
+				TexelB = _mm_mul_ps(TexelB, WideInv255);
+				TexelC = _mm_mul_ps(TexelC, WideInv255);
+				TexelD = _mm_mul_ps(TexelD, WideInv255);
 
-				// NOTE: Lerp to blend texel
-				float OneMinusLerpX = 1.0f - fX;
-				vector4 Texel = (
-					((1.0f - fY) * (OneMinusLerpX * TexelA + fX * TexelB)) + 
-					(fY * (OneMinusLerpX * TexelC + fX * TexelD))
+				// NOTE: Lerp to bilinear blend texel
+				__m128 Texel = _mm_add_ps(
+					_mm_mul_ps(
+						OneMinusFY,
+						_mm_add_ps(
+							_mm_mul_ps(OneMinusFX, TexelA),
+							_mm_mul_ps(WideFX, TexelB) 
+						)
+					),
+					_mm_mul_ps(
+						WideFY,
+						_mm_add_ps(
+							_mm_mul_ps(OneMinusFX, TexelC),
+							_mm_mul_ps(WideFX, TexelD)
+						)
+					)
 				);
 
-				Texel = Hadamard(Texel, Color);
+				// NOTE: mask with color
+				Texel = _mm_mul_ps(Texel, WideColor);
+
+				// NOTE: Clamping
 				// NOTE: the point of the clamping is to normalize the color 
 				// CONT: before converting to 255 color
-				Texel.A = Clamp01(Texel.A);
-				Texel.R = Clamp01(Texel.R);
-				Texel.G = Clamp01(Texel.G);
-				Texel.B = Clamp01(Texel.B);
+				Texel = _mm_min_ps(_mm_max_ps(Texel, WideZero), WideOne);
 
-				float NormalizedAlpha = Texel.A;
-				float OneMinusNormalizedAlpha = 1.0f - NormalizedAlpha; 
-				
-				vector4 SourceColor;
-				SourceColor.R = (float) ((((*Pixel >> 16) & 0xFF)) / 255.0f);
-				SourceColor.G = (float) ((((*Pixel >> 8) & 0xFF)) / 255.0f);
-				SourceColor.B = (float) ((((*Pixel) & 0xFF)) / 255.0f);
+				// NOTE: blend with source
+				__m128 NormalizedAlpha = _mm_set1_ps(
+					GET_FLOAT_FROM_MM128(&Texel, 3)
+				);
+				__m128 OneMinusNormalizedAlpha = _mm_sub_ps(
+					WideOne, NormalizedAlpha
+				);
+				__m128 SourceColor = VectorizedUnpack4x8(*Pixel);
+				SourceColor = _mm_mul_ps(SourceColor, WideInv255);
+				__m128 NormalFinalColor = _mm_add_ps(
+					_mm_mul_ps(OneMinusNormalizedAlpha, SourceColor),
+					_mm_mul_ps(NormalizedAlpha, Texel)
+				);
+				__m128 FinalColor255 = _mm_mul_ps(NormalFinalColor, Wide255);
 
-				vector4 NormalFinalColor = (
-					(OneMinusNormalizedAlpha * SourceColor) + 
-					(NormalizedAlpha * Texel)
-				);
-				ASSERT(
-					NormalFinalColor.R >= 0.0f && NormalFinalColor.R <= 1.0f
-				);
-				ASSERT(
-					NormalFinalColor.G >= 0.0f && NormalFinalColor.G <= 1.0f
-				);
-				ASSERT(
-					NormalFinalColor.B >= 0.0f && NormalFinalColor.B <= 1.0f
-				);
-				vector4 FinalColor = NormalColorToRgb255(NormalFinalColor);
-
+				float R = GET_FLOAT_FROM_MM128(&FinalColor255, 0);
+				float G = GET_FLOAT_FROM_MM128(&FinalColor255, 1);
+				float B = GET_FLOAT_FROM_MM128(&FinalColor255, 2);
 				*Pixel = (
 					(((uint32_t) 0xFF) << 24) | 
-					(((uint32_t) (FinalColor.R + 0.5f)) << 16) |
-					(((uint32_t) (FinalColor.G + 0.5f)) << 8) |
-					((uint32_t) (FinalColor.B + 0.5f))
+					(((uint32_t) (R + 0.5f)) << 16) |
+					(((uint32_t) (G + 0.5f)) << 8) |
+					((uint32_t) (B + 0.5f))
 				);
 				END_TIMED_BLOCK(FillPixel);
 			}

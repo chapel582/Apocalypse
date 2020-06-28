@@ -708,12 +708,12 @@ void DrawBitmapQuickly(
 		MinX * BYTES_PER_PIXEL +
 		MinY * Buffer->Pitch 
 	);
+	BEGIN_TIMED_BLOCK(ProcessPixel);
 	for(int Y = MinY; Y < MaxY; Y++)
 	{
 		uint32_t* Pixel = (uint32_t*) Row;
 		for(int X = MinX; X < MaxX; X++)
 		{
-			BEGIN_TIMED_BLOCK(TestPixel);
 			vector2 Point = Vector2(X, Y);
 			vector2 PointOffsetFromOrigin = Point - Origin;
 			// NOTE: U and V are calculated this way because 
@@ -729,7 +729,6 @@ void DrawBitmapQuickly(
 				(V <= 1.0f)
 			)
 			{
-				BEGIN_TIMED_BLOCK(FillPixel);
 				// TODO: formalize texture boundaries
 				// NOTE: U and V are then used to find the sample within the 
 				// CONT: texture 
@@ -825,14 +824,13 @@ void DrawBitmapQuickly(
 					(((uint32_t) (G + 0.5f)) << 8) |
 					((uint32_t) (B + 0.5f))
 				);
-				END_TIMED_BLOCK(FillPixel);
 			}
 			Pixel++;
-			END_TIMED_BLOCK(TestPixel);
 		}
 		Row += Buffer->Pitch;
 	}
 
+	END_TIMED_BLOCK_COUNTED(ProcessPixel, (MaxX - MinX) * (MaxY - MinY));
 	END_TIMED_BLOCK(DrawBitmapQuickly);
 }
 

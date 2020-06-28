@@ -745,9 +745,6 @@ void DrawBitmapQuickly(
 				__m128 WideFY = _mm_set1_ps(fY);
 				__m128 OneMinusFY = _mm_sub_ps(WideOne, WideFY);
 
-				ASSERT((iX >= 0) && (iX < Texture->Width));
-				ASSERT((iY >= 0) && (iY < Texture->Height));
-
 				// NOTE: lerp based on texels below above and to the right
 				// bilinear_sample Sample = BilinearSample(Texture, iX, iY);
 				uint8_t* TexelPtr = (

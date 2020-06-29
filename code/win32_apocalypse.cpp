@@ -83,9 +83,7 @@ void HandleDebugCycleCounters(game_memory* Memory)
 }
 // STOP SECTION: Performance counters
 
-debug_read_file_result DEBUGPlatformReadEntireFile(
-	thread_context* Thread, char* FileName
-)
+debug_read_file_result DEBUGPlatformReadEntireFile(char* FileName)
 {
 	debug_read_file_result Result = {};
 	HANDLE FileHandle = INVALID_HANDLE_VALUE;
@@ -144,7 +142,7 @@ end:
 	return Result;
 }
 
-void DEBUGPlatformFreeFileMemory(thread_context* Thread, void* Memory)
+void DEBUGPlatformFreeFileMemory(void* Memory)
 {
 	if(Memory)
 	{
@@ -153,7 +151,7 @@ void DEBUGPlatformFreeFileMemory(thread_context* Thread, void* Memory)
 }
 
 bool DEBUGPlatformWriteEntireFile(
-	thread_context* Thread, char* FileName, void* Memory, uint32_t MemorySize
+	char* FileName, void* Memory, uint32_t MemorySize
 )
 {
 	bool Result = false;
@@ -531,6 +529,133 @@ LRESULT CALLBACK MainWindowCallback(
 	return Result;
 }
 
+
+// SECTION START: job queue implementation 
+struct win32_thread_info
+{
+	int LogicalThreadIndex;
+	platform_job_queue* JobQueue;
+};
+
+struct platform_semaphore_handle
+{
+	HANDLE Semaphore;
+};
+
+struct platform_mutex_handle
+{
+	HANDLE Mutex;
+};
+
+struct platform_event_handle
+{
+	HANDLE Event;
+};
+
+void InitJobQueue(platform_job_queue* JobQueue, uint32_t ThreadCount)
+{
+	*JobQueue = {};
+	for(int Index = 0; Index < ARRAY_COUNT(JobQueue->Entries); Index++)
+	{
+		platform_job_queue_entry* Entry = &JobQueue->Entries[Index];
+		Entry->Next = JobQueue->EmptyHead;
+		JobQueue->EmptyHead = Entry;
+	}
+
+	JobQueue->UsingFilled = (platform_mutex_handle*) VirtualAlloc(
+		0, sizeof(platform_mutex_handle), MEM_COMMIT, PAGE_READWRITE
+	);
+	JobQueue->UsingFilled->Mutex = CreateMutexA(NULL, false, NULL);
+	JobQueue->UsingEmpty = (platform_mutex_handle*) VirtualAlloc(
+		0, sizeof(platform_mutex_handle), MEM_COMMIT, PAGE_READWRITE
+	);
+	JobQueue->UsingEmpty->Mutex = CreateMutexA(NULL, false, NULL);
+	JobQueue->FilledSemaphore = (platform_semaphore_handle*) VirtualAlloc(
+		0, sizeof(platform_semaphore_handle), MEM_COMMIT, PAGE_READWRITE
+	);
+	JobQueue->FilledSemaphore->Semaphore = CreateSemaphoreEx(
+		0, 0, ThreadCount, 0, 0, SEMAPHORE_ALL_ACCESS
+	);
+	JobQueue->EmptySemaphore = (platform_semaphore_handle*) VirtualAlloc(
+		0, sizeof(platform_semaphore_handle), MEM_COMMIT, PAGE_READWRITE
+	);
+	JobQueue->EmptySemaphore->Semaphore = CreateSemaphoreEx(
+		0,
+		ARRAY_COUNT(JobQueue->Entries),
+		ThreadCount,
+		0,
+		0,
+		SEMAPHORE_ALL_ACCESS
+	);
+
+	JobQueue->JobDone = (platform_event_handle*) VirtualAlloc(
+		0, sizeof(platform_event_handle), MEM_COMMIT, PAGE_READWRITE
+	);
+	JobQueue->JobDone->Event = CreateEventA(NULL, false, false, NULL);
+}
+
+void PlatformAddJob(
+	platform_job_queue* JobQueue,
+	platform_job_callback* Callback,
+	void* Data
+)
+{
+	WaitForSingleObject(JobQueue->EmptySemaphore->Semaphore, INFINITE);
+	WaitForSingleObject(JobQueue->UsingEmpty->Mutex, INFINITE);
+	platform_job_queue_entry* Entry = JobQueue->EmptyHead;
+	JobQueue->EmptyHead = JobQueue->EmptyHead->Next;
+	ReleaseMutex(JobQueue->UsingEmpty->Mutex);
+
+	WaitForSingleObject(JobQueue->UsingFilled->Mutex, INFINITE);
+	Entry->Next = JobQueue->FilledHead;
+	JobQueue->FilledHead = Entry; 
+	Entry->Callback = Callback;
+	Entry->Data = Data;
+	ReleaseMutex(JobQueue->UsingFilled->Mutex);
+	ReleaseSemaphore(JobQueue->FilledSemaphore->Semaphore, 1, NULL);
+}
+
+void PlatformCompleteAllJobs(platform_job_queue* JobQueue)
+{
+	while(true)
+	{
+		if(JobQueue->FilledHead == NULL)
+		{
+			break;
+		}
+		WaitForSingleObject(JobQueue->JobDone->Event, INFINITE);
+	}
+}
+
+DWORD WINAPI WorkerThread(LPVOID LpParam)
+{
+	// TODO: We might need a way to join all these threads in case they are
+	// CONT: doing something like saving a game
+	win32_thread_info* Info = (win32_thread_info*) LpParam;
+	platform_job_queue* JobQueue = Info->JobQueue;
+	while(true) 
+	{
+		// NOTE: Get job
+		WaitForSingleObject(JobQueue->FilledSemaphore->Semaphore, INFINITE);
+		WaitForSingleObject(JobQueue->UsingFilled->Mutex, INFINITE);
+		platform_job_queue_entry* Entry = JobQueue->FilledHead;
+		JobQueue->FilledHead = JobQueue->FilledHead->Next;
+		ReleaseMutex(JobQueue->UsingFilled->Mutex);
+
+		// NOTE: Do job
+		Entry->Callback(Entry->Data);
+		SetEvent(JobQueue->JobDone->Event);
+
+		// NOTE: open up an entry in the queue
+		WaitForSingleObject(JobQueue->UsingEmpty, INFINITE);
+		Entry->Next = JobQueue->EmptyHead;
+		JobQueue->EmptyHead = Entry;
+		ReleaseMutex(JobQueue->UsingEmpty);
+		ReleaseSemaphore(JobQueue->EmptySemaphore->Semaphore, 1, NULL);
+	}
+}
+// SECTION STOP: job queue implementation 
+
 int CALLBACK WinMain(
 	HINSTANCE Instance,
 	HINSTANCE PrevInstance,
@@ -538,6 +663,31 @@ int CALLBACK WinMain(
 	int ShowCode
 )
 {
+	uint32_t ThreadCount = 4;
+	HANDLE* ThreadHandles = (HANDLE*) VirtualAlloc(
+		0, ThreadCount * sizeof(HANDLE), MEM_COMMIT, PAGE_READWRITE
+	);
+	win32_thread_info* ThreadInfo = (win32_thread_info*) VirtualAlloc(
+		0, ThreadCount * sizeof(win32_thread_info), MEM_COMMIT, PAGE_READWRITE
+	);
+	platform_job_queue JobQueue;
+	InitJobQueue(&JobQueue, ThreadCount);
+	for(uint32_t ThreadIndex = 0; ThreadIndex < ThreadCount; ThreadIndex++)
+	{
+		DWORD ThreadId;
+		win32_thread_info* Info = &ThreadInfo[ThreadIndex];
+		Info->JobQueue = &JobQueue;
+		Info->LogicalThreadIndex = ThreadIndex;
+		ThreadHandles[ThreadIndex] = CreateThread( 
+			NULL, // default security attributes
+			0, // use default stack size  
+			WorkerThread, // thread function name
+			Info, // argument to thread function 
+			0, // use default creation flags 
+			&ThreadId // returns the thread identifier
+		);
+	}
+
 	LARGE_INTEGER PerformanceFrequency;
 	QueryPerformanceFrequency(&PerformanceFrequency);
 	GlobalPerformanceFrequency = PerformanceFrequency.QuadPart;
@@ -656,6 +806,7 @@ int CALLBACK WinMain(
 				OutputDebugStringA("Unable to allocate game memory\n");
 				goto end;
 			}
+			GameMemory.DefaultJobQueue = &JobQueue;
 
 			user_event_index UserEventIndex = 0;
 			game_mouse_events MouseEvents = {};
@@ -818,9 +969,7 @@ int CALLBACK WinMain(
 				BackBuffer.Height = GlobalBackBuffer.Height;
 				BackBuffer.Pitch = GlobalBackBuffer.Pitch;
 				BackBuffer.BytesPerPixel = GlobalBackBuffer.BytesPerPixel;
-				thread_context Thread;
 				GameUpdateAndRender(
-					&Thread,
 					&GameMemory,
 					&BackBuffer,
 					&MouseEvents,

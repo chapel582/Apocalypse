@@ -180,11 +180,14 @@ struct game_state
 	environment_map EnvMaps[3];
 	// TODO: done with test code here
 
+	// SECTION START: Card Game Code
 	card* Cards;
 	int MaxCards;
 	deck* Decks;
 	card_set* Hands;
 	card_set* Tableaus;
+	// SECTION STOP: Card GameCode
+
 };
 
 #define APOCALYPSE_H

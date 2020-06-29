@@ -28,11 +28,6 @@ inline uint32_t SafeTruncateUInt64(uint64_t Value)
 	return (uint32_t) Value;
 }
 
-typedef struct thread_context
-{
-	int PlaceHolder;
-} thread_context;
-
 #if APOCALYPSE_INTERNAL
 // NOTE: These are blocking calls that don't protect against lost data
 // CONT: they are intended for debug purposes only
@@ -42,12 +37,10 @@ struct debug_read_file_result
 	void* Contents;
 };
 
-debug_read_file_result DEBUGPlatformReadEntireFile(
-	thread_context* Thread, char* FileName
-);
-void DEBUGPlatformFreeFileMemory(thread_context* Thread, void* Memory);
+debug_read_file_result DEBUGPlatformReadEntireFile(char* FileName);
+void DEBUGPlatformFreeFileMemory(void* Memory);
 bool DEBUGPlatformWriteEntireFile(
-	thread_context* Thread, char* FileName, void* Memory, uint32_t MemorySize
+	char* FileName, void* Memory, uint32_t MemorySize
 );
 
 enum
@@ -76,6 +69,41 @@ extern struct game_memory* DebugGlobalMemory;
 
 #endif // NOTE: APOCALYPSE_INTERNAL
 
+// SECTION START: Threading Code
+typedef void platform_job_callback(void* Data);
+
+struct platform_job_queue_entry;
+struct platform_job_queue_entry
+{
+	platform_job_callback* Callback;
+	void* Data;
+
+	platform_job_queue_entry* Next;
+};
+
+struct platform_mutex_handle;
+struct platform_semaphore_handle;
+struct platform_event_handle;
+struct platform_job_queue
+{
+	platform_job_queue_entry Entries[256];
+	platform_event_handle* JobDone;
+	platform_semaphore_handle* EmptySemaphore;
+	platform_semaphore_handle* FilledSemaphore;
+	platform_mutex_handle* UsingFilled; // NOTE: for making mods to FilledQueue
+	platform_mutex_handle* UsingEmpty; // NOTE: for making mods to EmptyQueue
+	platform_job_queue_entry* FilledHead; // NOTE: Jobs to do
+	platform_job_queue_entry* EmptyHead; // NOTE: entries available for jobs
+};
+
+void PlatformAddJob(
+	platform_job_queue* JobQueue,
+	platform_job_callback* Callback,
+	void* Data
+);
+void PlatformCompleteAllJobs(platform_job_queue* JobQueue);
+// SECTION STOP: Threading Code
+
 struct game_memory
 {
 	bool IsInitialized;
@@ -85,6 +113,8 @@ struct game_memory
 
 	size_t TransientStorageSize;
 	void* TransientStorage;
+
+	platform_job_queue* DefaultJobQueue;
 
 #if APOCALYPSE_INTERNAL
 	debug_cycle_counter Counters[DebugCycleCounter_Count];
@@ -160,7 +190,6 @@ struct keyboard_state
 };
 
 void GameUpdateAndRender(
-	thread_context* Thread,
 	game_memory* Memory,
 	game_offscreen_buffer* BackBuffer,
 	game_mouse_events* MouseEvents,

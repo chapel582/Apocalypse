@@ -29,15 +29,13 @@ struct bitmap_header
 };
 #pragma pack(pop)
 
-loaded_bitmap DEBUGLoadBmp(thread_context* Thread, char* FileName)
+loaded_bitmap DEBUGLoadBmp(char* FileName)
 {
 	// NOTE: this is not complete BMP loading code. Can't handle negative height
 	// CONT: or compression
 
 	loaded_bitmap Result = {};
-	debug_read_file_result ReadResult = DEBUGPlatformReadEntireFile(
-		Thread, FileName
-	);
+	debug_read_file_result ReadResult = DEBUGPlatformReadEntireFile(FileName);
 	if(ReadResult.ContentsSize == 0)
 	{
 		goto end;

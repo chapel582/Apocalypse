@@ -14,111 +14,10 @@
 #define PI32 3.14159265359f
 
 // SECTION START: Temporary or Misc. code
-void MakeSphereNormalMap(
-	loaded_bitmap* Bitmap, float Roughness, float Cx = 1.0f, float Cy = 1.0f
-)
+void AlterData(void* Data)
 {
-	float InvWidth = 1.0f / ((float) (Bitmap->Width - 1));
-	float InvHeight = 1.0f / ((float) (Bitmap->Height - 1));
-	
-	uint8_t* Row = (uint8_t*) Bitmap->Memory;
-	for(
-		int32_t Y = 0;
-		Y < Bitmap->Height;
-		Y++
-	)
-	{
-		uint32_t* Pixel = (uint32_t*) Row;
-		for(
-			int32_t X = 0;
-			X < Bitmap->Width;
-			X++
-		)
-		{
-			vector2 BitmapUV = {InvWidth * (float) X, InvHeight * (float)Y};
-
-			// NOTE: range is (-1, 1)
-			float Nx = Cx * (2.0f * BitmapUV.X - 1.0f);
-			float Ny = Cy * (2.0f * BitmapUV.Y - 1.0f);
-
-			float RootTerm = 1.0f - Nx * Nx - Ny * Ny;
-			vector3 Normal = {0, 0.707106781188f, 0.707106781188f};
-			float Nz = 0.0f;
-			if(RootTerm >= 0.0f)
-			{
-				Nz = sqrtf(RootTerm);
-				Normal = Vector3(Nx, Ny, Nz);
-			}
-			
-			vector4 Color = {
-				255.0f * (0.5f*(Normal.X + 1.0f)),
-				255.0f * (0.5f*(Normal.Y + 1.0f)),
-				255.0f * (0.5f*(Normal.Z + 1.0f)),
-				255.0f * Roughness
-			};
-
-			*Pixel++ = (
-				(((uint32_t) (Color.A + 0.5f)) << 24) |
-				(((uint32_t) (Color.R + 0.5f)) << 16) |
-				(((uint32_t) (Color.G + 0.5f)) << 8) |
-				(((uint32_t) (Color.B + 0.5f)) << 0)
-			);
-		}
-
-		Row += Bitmap->Pitch;
-	}
-}
-
-void MakeSphereDiffuseMap(
-	loaded_bitmap* Bitmap, float Cx = 1.0f, float Cy = 1.0f
-)
-{
-	float InvWidth = 1.0f / ((float) (Bitmap->Width - 1));
-	float InvHeight = 1.0f / ((float) (Bitmap->Height - 1));
-	
-	uint8_t* Row = (uint8_t*) Bitmap->Memory;
-	for(
-		int32_t Y = 0;
-		Y < Bitmap->Height;
-		Y++
-	)
-	{
-		uint32_t* Pixel = (uint32_t*) Row;
-		for(
-			int32_t X = 0;
-			X < Bitmap->Width;
-			X++
-		)
-		{
-			vector2 BitmapUV = {InvWidth * (float) X, InvHeight * (float)Y};
-
-			// NOTE: range is (-1, 1)
-			float Nx = Cx * (2.0f * BitmapUV.X - 1.0f);
-			float Ny = Cy * (2.0f * BitmapUV.Y - 1.0f);
-
-			float RootTerm = 1.0f - Nx * Nx - Ny * Ny;
-			float Alpha;
-			if(RootTerm >= 0.0f)
-			{
-				Alpha = 255.0f;
-			}
-			else
-			{
-				Alpha = 0.0f;
-			}
-			
-			vector4 Color = {0.0f, 0.0f, 0.0f, Alpha};
-
-			*Pixel++ = (
-				(((uint32_t) (Color.A + 0.5f)) << 24) |
-				(((uint32_t) (Color.R + 0.5f)) << 16) |
-				(((uint32_t) (Color.G + 0.5f)) << 8) |
-				(((uint32_t) (Color.B + 0.5f)) << 0)
-			);
-		}
-
-		Row += Bitmap->Pitch;
-	}
+	int* IntArray = (int*) Data;
+	IntArray[0] = 123;
 }
 // SECTION END: Temporary or Misc. code
 
@@ -269,7 +168,6 @@ game_memory* DebugGlobalMemory;
 #endif 
 
 void GameUpdateAndRender(
-	thread_context* Thread,
 	game_memory* Memory,
 	game_offscreen_buffer* BackBuffer,
 	game_mouse_events* MouseEvents,
@@ -477,14 +375,10 @@ void GameUpdateAndRender(
 		DrawFullHand(GameState, Player_Two, CardWidth, CardHeight);
 
 		{
-			GameState->TestCard = DEBUGLoadBmp(
-				Thread, "../data/test/test_card.bmp"
-			);
-			GameState->TestBitmap = DEBUGLoadBmp(
-				Thread, "../data/test/tree00.bmp"
-			);
+			GameState->TestCard = DEBUGLoadBmp("../data/test/test_card.bmp");
+			GameState->TestBitmap = DEBUGLoadBmp("../data/test/tree00.bmp");
 			GameState->TestBackground = DEBUGLoadBmp(
-				Thread, "../data/test/test_background.bmp"
+				"../data/test/test_background.bmp"
 			);
 
 
@@ -518,6 +412,43 @@ void GameUpdateAndRender(
 	}
 
 	GameState->Time += DtForFrame;
+
+#if 0
+	// TODO: delete this when we're using the job queue for other things
+	int IntArray1[] = {0, 1, 2, 3};
+	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray1);
+	int IntArray2[] = {0, 1, 2, 4};
+	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray2);
+	int IntArray3[] = {0, 1, 2, 3};
+	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray3);
+	int IntArray4[] = {0, 1, 2, 3};
+	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray4);
+	int IntArray5[] = {0, 1, 2, 3};
+	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray5);
+	int IntArray6[] = {0, 1, 2, 3};
+	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray6);
+	int IntArray7[] = {0, 1, 2, 3};
+	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray7);
+	int IntArray8[] = {0, 1, 2, 3};
+	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray8);
+	int IntArray9[] = {0, 1, 2, 3};
+	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray9);
+	int IntArray10[] = {0, 1, 2, 3};
+	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray10);
+	int IntArray11[] = {0, 1, 2, 3};
+	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray11);
+	int IntArray12[] = {0, 1, 2, 3};
+	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray12);
+	int IntArray13[] = {0, 1, 2, 3};
+	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray13);
+	int IntArray14[] = {0, 1, 2, 3};
+	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray14);
+	int IntArray15[] = {0, 1, 2, 3};
+	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray15);
+	int IntArray16[] = {0, 1, 2, 3};
+	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray16);
+	PlatformCompleteAllJobs(Memory->DefaultJobQueue);
+#endif 
 
 	// SECTION START: User input
 	// TODO: move to game memory

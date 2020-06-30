@@ -60,10 +60,35 @@ vector2 WorldToScreenDim(basis* WorldScreenBasis, vector2 WorldDim)
 	return TransformVectorFromBasis(WorldScreenBasis, WorldDim);
 }
 
+struct screen_pos_dim
+{
+	vector2 Pos;
+	vector2 XAxis;
+	vector2 YAxis;
+};
+
+screen_pos_dim GetScreenPosDim(
+	basis* Basis, basis* WorldToCamera, basis* CameraToScreen
+)
+{
+	screen_pos_dim Result = {};
+
+	vector2 CameraSpacePos = TransformPosToBasis(WorldToCamera, Basis->Offset);
+	Result.Pos = TransformPosToBasis(CameraToScreen, CameraSpacePos);
+
+	vector2 CameraAxis = TransformVectorToBasis(WorldToCamera, Basis->Axis1);
+	Result.XAxis = TransformVectorToBasis(CameraToScreen, CameraAxis);
+
+	CameraAxis = TransformVectorToBasis(WorldToCamera, Basis->Axis2);
+	Result.YAxis = TransformVectorToBasis(CameraToScreen, CameraAxis);
+
+	return Result;
+}
+
 inline void PushBitmap(
 	render_group* Group,
 	loaded_bitmap* Bitmap,
-	basis Basis,
+	basis* Basis,
 	vector4 Color,
 	loaded_bitmap* NormalMap,
 	environment_map* Top,
@@ -80,13 +105,23 @@ inline void PushBitmap(
 	render_entry_bitmap* Entry = PushStruct(Group->Arena, render_entry_bitmap);
 	Group->LastEntry = (uint8_t*) Entry;
 	Entry->Header.Type = EntryType_Bitmap;
-	Entry->Basis = Basis;
 	Entry->Bitmap = Bitmap;
 	Entry->Color = Color;
 	Entry->NormalMap = NormalMap;
 	Entry->Top = Top;
 	Entry->Middle = Middle;
 	Entry->Bottom = Bottom;
+
+	screen_pos_dim ScreenPosDim = GetScreenPosDim(
+		Basis, Group->WorldToCamera, Group->CameraToScreen
+	);
+	Entry->Pos = ScreenPosDim.Pos;
+	Entry->XAxis = (
+		((float) Entry->Bitmap->Width) * ScreenPosDim.XAxis
+	);
+	Entry->YAxis = (
+		((float) Entry->Bitmap->Height) * ScreenPosDim.YAxis
+	);
 }
 
 inline void PushCenteredBitmap(
@@ -115,18 +150,19 @@ inline void PushCenteredBitmap(
 		Vector2(Bitmap->Width, Bitmap->Height)
 	);
 
+	basis Basis = MakeBasis(
+		(
+			Center - 
+			(0.5f * CameraXAxis * BitmapDim.X) - 
+			(0.5f * CameraYAxis * BitmapDim.Y)
+		),
+		XAxis,
+		YAxis
+	);
 	PushBitmap(
 		Group,
 		Bitmap,
-		MakeBasis(
-			(
-				Center - 
-				(0.5f * CameraXAxis * BitmapDim.X) - 
-				(0.5f * CameraYAxis * BitmapDim.Y)
-			),
-			XAxis,
-			YAxis
-		),
+		&Basis,
 		Color,
 		NormalMap,
 		Top,
@@ -194,7 +230,7 @@ inline void PushSizedBitmap(
 
 // TODO: make a push rect that doesn't require pushing a basis and will make it based on the rect you push
 inline void PushRect(
-	render_group* Group, basis Basis, rectangle Rectangle, vector4 Color
+	render_group* Group, basis* Basis, rectangle Rectangle, vector4 Color
 )
 {
 	// NOTE: Basis should be the top left of the unrotated rect
@@ -203,9 +239,14 @@ inline void PushRect(
 	);
 	Group->LastEntry = (uint8_t*) Entry;
 	Entry->Header.Type = EntryType_Rectangle;
-	Entry->Basis = Basis;
 	Entry->Color = Color;
-	Entry->Dim = Rectangle.Dim;
+
+	screen_pos_dim ScreenPosDim = GetScreenPosDim(
+		Basis, Group->WorldToCamera, Group->CameraToScreen
+	);	
+	Entry->Pos = ScreenPosDim.Pos;
+	Entry->XAxis = Rectangle.Dim.X * ScreenPosDim.XAxis;
+	Entry->YAxis = Rectangle.Dim.Y * ScreenPosDim.YAxis;
 }
 
 inline void PushClear(render_group* Group, vector4 Color)
@@ -214,16 +255,6 @@ inline void PushClear(render_group* Group, vector4 Color)
 	Group->LastEntry = (uint8_t*) Entry;
 	Entry->Header.Type = EntryType_Clear;
 	Entry->Color = Color;
-}
-
-inline void PushCoordinateSystem(render_group* Group, basis Basis)
-{
-	render_entry_coordinate_system* Entry = PushStruct(
-		Group->Arena, render_entry_coordinate_system
-	);
-	Group->LastEntry = (uint8_t*) Entry;
-	Entry->Header.Type = EntryType_CoordinateSystem;
-	Entry->Basis = Basis;
 }
 
 bool IsInRotatedQuad(
@@ -843,35 +874,6 @@ void Clear(loaded_bitmap* Buffer, vector4 Color)
 	);
 }
 
-struct screen_pos_dim
-{
-	vector2 Pos;
-	vector2 XAxis;
-	vector2 YAxis;
-};
-
-screen_pos_dim GetScreenPosDim(
-	basis* Basis, basis* WorldToCamera, basis* CameraToScreen
-)
-{
-	// vector2 WorldPos = TransformPosFromBasis(Basis, EntryPosition);
-	// vector2 CameraTopLeft = WorldPos - CameraPos;
-
-	// return TransformPosToBasis(WorldScreenBasis, CameraTopLeft);
-	screen_pos_dim Result = {};
-
-	vector2 CameraSpacePos = TransformPosToBasis(WorldToCamera, Basis->Offset);
-	Result.Pos = TransformPosToBasis(CameraToScreen, CameraSpacePos);
-
-	vector2 CameraAxis = TransformVectorToBasis(WorldToCamera, Basis->Axis1);
-	Result.XAxis = TransformVectorToBasis(CameraToScreen, CameraAxis);
-
-	CameraAxis = TransformVectorToBasis(WorldToCamera, Basis->Axis2);
-	Result.YAxis = TransformVectorToBasis(CameraToScreen, CameraAxis);
-
-	return Result;
-}
-
 void RenderGroupToOutput(
 	render_group* RenderGroup, loaded_bitmap* Target
 )
@@ -903,17 +905,11 @@ void RenderGroupToOutput(
 					Header
 				);
 
-				screen_pos_dim ScreenPosDim = GetScreenPosDim(
-					&Entry->Basis,
-					RenderGroup->WorldToCamera,
-					RenderGroup->CameraToScreen
-				);
-
 				DrawRectangleSlowly(
 					Target,
-					ScreenPosDim.Pos,
-					Entry->Dim.X * ScreenPosDim.XAxis,
-					Entry->Dim.Y * ScreenPosDim.YAxis,
+					Entry->Pos,
+					Entry->XAxis,
+					Entry->YAxis,
 					Entry->Color
 				);
 				CurrentAddress += sizeof(*Entry);
@@ -923,23 +919,11 @@ void RenderGroupToOutput(
 			{
 				render_entry_bitmap* Entry = (render_entry_bitmap*) Header;
 
-				screen_pos_dim ScreenPosDim = GetScreenPosDim(
-					&Entry->Basis,
-					RenderGroup->WorldToCamera,
-					RenderGroup->CameraToScreen
-				);
-				vector2 XAxis = (
-					((float) Entry->Bitmap->Width) * ScreenPosDim.XAxis
-				);
-				vector2 YAxis = (
-					((float) Entry->Bitmap->Height) * ScreenPosDim.YAxis
-				);
-
 				DrawBitmapQuickly(
 					Target,
-					ScreenPosDim.Pos,
-					XAxis,
-					YAxis,
+					Entry->Pos,
+					Entry->XAxis,
+					Entry->YAxis,
 					Entry->Bitmap,
 					Entry->Color
 				);

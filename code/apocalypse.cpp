@@ -236,9 +236,6 @@ void GameUpdateAndRender(
 		*RenderGroup = {};
 		RenderGroup->Arena = &GameState->RenderArena;
 
-		RenderGroup->DefaultBasis = MakeBasis(
-			Vector2(0, 0), Vector2(1, 0), Vector2(0, 1)
-		); 
 		RenderGroup->WorldToCamera = &GameState->WorldToCamera;
 		RenderGroup->CameraToScreen = &GameState->CameraToScreen;
 
@@ -612,9 +609,10 @@ void GameUpdateAndRender(
 		NULL
 	);
 
+	basis RectBasis = MakeBasis(Vector2(0, 0), Vector2(1, 0), Vector2(0, 1));
 	PushRect(
 		&GameState->RenderGroup,
-		MakeBasis(Vector2(0, 0), Vector2(1, 0), Vector2(0, 1)),
+		&RectBasis,
 		MakeRectangle(Vector2(0, 0), Vector2(25, 25)),
 		Vector4(1.0f, 1.0f, 1.0f, 1.0f)
 	);

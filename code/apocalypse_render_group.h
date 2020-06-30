@@ -81,9 +81,12 @@ struct render_entry_clear
 struct render_entry_bitmap
 {
 	render_entry_header Header;
-	basis Basis; // NOTE: basis in world space
 	vector4 Color;
 	
+	vector2 Pos;
+	vector2 XAxis;
+	vector2 YAxis;
+
 	loaded_bitmap* Bitmap;
 	loaded_bitmap* NormalMap;
 
@@ -95,15 +98,10 @@ struct render_entry_bitmap
 struct render_entry_rectangle
 {
 	render_entry_header Header;
-	basis Basis; // NOTE: basis in world space
 	vector4 Color;
-	vector2 Dim;
-};
-
-struct render_entry_coordinate_system
-{
-	render_entry_header Header;
-	basis Basis;
+	vector2 Pos;
+	vector2 XAxis;
+	vector2 YAxis;
 };
 
 struct render_group
@@ -111,7 +109,6 @@ struct render_group
 	memory_arena* Arena;
 	uint8_t* LastEntry;
 	
-	basis DefaultBasis; // TODO: see if this is needed
 	// NOTE: camera basis is helpful so we can center the scaling of the world
 	// CONT: somewhere besides the screen origin 
 	basis* WorldToCamera;

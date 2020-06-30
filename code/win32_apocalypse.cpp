@@ -389,14 +389,14 @@ void Win32DebugSyncDisplay(
 
 void Win32BufferToWindow(
 	win32_offscreen_buffer* BackBuffer, 
-	HDC DeviceContext
-	// ,
-	// int WindowWidth, 
-	// int WindowHeight
+	HDC DeviceContext,
+	int WindowWidth, 
+	int WindowHeight
 )
 {
 	// TODO: aspect ratio correction
 	// TODO: while prototyping, no stretching
+#if APOCALYPSE_INTERNAL
 	StretchDIBits(
 		DeviceContext,
 		0,
@@ -412,6 +412,23 @@ void Win32BufferToWindow(
 		DIB_RGB_COLORS,
 		SRCCOPY
 	);
+#else
+	StretchDIBits(
+		DeviceContext,
+		0,
+		0,
+		WindowWidth,
+		WindowHeight,
+		0,
+		0,
+		BackBuffer->Width,
+		BackBuffer->Height,
+		BackBuffer->Memory,
+		&BackBuffer->Info,
+		DIB_RGB_COLORS,
+		SRCCOPY
+	);
+#endif
 }
 
 win32_window_dimension Win32GetWindowDimension(HWND Window)
@@ -505,15 +522,15 @@ LRESULT CALLBACK MainWindowCallback(
 		{
 			PAINTSTRUCT Paint = {};
 			HDC DeviceContext = BeginPaint(Window, &Paint);
-			// int WindowWidth = Paint.rcPaint.right - Paint.rcPaint.left;
-			// int WindowHeight = Paint.rcPaint.bottom - Paint.rcPaint.top;
-			// win32_window_dimension WindowDim = Win32GetWindowDimension(Window);
+			int WindowWidth = Paint.rcPaint.right - Paint.rcPaint.left;
+			int WindowHeight = Paint.rcPaint.bottom - Paint.rcPaint.top;
+			win32_window_dimension WindowDim = Win32GetWindowDimension(Window);
 			
 			Win32BufferToWindow(
 				&GlobalBackBuffer,
-				DeviceContext
-				// WindowDim.Width,
-				// WindowDim.Height
+				DeviceContext,
+				WindowDim.Width,
+				WindowDim.Height
 			);
 
 			EndPaint(Window, &Paint);
@@ -735,8 +752,13 @@ int CALLBACK WinMain(
 			win32_window_dimension Dimensions = Win32GetWindowDimension(
 				WindowHandle
 			);
+#if APOCALYPSE_INTERNAL
 			GlobalBackBuffer.Width = 960;
-			GlobalBackBuffer.Height = 540;
+			GlobalBackBuffer.Height = 540;			
+#else
+			GlobalBackBuffer.Width = 1440;
+			GlobalBackBuffer.Height = 910;
+#endif
 			int BytesPerPixel = 4;
 			GlobalBackBuffer.Pitch = GlobalBackBuffer.Width * BytesPerPixel;
 
@@ -1258,9 +1280,9 @@ int CALLBACK WinMain(
 #endif
 				Win32BufferToWindow(
 					&GlobalBackBuffer,
-					DeviceContext
-					// Dimensions.Width,
-					// Dimensions.Height
+					DeviceContext,
+					Dimensions.Width,
+					Dimensions.Height
 				);
 				FlipWallClock = Win32GetWallClock();
 				

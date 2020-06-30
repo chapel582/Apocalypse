@@ -10,6 +10,7 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <time.h>
 
 #define PI32 3.14159265359f
 
@@ -187,7 +188,7 @@ void GameUpdateAndRender(
 	{
 #if !APOCALYPSE_INTERNAL
 		// NOTE: only init rand tools if we're in a release build
-		srand();
+		srand(time(NULL));
 #endif
 
 		// NOTE: zero out memory at start just in case

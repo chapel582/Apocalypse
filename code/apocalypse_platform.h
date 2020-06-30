@@ -28,7 +28,7 @@ inline uint32_t SafeTruncateUInt64(uint64_t Value)
 	return (uint32_t) Value;
 }
 
-#if APOCALYPSE_INTERNAL
+// TODO: remove DEBUG IO
 // NOTE: These are blocking calls that don't protect against lost data
 // CONT: they are intended for debug purposes only
 struct debug_read_file_result
@@ -43,6 +43,7 @@ bool DEBUGPlatformWriteEntireFile(
 	char* FileName, void* Memory, uint32_t MemorySize
 );
 
+#if APOCALYPSE_INTERNAL
 enum
 {
 	DebugCycleCounter_GameUpdateAndRender,
@@ -57,7 +58,9 @@ struct debug_cycle_counter
 	uint64_t CycleCount;
 	uint32_t HitCount;
 };
+
 extern struct game_memory* DebugGlobalMemory;
+
 #if _MSC_VER
 #define BEGIN_TIMED_BLOCK(ID) uint64_t StartCycleCount##ID = __rdtsc(); 
 #define END_TIMED_BLOCK(ID) DebugGlobalMemory->Counters[DebugCycleCounter_##ID].CycleCount += __rdtsc() - StartCycleCount##ID; DebugGlobalMemory->Counters[DebugCycleCounter_##ID].HitCount++;
@@ -65,8 +68,13 @@ extern struct game_memory* DebugGlobalMemory;
 #else
 #define BEGIN_TIMED_BLOCK(ID) 
 #define END_TIMED_BLOCK(ID)
+#define END_TIMED_BLOCK_COUNTED(ID, Count)
 #endif
 
+#else // NOTE: !APOCALYPSE_INTERNAL
+#define BEGIN_TIMED_BLOCK(ID) 
+#define END_TIMED_BLOCK(ID)
+#define END_TIMED_BLOCK_COUNTED(ID, Count)
 #endif // NOTE: APOCALYPSE_INTERNAL
 
 // SECTION START: Threading Code

@@ -16,10 +16,6 @@
 	units, NOT pixels. Anything that is in pixel values will be explicitly 
 	marked as such.  
 */
-struct environment_map
-{
-	loaded_bitmap Lod[4];
-};
 
 struct basis
 {
@@ -89,10 +85,6 @@ struct render_entry_bitmap
 
 	loaded_bitmap* Bitmap;
 	loaded_bitmap* NormalMap;
-
-	environment_map* Top;
-	environment_map* Middle;
-	environment_map* Bottom;
 };
 
 struct render_entry_rectangle

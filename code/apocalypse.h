@@ -6,6 +6,7 @@
 #include "apocalypse_memory_arena.h"
 #include "apocalypse_bitmap.h"
 #include "apocalypse_render_group.h"
+#include "apocalypse_assets.h"
 
 #define MAX_CARDS_PER_SET 7
 
@@ -21,7 +22,7 @@ typedef enum
 	CardSet_Hand,
 	CardSet_Tableau,
 	CardSet_Count
-} card_set_type;
+} card_set_e;
 
 struct deck_card;
 struct deck_card
@@ -165,19 +166,11 @@ struct game_state
 	basis CameraToScreen;
 
 	float Time;
+
+	assets Assets;
 	
 	// TODO: delete test code below
-	loaded_bitmap TestBitmap;
-	loaded_bitmap TestCard;
-	loaded_bitmap TestBackground;
 	int ToneHz;
-	mouse_event_type CurrentPrimaryState;
-	loaded_bitmap TestDiffuse;
-	loaded_bitmap TestNormal;
-	int EnvMapWidth;
-	int EnvMapHeight;
-	// NOTE: 0 is bottom, 1 is middle, 2 is top
-	environment_map EnvMaps[3];
 	// TODO: done with test code here
 
 	// SECTION START: Card Game Code

@@ -3,6 +3,7 @@
 #include "apocalypse_math.h"
 #include "apocalypse_rectangle.h"
 #include "apocalypse_vector.h"
+#include "apocalypse_assets.h"
 
 vector2 TransformVectorToBasis(basis* Basis, vector2 Vector)
 {
@@ -89,11 +90,7 @@ inline void PushBitmap(
 	render_group* Group,
 	loaded_bitmap* Bitmap,
 	basis* Basis,
-	vector4 Color,
-	loaded_bitmap* NormalMap,
-	environment_map* Top,
-	environment_map* Middle,
-	environment_map* Bottom
+	vector4 Color
 )
 {
 	// TODO: we might want a way to push a bitmap while only designating its 
@@ -107,10 +104,6 @@ inline void PushBitmap(
 	Entry->Header.Type = EntryType_Bitmap;
 	Entry->Bitmap = Bitmap;
 	Entry->Color = Color;
-	Entry->NormalMap = NormalMap;
-	Entry->Top = Top;
-	Entry->Middle = Middle;
-	Entry->Bottom = Bottom;
 
 	screen_pos_dim ScreenPosDim = GetScreenPosDim(
 		Basis, Group->WorldToCamera, Group->CameraToScreen
@@ -130,11 +123,7 @@ inline void PushCenteredBitmap(
 	vector2 Center,
 	vector2 XAxis,
 	vector2 YAxis,
-	vector4 Color,
-	loaded_bitmap* NormalMap,
-	environment_map* Top,
-	environment_map* Middle,
-	environment_map* Bottom
+	vector4 Color
 )
 {
 	// NOTE: rotation is CCW e.g. Xaxis = {0.707, 0.707}  
@@ -159,16 +148,24 @@ inline void PushCenteredBitmap(
 		XAxis,
 		YAxis
 	);
-	PushBitmap(
-		Group,
-		Bitmap,
-		&Basis,
-		Color,
-		NormalMap,
-		Top,
-		Middle,
-		Bottom
-	);
+	PushBitmap(Group, Bitmap, &Basis, Color);
+}
+
+inline void PushCenteredBitmap(
+	render_group* Group,
+	assets* Assets,
+	bitmap_tag_e Tag,
+	vector2 Center,
+	vector2 XAxis,
+	vector2 YAxis,
+	vector4 Color
+)
+{
+	loaded_bitmap* Bitmap = GetBitmap(Assets, Tag);
+	if(Bitmap)
+	{
+		PushCenteredBitmap(Group, Bitmap, Center, XAxis, YAxis, Color);
+	}
 }
 
 inline void PushSizedBitmap(
@@ -177,11 +174,7 @@ inline void PushSizedBitmap(
 	vector2 Center,
 	vector2 SizedXAxis,
 	vector2 SizedYAxis,
-	vector4 Color,
-	loaded_bitmap* NormalMap,
-	environment_map* Top,
-	environment_map* Middle,
-	environment_map* Bottom
+	vector4 Color
 )
 {
 	// NOTE: this is for when you know the dimensions that you want the bitmap
@@ -220,12 +213,25 @@ inline void PushSizedBitmap(
 		Center,
 		CameraXAxis / BmpWorldDim.X,
 		CameraYAxis / BmpWorldDim.Y,
-		Color,
-		NormalMap,
-		Top,
-		Middle,
-		Bottom
+		Color
 	);
+}
+
+inline void PushSizedBitmap(
+	render_group* Group,
+	assets* Assets,
+	bitmap_tag_e Tag,
+	vector2 Center,
+	vector2 SizedXAxis,
+	vector2 SizedYAxis,
+	vector4 Color
+)
+{
+	loaded_bitmap* Bitmap = GetBitmap(Assets, Tag);
+	if(Bitmap)
+	{
+		PushSizedBitmap(Group, Bitmap, Center, SizedXAxis, SizedYAxis, Color);
+	}
 }
 
 // TODO: make a push rect that doesn't require pushing a basis and will make it based on the rect you push

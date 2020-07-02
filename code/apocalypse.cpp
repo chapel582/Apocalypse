@@ -8,19 +8,15 @@
 #include "apocalypse_bitmap.h"
 #include "apocalypse_bitmap.cpp"
 
+#include "apocalypse_assets.h"
+#include "apocalypse_assets.cpp"
+
+#include <string.h>
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
 
 #define PI32 3.14159265359f
-
-// SECTION START: Temporary or Misc. code
-void AlterData(void* Data)
-{
-	int* IntArray = (int*) Data;
-	IntArray[0] = 123;
-}
-// SECTION END: Temporary or Misc. code
 
 loaded_bitmap MakeEmptyBitmap(
 	memory_arena* Arena, int32_t Width, int32_t Height
@@ -239,9 +235,24 @@ void GameUpdateAndRender(
 		RenderGroup->WorldToCamera = &GameState->WorldToCamera;
 		RenderGroup->CameraToScreen = &GameState->CameraToScreen;
 
-		GameState->CurrentPrimaryState = PrimaryUp;
 		GameState->Time = 0;
+
+		// TODO: remove ToneHz
 		GameState->ToneHz = 256;
+
+		assets* Assets = &GameState->Assets; 
+		*Assets = {}; 
+		Assets->JobQueue = Memory->DefaultJobQueue;
+		Assets->NextJob = 0;
+		for(
+			int InfoIndex = 0;
+			InfoIndex < ARRAY_COUNT(Assets->BitmapInfo);
+			InfoIndex++
+		)
+		{
+			asset_info* AssetInfo = &Assets->BitmapInfo[InfoIndex];
+			AssetInfo->State = AssetState_Unloaded;
+		}
 
 		GameState->MaxCards = Player_Count * CardSet_Count * MAX_CARDS_PER_SET;
 		GameState->Cards = PushArray(
@@ -372,81 +383,10 @@ void GameUpdateAndRender(
 		DrawFullHand(GameState, Player_One, CardWidth, CardHeight);
 		DrawFullHand(GameState, Player_Two, CardWidth, CardHeight);
 
-		{
-			GameState->TestCard = DEBUGLoadBmp("../data/test/test_card.bmp");
-			GameState->TestBitmap = DEBUGLoadBmp("../data/test/tree00.bmp");
-			GameState->TestBackground = DEBUGLoadBmp(
-				"../data/test/test_background.bmp"
-			);
-
-
-			GameState->EnvMapWidth = 512;
-			GameState->EnvMapHeight = 256;
-			for(
-				uint32_t MapIndex = 0;
-				MapIndex < ARRAY_COUNT(GameState->EnvMaps);
-				MapIndex++
-			)
-			{
-				environment_map* Map = GameState->EnvMaps + MapIndex;
-				uint32_t Width = GameState->EnvMapWidth;
-				uint32_t Height = GameState->EnvMapHeight;
-				for(
-					uint32_t LodIndex = 0;
-					LodIndex < ARRAY_COUNT(Map->Lod);
-					LodIndex++
-				)
-				{
-					Map->Lod[LodIndex] = MakeEmptyBitmap(
-						&GameState->TransientArena, Width, Height
-					);
-					Width >>= 1;
-					Height >>= 1;
-				}
-			}
-		}
-
 		Memory->IsInitialized = true;
 	}
 
 	GameState->Time += DtForFrame;
-
-#if 0
-	// TODO: delete this when we're using the job queue for other things
-	int IntArray1[] = {0, 1, 2, 3};
-	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray1);
-	int IntArray2[] = {0, 1, 2, 4};
-	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray2);
-	int IntArray3[] = {0, 1, 2, 3};
-	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray3);
-	int IntArray4[] = {0, 1, 2, 3};
-	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray4);
-	int IntArray5[] = {0, 1, 2, 3};
-	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray5);
-	int IntArray6[] = {0, 1, 2, 3};
-	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray6);
-	int IntArray7[] = {0, 1, 2, 3};
-	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray7);
-	int IntArray8[] = {0, 1, 2, 3};
-	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray8);
-	int IntArray9[] = {0, 1, 2, 3};
-	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray9);
-	int IntArray10[] = {0, 1, 2, 3};
-	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray10);
-	int IntArray11[] = {0, 1, 2, 3};
-	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray11);
-	int IntArray12[] = {0, 1, 2, 3};
-	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray12);
-	int IntArray13[] = {0, 1, 2, 3};
-	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray13);
-	int IntArray14[] = {0, 1, 2, 3};
-	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray14);
-	int IntArray15[] = {0, 1, 2, 3};
-	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray15);
-	int IntArray16[] = {0, 1, 2, 3};
-	PlatformAddJob(Memory->DefaultJobQueue, AlterData, &IntArray16);
-	PlatformCompleteAllJobs(Memory->DefaultJobQueue);
-#endif 
 
 	// SECTION START: User input
 	// TODO: move to game memory
@@ -542,15 +482,12 @@ void GameUpdateAndRender(
 	PushClear(&GameState->RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
 	PushSizedBitmap(
 		&GameState->RenderGroup,
-		&GameState->TestBackground,
+		&GameState->Assets,
+		BitmapTag_TestBackground,
 		Vector2((BackBuffer->Width / 2.0f), (BackBuffer->Height / 2.0f)),
 		Vector2(BackBuffer->Width, 0),
 		Vector2(0, BackBuffer->Height),
-		Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-		NULL,
-		NULL,
-		NULL,
-		NULL
+		Vector4(1.0f, 1.0f, 1.0f, 1.0f)		
 	);
 	{
 		card* Card = &GameState->Cards[0];
@@ -569,15 +506,12 @@ void GameUpdateAndRender(
 				}
 				PushSizedBitmap(
 					&GameState->RenderGroup,
-					&GameState->TestCard,
+					&GameState->Assets,
+					BitmapTag_TestCard,
 					GetCenter(Card->Rectangle),
 					Vector2(Card->Rectangle.Dim.X, 0.0f),
 					Vector2(0.0f, Card->Rectangle.Dim.Y),
-					Card->Color,
-					NULL,
-					NULL,
-					NULL,
-					NULL
+					Card->Color
 				);
 			}
 			Card++;
@@ -598,15 +532,12 @@ void GameUpdateAndRender(
 
 	PushCenteredBitmap(
 		&GameState->RenderGroup,
-		&GameState->TestBitmap,
+		&GameState->Assets,
+		BitmapTag_TestBitmap,
 		Center,
 		XAxis,
 		YAxis,
-		Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-		NULL,
-		NULL,
-		NULL,
-		NULL
+		Vector4(1.0f, 1.0f, 1.0f, 1.0f)
 	);
 
 	basis RectBasis = MakeBasis(Vector2(0, 0), Vector2(1, 0), Vector2(0, 1));

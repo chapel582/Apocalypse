@@ -396,13 +396,13 @@ void Win32BufferToWindow(
 {
 	// TODO: aspect ratio correction
 	// TODO: while prototyping, no stretching
-#if APOCALYPSE_INTERNAL
+#ifdef APOCALYPSE_RELEASE
 	StretchDIBits(
 		DeviceContext,
 		0,
 		0,
-		BackBuffer->Width,
-		BackBuffer->Height,
+		WindowWidth,
+		WindowHeight,
 		0,
 		0,
 		BackBuffer->Width,
@@ -417,8 +417,8 @@ void Win32BufferToWindow(
 		DeviceContext,
 		0,
 		0,
-		WindowWidth,
-		WindowHeight,
+		BackBuffer->Width,
+		BackBuffer->Height,
 		0,
 		0,
 		BackBuffer->Width,

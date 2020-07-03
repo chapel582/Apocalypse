@@ -185,7 +185,7 @@ void GameUpdateAndRender(
 	game_state* GameState = (game_state*) Memory->PermanentStorage;
 	if(!Memory->IsInitialized)
 	{
-#if !APOCALYPSE_INTERNAL
+#if APOCALYPSE_RELEASE
 		// NOTE: only init rand tools if we're in a release build
 		srand(time(NULL));
 #endif

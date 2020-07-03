@@ -4,7 +4,7 @@
 
 void LoadBmpJob(void* Data)
 {
-	load_bmp_job_args* Args = (load_bmp_job_args*) Data;
+	load_bmp_job* Args = (load_bmp_job*) Data;
 	*(Args->Result) = DEBUGLoadBmp(&Args->FileName[0]);
 	Args->Info->State = AssetState_Loaded;
 }
@@ -12,7 +12,7 @@ void LoadBmpJob(void* Data)
 void StartLoadingBitmap(assets* Assets, bitmap_tag_e Tag)
 {
 	asset_info* Info = &(Assets->BitmapInfo[Tag]);
-	load_bmp_job_args* Args = &(Assets->BitmapJobArgs[Assets->NextJob++]);
+	load_bmp_job* Args = &(Assets->BitmapJobArgs[Assets->NextJob++]);
 	switch(Tag)
 	{
 		case(BitmapTag_TestBitmap):

@@ -8,6 +8,9 @@
 #include "apocalypse_bitmap.h"
 #include "apocalypse_bitmap.cpp"
 
+#include "apocalypse_wav.h"
+#include "apocalypse_wav.cpp"
+
 #include "apocalypse_assets.h"
 #include "apocalypse_assets.cpp"
 
@@ -238,7 +241,7 @@ void GameUpdateAndRender(
 		GameState->Time = 0;
 
 		// TODO: remove ToneHz
-		GameState->ToneHz = 256;
+		GameState->TestWav = DEBUGLoadWav("../data/test/music_test.wav");
 
 		assets* Assets = &GameState->Assets; 
 		*Assets = {}; 
@@ -569,23 +572,25 @@ void GameFillSound(game_memory* Memory, game_sound_output_buffer* SoundBuffer)
 {
 	ASSERT(sizeof(game_state) <= Memory->PermanentStorageSize);
 	game_state* GameState = (game_state*) Memory->PermanentStorage;
-#if 0
-	int16_t ToneVolume = 3000;
-	int WavePeriod = SoundBuffer->SamplesPerSecond / GameState->ToneHz;
+	
 	int16_t* SampleOut = SoundBuffer->Samples;
 	for(
 		int SampleIndex = 0;
 		SampleIndex < SoundBuffer->SampleCount;
-		++SampleIndex
+		SampleIndex++
 	)
 	{
-		float SineValue = sinf(GameState->SineT);
-		int16_t SampleValue = (int16_t) (SineValue * ToneVolume);
-		GameState->SineT += (2.0f * PI32 * 1.0f) / ((float) WavePeriod);
 
 		// NOTE: SampleOut writes left and right channels
+		uint32_t TestSoundSampleIndex = (
+			(GameState->TestSampleIndex + SampleIndex) %
+			GameState->TestWav.SampleCount
+		);
+		int16_t SampleValue = (
+			GameState->TestWav.Samples[0][TestSoundSampleIndex]
+		);
 		*SampleOut++ = SampleValue;
 		*SampleOut++ = SampleValue;
 	}
-#endif
+	GameState->TestSampleIndex += SoundBuffer->SampleCount;
 }

@@ -170,7 +170,8 @@ struct game_state
 	assets Assets;
 	
 	// TODO: delete test code below
-	int ToneHz;
+	uint32_t TestSampleIndex;
+	loaded_wav TestWav;
 	// TODO: done with test code here
 
 	// SECTION START: Card Game Code

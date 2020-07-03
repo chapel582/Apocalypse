@@ -36,6 +36,13 @@ struct load_bmp_job
 	asset_info* Info;
 };
 
+typedef enum
+{
+	WavTag_Bloop00,
+	WavTag_Crack00,
+	WavTag_TestMusic
+} wav_tag_e;
+
 struct load_wav_job
 {
 	char FileName[256]; // TODO: Platform max path
@@ -47,15 +54,15 @@ struct assets
 {
 	platform_job_queue* JobQueue;
 
-	load_bmp_job BitmapJobArgs[BitmapTag_Count]; // TODO: allocate/free these arguments dynamically
+	load_bmp_job BitmapJobs[BitmapTag_Count]; // TODO: allocate/free these arguments dynamically
 	int NextJob;
 	asset_info BitmapInfo[BitmapTag_Count];
 	loaded_bitmap Bitmaps[BitmapTag_Count];
 
-	load_wav_job WavJobArgs[BitmapTag_Count]; // TODO: allocate/free these arguments dynamically
+	load_wav_job WavJobs[BitmapTag_Count]; // TODO: allocate/free these arguments dynamically
 	int WavNextJob;
 	asset_info WavInfo[BitmapTag_Count];
-	loaded_wav WavSounds[BitmapTag_Count];
+	loaded_wav Wavs[BitmapTag_Count];
 
 	// TODO: get a general purpose memory allocator for asset data management
 	// TODO: have a way to track how stale an asset is

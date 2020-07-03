@@ -163,6 +163,136 @@ void DrawFullHand(
 	AlignCardSet(&GameState->Hands[Player]);
 }
 
+void PlaySound(game_state* GameState, wav_tag_e Tag)
+{
+	if(!GameState->FreePlayingSoundHead)
+	{
+		GameState->FreePlayingSoundHead = PushStruct(
+			&GameState->TransientArena, playing_sound
+		);
+		GameState->FreePlayingSoundHead->Next = NULL;
+	}
+
+	playing_sound* PlayingSound = GameState->FreePlayingSoundHead;
+	*PlayingSound = {};
+
+	// NOTE: remove from free and add to playing list
+	GameState->FreePlayingSoundHead = PlayingSound->Next;
+	PlayingSound->Next = GameState->PlayingSoundHead;
+	GameState->PlayingSoundHead = PlayingSound;
+
+	// NOTE: init data
+	PlayingSound->SamplesPlayed = 0;
+	PlayingSound->Volume[0] = 1.0f;
+	PlayingSound->Volume[1] = 1.0f;
+	PlayingSound->Tag = Tag;
+}
+
+void GameFillSound(game_memory* Memory, game_sound_output_buffer* SoundBuffer)
+{
+	ASSERT(sizeof(game_state) <= Memory->PermanentStorageSize);
+	game_state* GameState = (game_state*) Memory->PermanentStorage;
+
+	// NOTE: mix in float channels and then cast to int16_t so we don't get 
+	// CONT: unnecessary clipping/wrap-around
+	// TODO: this is fast, but it might be faster to just allocate this once?
+	// CONT: since we probably don't have to worry about SampleCount changing 
+	// CONT: from frame to frame
+	float* Channel0 = PushArray(
+		&GameState->FrameArena, SoundBuffer->SampleCount, float
+	);
+	float* Channel1 = PushArray(
+		&GameState->FrameArena, SoundBuffer->SampleCount, float
+	);
+	memset(Channel0, 0, sizeof(*Channel0) * SoundBuffer->SampleCount);
+	memset(Channel1, 0, sizeof(*Channel1) * SoundBuffer->SampleCount);
+	
+	playing_sound* PrevPlayingSound = NULL;
+	for(
+		playing_sound* PlayingSound = GameState->PlayingSoundHead;
+		PlayingSound != NULL;
+	)
+	{
+		playing_sound* NextPlayingSound = PlayingSound->Next;
+		
+		loaded_wav* LoadedSound = GetWav(&GameState->Assets, PlayingSound->Tag);
+		bool FinishedPlaying = false;
+		if(LoadedSound != NULL)
+		{
+			float Volume0 = PlayingSound->Volume[0];
+			float Volume1 = PlayingSound->Volume[1];
+			float* Dest0 = Channel0;
+			float* Dest1 = Channel1;
+
+			uint32_t SamplesToMix;
+			uint32_t SamplesRemainingInSound = (
+				LoadedSound->SampleCount - PlayingSound->SamplesPlayed
+			);
+			if(SamplesRemainingInSound < SoundBuffer->SampleCount)
+			{
+				SamplesToMix = SamplesRemainingInSound;
+			}
+			else
+			{
+				SamplesToMix = SoundBuffer->SampleCount;
+			}
+
+			for(
+				uint32_t SampleIndex = PlayingSound->SamplesPlayed;
+				SampleIndex < (PlayingSound->SamplesPlayed + SamplesToMix);
+				SampleIndex++
+			)
+			{
+				// TODO: load stereo sound
+				float SampleValue = LoadedSound->Samples[0][SampleIndex];
+				*Dest0++ += Volume0 * SampleValue;
+				*Dest1++ += Volume1 * SampleValue;
+			}
+
+			PlayingSound->SamplesPlayed += SamplesToMix;
+			FinishedPlaying = (
+				PlayingSound->SamplesPlayed == LoadedSound->SampleCount
+			);
+			if(FinishedPlaying)
+			{
+				if(PrevPlayingSound)
+				{
+					PrevPlayingSound->Next = PlayingSound->Next;
+				}
+				if(GameState->PlayingSoundHead == PlayingSound)
+				{
+					GameState->PlayingSoundHead = NextPlayingSound; 
+				}
+				PlayingSound->Next = GameState->FreePlayingSoundHead;
+				GameState->FreePlayingSoundHead = PlayingSound;
+			}
+		}
+
+		if(!FinishedPlaying)
+		{
+			// NOTE: Only update PrevPlaying if the element wasn't removed
+			PrevPlayingSound = PlayingSound;
+		}
+		PlayingSound = NextPlayingSound;
+	}
+
+	int16_t* SampleOut = SoundBuffer->Samples;
+	float* Source0 = Channel0;
+	float* Source1 = Channel1;
+	for(
+		uint32_t SampleIndex = 0;
+		SampleIndex < SoundBuffer->SampleCount;
+		SampleIndex++
+	)
+	{
+		// NOTE: SampleOut writes left and right channels
+		*SampleOut++ = (int16_t) (*Source0 + 0.5f);
+		Source0++;
+		*SampleOut++ = (int16_t) (*Source1 + 0.5f);
+		Source1++;
+	}
+}
+
 #if APOCALYPSE_INTERNAL
 game_memory* DebugGlobalMemory;
 #endif 
@@ -239,9 +369,6 @@ void GameUpdateAndRender(
 		RenderGroup->CameraToScreen = &GameState->CameraToScreen;
 
 		GameState->Time = 0;
-
-		// TODO: remove ToneHz
-		GameState->TestWav = DEBUGLoadWav("../data/test/music_test.wav");
 
 		assets* Assets = &GameState->Assets; 
 		*Assets = {}; 
@@ -387,6 +514,9 @@ void GameUpdateAndRender(
 		DrawFullHand(GameState, Player_Two, CardWidth, CardHeight);
 
 		Memory->IsInitialized = true;
+
+		// TODO: remove me!
+		PlaySound(GameState, WavTag_TestMusic);
 	}
 
 	GameState->Time += DtForFrame;
@@ -403,8 +533,6 @@ void GameUpdateAndRender(
 	{
 		for(; MouseEventIndex < MouseEvents->Length; MouseEventIndex++)
 		{
-			// TODO: remove last action wins stuff from 
-			// NOTE: testing platform layer mouse stuff
 			game_mouse_event* MouseEvent = (
 				&MouseEvents->Events[MouseEventIndex]
 			);
@@ -423,6 +551,7 @@ void GameUpdateAndRender(
 			);
 			if(MouseEvent->Type == PrimaryUp)
 			{
+				PlaySound(GameState, WavTag_Bloop00);
 				card* Card = &GameState->Cards[0];
 				for(
 					int CardIndex = 0;
@@ -505,7 +634,7 @@ void GameUpdateAndRender(
 				Card->TimeLeft -= DtForFrame;
 				if(Card->TimeLeft <= 0)
 				{
-					Card->Active = false;
+					// Card->Active = false;
 				}
 				PushSizedBitmap(
 					&GameState->RenderGroup,
@@ -566,31 +695,4 @@ void GameUpdateAndRender(
 	ResetMemArena(&GameState->FrameArena);
 
 	END_TIMED_BLOCK(GameUpdateAndRender);
-}
-
-void GameFillSound(game_memory* Memory, game_sound_output_buffer* SoundBuffer)
-{
-	ASSERT(sizeof(game_state) <= Memory->PermanentStorageSize);
-	game_state* GameState = (game_state*) Memory->PermanentStorage;
-	
-	int16_t* SampleOut = SoundBuffer->Samples;
-	for(
-		int SampleIndex = 0;
-		SampleIndex < SoundBuffer->SampleCount;
-		SampleIndex++
-	)
-	{
-
-		// NOTE: SampleOut writes left and right channels
-		uint32_t TestSoundSampleIndex = (
-			(GameState->TestSampleIndex + SampleIndex) %
-			GameState->TestWav.SampleCount
-		);
-		int16_t SampleValue = (
-			GameState->TestWav.Samples[0][TestSoundSampleIndex]
-		);
-		*SampleOut++ = SampleValue;
-		*SampleOut++ = SampleValue;
-	}
-	GameState->TestSampleIndex += SoundBuffer->SampleCount;
 }

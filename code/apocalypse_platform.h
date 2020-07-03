@@ -141,7 +141,7 @@ struct game_offscreen_buffer
 struct game_sound_output_buffer
 {
 	int SamplesPerSecond;
-	int SampleCount;
+	uint32_t SampleCount;
 	int16_t* Samples;
 };
 

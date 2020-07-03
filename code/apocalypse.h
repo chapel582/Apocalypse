@@ -148,15 +148,25 @@ struct card_set
 	float YPos;
 };
 
+struct playing_sound;
+struct playing_sound
+{
+	uint32_t SamplesPlayed;
+	float Volume[2];
+	wav_tag_e Tag;
+	playing_sound* Next;
+};
+
 struct game_state
 {
 	// NOTE: Arena is just for permanent things that can/should be determined
 	// CONT: at run time
 	memory_arena Arena;
-	// NOTE: TransientArena is for things that last longer than a frame but 
-	// CONT: can be cleaned up in a big batch. stuff like composite bitmaps
+	// NOTE: TransientArena is for memory that last longer than a frame but 
+	// CONT: can be cleaned up in a big batch, usually when switching contexts 
+	// CONT: in the game, e.g. from the menu to starting the game 
 	memory_arena TransientArena;
-	// NOTE: FrameArena is just for things that will be dead by EOF
+	// NOTE: FrameArena is just for memory that will not be needed after EOF
 	memory_arena FrameArena;
 	// NOTE: render arena is just for the renderer
 	memory_arena RenderArena;
@@ -168,11 +178,6 @@ struct game_state
 	float Time;
 
 	assets Assets;
-	
-	// TODO: delete test code below
-	uint32_t TestSampleIndex;
-	loaded_wav TestWav;
-	// TODO: done with test code here
 
 	// SECTION START: Card Game Code
 	card* Cards;
@@ -182,6 +187,10 @@ struct game_state
 	card_set* Tableaus;
 	// SECTION STOP: Card GameCode
 
+	// SECTION START: Audio code
+	playing_sound* PlayingSoundHead;
+	playing_sound* FreePlayingSoundHead;
+	// SECTION STOP: Audio code
 };
 
 #define APOCALYPSE_H

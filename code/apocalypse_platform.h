@@ -50,6 +50,10 @@ enum
 	DebugCycleCounter_RenderGroupToOutput,
 	DebugCycleCounter_DrawBitmapQuickly,
 	DebugCycleCounter_ProcessPixel,
+	DebugCycleCounter_MixAudio,
+	DebugCycleCounter_MixAudio_Init,
+	DebugCycleCounter_MixAudioSample,
+	DebugCycleCounter_SetAudioSample,
 	DebugCycleCounter_Count
 };
 

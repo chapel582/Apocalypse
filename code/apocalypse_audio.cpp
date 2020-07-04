@@ -36,15 +36,37 @@ void MixSounds(
 	playing_sound_list* PlayingSoundList
 )
 {
+	BEGIN_TIMED_BLOCK(MixAudio);
+
 	// NOTE: mix in float channels and then cast to int16_t so we don't get 
 	// CONT: unnecessary clipping/wrap-around
 	// TODO: PushArray is fast, but it might be faster to allocate this once
 	// CONT: since we probably don't have to worry about SampleCount changing 
 	// CONT: from frame to frame
-	float* Channel0 = PushArray(FrameArena, SoundBuffer->SampleCount, float);
-	float* Channel1 = PushArray(FrameArena, SoundBuffer->SampleCount, float);
-	memset(Channel0, 0, sizeof(*Channel0) * SoundBuffer->SampleCount);
-	memset(Channel1, 0, sizeof(*Channel1) * SoundBuffer->SampleCount);
+	uint32_t SampleCountOverFour = SoundBuffer->SampleCount / 4;
+	
+	__m128* Channel0 = PushArray(FrameArena, SampleCountOverFour, __m128, 16);
+	__m128* Channel1 = PushArray(FrameArena, SampleCountOverFour, __m128, 16);
+
+	// NOTE: clear mixer channels
+	BEGIN_TIMED_BLOCK(MixAudio_Init);
+	{
+		// TODO: handle intrinsics on different platforms
+		// TODO: maybe pull this out to intrinsics for fast zero setting?
+		__m128 FourByZero = _mm_set1_ps(0.0f);
+		__m128* Dest0 = Channel0;
+		__m128* Dest1 = Channel1;
+		for(
+			uint32_t SampleIndex = 0;
+			SampleIndex < SampleCountOverFour;
+			SampleIndex++
+		)
+		{
+			*Dest0++ = FourByZero;
+			*Dest1++ = FourByZero;
+		}
+	}
+	END_TIMED_BLOCK(MixAudio_Init);
 	
 	playing_sound* PrevPlayingSound = NULL;
 	for(
@@ -58,11 +80,6 @@ void MixSounds(
 		bool FinishedPlaying = false;
 		if(LoadedSound != NULL)
 		{
-			float Volume0 = PlayingSound->Volume[0];
-			float Volume1 = PlayingSound->Volume[1];
-			float* Dest0 = Channel0;
-			float* Dest1 = Channel1;
-
 			uint32_t SamplesToMix;
 			uint32_t SamplesRemainingInSound = (
 				LoadedSound->SampleCount - PlayingSound->SamplesPlayed
@@ -76,17 +93,62 @@ void MixSounds(
 				SamplesToMix = SoundBuffer->SampleCount;
 			}
 
+			BEGIN_TIMED_BLOCK(MixAudioSample);
+			__m128 Volume0 = _mm_set1_ps(PlayingSound->Volume[0]);
+			__m128 Volume1 = _mm_set1_ps(PlayingSound->Volume[1]);
+			__m128* Dest0 = Channel0;
+			__m128* Dest1 = Channel1;
+
+			uint32_t FinalSampleIndex = (
+				PlayingSound->SamplesPlayed + SamplesToMix
+			);
+			uint32_t SampleIndex;
 			for(
-				uint32_t SampleIndex = PlayingSound->SamplesPlayed;
-				SampleIndex < (PlayingSound->SamplesPlayed + SamplesToMix);
-				SampleIndex++
+				SampleIndex = PlayingSound->SamplesPlayed;
+				SampleIndex < FinalSampleIndex;
+				SampleIndex += 4
 			)
 			{
 				// TODO: load stereo sound
-				float SampleValue = LoadedSound->Samples[0][SampleIndex];
-				*Dest0++ += Volume0 * SampleValue;
-				*Dest1++ += Volume1 * SampleValue;
+				__m128i WideSample0_16 = _mm_loadu_si128(
+					(__m128i*) &LoadedSound->Samples[0][SampleIndex]
+				);
+				__m128i WideSample0_32 = _mm_cvtepi16_epi32(WideSample0_16);
+				__m128 WideSample0 = _mm_cvtepi32_ps(WideSample0_32);
+				__m128 WideDest0 = *Dest0;
+				__m128 WideDest1 = *Dest1;
+
+				WideDest0 = _mm_add_ps(
+					WideDest0, _mm_mul_ps(Volume0, WideSample0)
+				);
+				WideDest1 = _mm_add_ps(
+					WideDest1, _mm_mul_ps(Volume1, WideSample0)
+				);
+				*Dest0++ = WideDest0;
+				*Dest1++ = WideDest1;
 			}
+			uint32_t Overshoot = SampleIndex - FinalSampleIndex;
+			if(Overshoot)
+			{
+				float* OvershootDest0 = (float*) Dest0;
+				float* OvershootDest1 = (float*) Dest1;
+				for(
+					uint32_t RemainderIndex = 0;
+					RemainderIndex < Overshoot;
+					RemainderIndex++
+				)
+				{
+					// TODO: load stereo sound
+					float SampleValue = (
+						LoadedSound->Samples[0][SampleIndex - RemainderIndex]
+					);
+					*OvershootDest0-- = SampleValue;
+					*OvershootDest1-- = SampleValue;
+				}
+			}
+			END_TIMED_BLOCK_COUNTED(
+				MixAudioSample, (PlayingSound->SamplesPlayed + SamplesToMix)
+			);
 
 			PlayingSound->SamplesPlayed += SamplesToMix;
 			FinishedPlaying = (
@@ -115,19 +177,37 @@ void MixSounds(
 		PlayingSound = NextPlayingSound;
 	}
 
-	int16_t* SampleOut = SoundBuffer->Samples;
-	float* Source0 = Channel0;
-	float* Source1 = Channel1;
-	for(
-		uint32_t SampleIndex = 0;
-		SampleIndex < SoundBuffer->SampleCount;
-		SampleIndex++
-	)
-	{
-		// NOTE: SampleOut writes left and right channels
-		*SampleOut++ = (int16_t) (*Source0 + 0.5f);
-		Source0++;
-		*SampleOut++ = (int16_t) (*Source1 + 0.5f);
-		Source1++;
+	BEGIN_TIMED_BLOCK(SetAudioSample);
+	{ 
+		//NOTE: 16-bit conversion
+		__m128* Source0 = Channel0;
+		__m128* Source1 = Channel1;
+
+		__m128i* SampleOut = (__m128i*) SoundBuffer->Samples;
+		for(uint32_t SampleIndex = 0;
+			SampleIndex < SampleCountOverFour;
+			SampleIndex++)
+		{
+			__m128 WideSource0 = *Source0++;
+			__m128 WideSource1 = *Source1++;
+			
+			// NOTE: Convert floats to 32-bit integers
+			__m128i Left = _mm_cvtps_epi32(WideSource0);
+			__m128i Right = _mm_cvtps_epi32(WideSource1);
+			
+			// NOTE: pack/zip the low bytes
+			__m128i Lr0 = _mm_unpacklo_epi32(Left, Right);
+			// NOTE: pack/zip the higher bytes
+			__m128i Lr1 = _mm_unpackhi_epi32(Left, Right);
+			
+			// NOTE: convert 32-bit integers to 16-bit integers, then pack side
+			// CONT: by side
+			__m128i S01 = _mm_packs_epi32(Lr0, Lr1);
+
+			*SampleOut++ = S01;
+		}
 	}
+	END_TIMED_BLOCK_COUNTED(SetAudioSample, SoundBuffer->SampleCount);
+
+	END_TIMED_BLOCK(MixAudio);
 }

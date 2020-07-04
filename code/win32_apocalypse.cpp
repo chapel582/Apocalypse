@@ -687,12 +687,12 @@ int CALLBACK WinMain(
 	GlobalBackBuffer.BytesPerPixel = 4;
 	// NOTE: get memory for backbuffer
 	{
-#if APOCALYPSE_INTERNAL
-		GlobalBackBuffer.Width = 960;
-		GlobalBackBuffer.Height = 540;
-#else
+#if APOCALYPSE_RELEASE
 		GlobalBackBuffer.Width = 1440;
 		GlobalBackBuffer.Height = 910;
+#else
+		GlobalBackBuffer.Width = 960;
+		GlobalBackBuffer.Height = 540;
 #endif
 		GlobalBackBuffer.Pitch = (
 			GlobalBackBuffer.Width * GlobalBackBuffer.BytesPerPixel

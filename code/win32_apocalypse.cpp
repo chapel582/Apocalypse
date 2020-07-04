@@ -29,7 +29,12 @@ TODO: This is not a final platform layer
 // TODO: this is a global for now
 bool GlobalRunning = false;
 LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer = NULL;
+// NOTE: don't prematurely spend too much time getting rid of the 
+// CONT: globalbackbuffer. until you're sure it's not distinct from the 
+// CONT: game offscreen buffer on multiple platforms
 win32_offscreen_buffer GlobalBackBuffer = {};
+
+#define WINDOW_STYLE (WS_OVERLAPPEDWINDOW | WS_VISIBLE)
 
 // START SECTION: Performance counters
 int64_t GlobalPerformanceFrequency = 0;
@@ -416,6 +421,22 @@ win32_window_dimension Win32GetWindowDimension(HWND Window)
 	return Result;
 }
 
+win32_window_dimension Win32CalculateWindowDimensions()
+{
+	RECT ClientRect = {};
+	ClientRect.right = GlobalBackBuffer.Width;
+	ClientRect.bottom = GlobalBackBuffer.Height;
+	AdjustWindowRect(
+		&ClientRect,
+		WINDOW_STYLE,
+		false
+	);
+	win32_window_dimension Result;
+	Result.Width = ClientRect.right - ClientRect.left;
+	Result.Height = ClientRect.bottom - ClientRect.top;
+	return Result;
+}
+
 void Win32WriteMouseEvent(
 	game_mouse_events* MouseEvents,
 	LPARAM LParam,
@@ -501,6 +522,16 @@ LRESULT CALLBACK MainWindowCallback(
 			Win32BufferToWindow(&GlobalBackBuffer, DeviceContext);
 
 			EndPaint(Window, &Paint);
+			break;
+		}
+		case(WM_GETMINMAXINFO):
+		{
+			win32_window_dimension Dim = Win32CalculateWindowDimensions();
+			MINMAXINFO* Mmi = (MINMAXINFO*) LParam;
+			Mmi->ptMinTrackSize.x = Dim.Width;
+			Mmi->ptMinTrackSize.y = Dim.Height;
+			Mmi->ptMaxTrackSize.x = Dim.Width;
+			Mmi->ptMaxTrackSize.y = Dim.Height;
 			break;
 		}
 		default:
@@ -733,24 +764,16 @@ int CALLBACK WinMain(
 
 	if(RegisterClassA(&WindowClass))
 	{
-		DWORD WindowStyle = WS_OVERLAPPEDWINDOW | WS_VISIBLE;
-		RECT ClientRect = {};
-		ClientRect.right = GlobalBackBuffer.Width;
-		ClientRect.bottom = GlobalBackBuffer.Height;
-		AdjustWindowRect(
-			&ClientRect,
-			WindowStyle,
-			false
-		);
+		win32_window_dimension WindowDim = Win32CalculateWindowDimensions();
 		HWND WindowHandle = CreateWindowExA(
 			0,
 			WindowClass.lpszClassName,
 			"Apocalypse",
-			WindowStyle,
+			WINDOW_STYLE,
 			0,
 			0,
-			ClientRect.right - ClientRect.left,
-			ClientRect.bottom - ClientRect.top,
+			WindowDim.Width,
+			WindowDim.Height,
 			0,
 			0,
 			Instance,

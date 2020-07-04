@@ -7,6 +7,7 @@
 #include "apocalypse_bitmap.h"
 #include "apocalypse_render_group.h"
 #include "apocalypse_assets.h"
+#include "apocalypse_audio.h"
 
 #define MAX_CARDS_PER_SET 7
 
@@ -148,15 +149,6 @@ struct card_set
 	float YPos;
 };
 
-struct playing_sound;
-struct playing_sound
-{
-	uint32_t SamplesPlayed;
-	float Volume[2];
-	wav_tag_e Tag;
-	playing_sound* Next;
-};
-
 struct game_state
 {
 	// NOTE: Arena is just for permanent things that can/should be determined
@@ -171,13 +163,15 @@ struct game_state
 	// NOTE: render arena is just for the renderer
 	memory_arena RenderArena;
 
+	assets Assets;
+
 	render_group RenderGroup;
 	basis WorldToCamera;
 	basis CameraToScreen;
 
-	float Time;
+	playing_sound_list PlayingSoundList;
 
-	assets Assets;
+	float Time;
 
 	// SECTION START: Card Game Code
 	card* Cards;
@@ -186,11 +180,6 @@ struct game_state
 	card_set* Hands;
 	card_set* Tableaus;
 	// SECTION STOP: Card GameCode
-
-	// SECTION START: Audio code
-	playing_sound* PlayingSoundHead;
-	playing_sound* FreePlayingSoundHead;
-	// SECTION STOP: Audio code
 };
 
 #define APOCALYPSE_H

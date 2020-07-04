@@ -387,32 +387,8 @@ void Win32DebugSyncDisplay(
 	}
 }
 
-void Win32BufferToWindow(
-	win32_offscreen_buffer* BackBuffer, 
-	HDC DeviceContext,
-	int WindowWidth, 
-	int WindowHeight
-)
+void Win32BufferToWindow(win32_offscreen_buffer* BackBuffer, HDC DeviceContext)
 {
-	// TODO: aspect ratio correction
-	// TODO: while prototyping, no stretching
-#ifdef APOCALYPSE_RELEASE
-	StretchDIBits(
-		DeviceContext,
-		0,
-		0,
-		WindowWidth,
-		WindowHeight,
-		0,
-		0,
-		BackBuffer->Width,
-		BackBuffer->Height,
-		BackBuffer->Memory,
-		&BackBuffer->Info,
-		DIB_RGB_COLORS,
-		SRCCOPY
-	);
-#else
 	StretchDIBits(
 		DeviceContext,
 		0,
@@ -428,7 +404,6 @@ void Win32BufferToWindow(
 		DIB_RGB_COLORS,
 		SRCCOPY
 	);
-#endif
 }
 
 win32_window_dimension Win32GetWindowDimension(HWND Window)
@@ -522,16 +497,8 @@ LRESULT CALLBACK MainWindowCallback(
 		{
 			PAINTSTRUCT Paint = {};
 			HDC DeviceContext = BeginPaint(Window, &Paint);
-			int WindowWidth = Paint.rcPaint.right - Paint.rcPaint.left;
-			int WindowHeight = Paint.rcPaint.bottom - Paint.rcPaint.top;
-			win32_window_dimension WindowDim = Win32GetWindowDimension(Window);
 			
-			Win32BufferToWindow(
-				&GlobalBackBuffer,
-				DeviceContext,
-				WindowDim.Width,
-				WindowDim.Height
-			);
+			Win32BufferToWindow(&GlobalBackBuffer, DeviceContext);
 
 			EndPaint(Window, &Paint);
 			break;
@@ -718,6 +685,40 @@ int CALLBACK WinMain(
 
 	GlobalBackBuffer = {};
 	GlobalBackBuffer.BytesPerPixel = 4;
+	// NOTE: get memory for backbuffer
+	{
+#if APOCALYPSE_INTERNAL
+		GlobalBackBuffer.Width = 960;
+		GlobalBackBuffer.Height = 540;
+#else
+		GlobalBackBuffer.Width = 1440;
+		GlobalBackBuffer.Height = 910;
+#endif
+		GlobalBackBuffer.Pitch = (
+			GlobalBackBuffer.Width * GlobalBackBuffer.BytesPerPixel
+		);
+
+		GlobalBackBuffer.Info.bmiHeader.biSize = (
+			sizeof(GlobalBackBuffer.Info.bmiHeader)
+		);
+		GlobalBackBuffer.Info.bmiHeader.biWidth = GlobalBackBuffer.Width;
+		GlobalBackBuffer.Info.bmiHeader.biHeight = GlobalBackBuffer.Height;
+		GlobalBackBuffer.Info.bmiHeader.biPlanes = 1;
+		GlobalBackBuffer.Info.bmiHeader.biBitCount = 32;
+		GlobalBackBuffer.Info.bmiHeader.biCompression = BI_RGB;
+
+		size_t BitmapMemorySize = (
+			(GlobalBackBuffer.Width * GlobalBackBuffer.Height) * 
+			GlobalBackBuffer.BytesPerPixel
+		);
+		if(GlobalBackBuffer.Memory)
+		{
+			VirtualFree(GlobalBackBuffer.Memory, 0, MEM_RELEASE);
+		}
+		GlobalBackBuffer.Memory = VirtualAlloc(
+			0, BitmapMemorySize, MEM_COMMIT, PAGE_READWRITE
+		);
+	}
 
 	WNDCLASS WindowClass = {};
 	WindowClass.lpfnWndProc = MainWindowCallback;
@@ -732,57 +733,29 @@ int CALLBACK WinMain(
 
 	if(RegisterClassA(&WindowClass))
 	{
+		DWORD WindowStyle = WS_OVERLAPPEDWINDOW | WS_VISIBLE;
+		RECT ClientRect = {};
+		ClientRect.right = GlobalBackBuffer.Width;
+		ClientRect.bottom = GlobalBackBuffer.Height;
+		AdjustWindowRect(
+			&ClientRect,
+			WindowStyle,
+			false
+		);
 		HWND WindowHandle = CreateWindowExA(
 			0,
 			WindowClass.lpszClassName,
-			"Apocalypses",
-			WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-			CW_USEDEFAULT,
-			CW_USEDEFAULT,
-			CW_USEDEFAULT,
-			CW_USEDEFAULT,
+			"Apocalypse",
+			WindowStyle,
+			0,
+			0,
+			ClientRect.right - ClientRect.left,
+			ClientRect.bottom - ClientRect.top,
 			0,
 			0,
 			Instance,
 			0
 		);
-		
-		// NOTE: get memory for backbuffer
-		{
-			win32_window_dimension Dimensions = Win32GetWindowDimension(
-				WindowHandle
-			);
-#if APOCALYPSE_INTERNAL
-			GlobalBackBuffer.Width = 960;
-			GlobalBackBuffer.Height = 540;			
-#else
-			GlobalBackBuffer.Width = 1440;
-			GlobalBackBuffer.Height = 910;
-#endif
-			int BytesPerPixel = 4;
-			GlobalBackBuffer.Pitch = GlobalBackBuffer.Width * BytesPerPixel;
-
-			GlobalBackBuffer.Info.bmiHeader.biSize = (
-				sizeof(GlobalBackBuffer.Info.bmiHeader)
-			);
-			GlobalBackBuffer.Info.bmiHeader.biWidth = GlobalBackBuffer.Width;
-			GlobalBackBuffer.Info.bmiHeader.biHeight = GlobalBackBuffer.Height;
-			GlobalBackBuffer.Info.bmiHeader.biPlanes = 1;
-			GlobalBackBuffer.Info.bmiHeader.biBitCount = 32;
-			GlobalBackBuffer.Info.bmiHeader.biCompression = BI_RGB;
-
-			size_t BitmapMemorySize = (
-				(GlobalBackBuffer.Width * GlobalBackBuffer.Height) * 
-				BytesPerPixel
-			);
-			if(GlobalBackBuffer.Memory)
-			{
-				VirtualFree(GlobalBackBuffer.Memory, 0, MEM_RELEASE);
-			}
-			GlobalBackBuffer.Memory = VirtualAlloc(
-				0, BitmapMemorySize, MEM_COMMIT, PAGE_READWRITE
-			);
-		}
 
 		if(WindowHandle)
 		{
@@ -1266,9 +1239,6 @@ int CALLBACK WinMain(
 				uint64_t FrameEndCycle = __rdtsc();
 				int64_t FrameEndCounter = Win32GetWallClock();
 
-				win32_window_dimension Dimensions = Win32GetWindowDimension(
-					WindowHandle
-				);
 #if 0
 				// NOTE: this is debug code
 				Win32DebugSyncDisplay(
@@ -1278,12 +1248,7 @@ int CALLBACK WinMain(
 					&SoundOutput
 				);
 #endif
-				Win32BufferToWindow(
-					&GlobalBackBuffer,
-					DeviceContext,
-					Dimensions.Width,
-					Dimensions.Height
-				);
+				Win32BufferToWindow(&GlobalBackBuffer, DeviceContext);
 				FlipWallClock = Win32GetWallClock();
 				
 

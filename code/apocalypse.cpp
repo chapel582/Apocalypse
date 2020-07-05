@@ -245,6 +245,7 @@ void GameUpdateAndRender(
 
 		assets* Assets = &GameState->Assets; 
 		*Assets = {}; 
+		Assets->Arena = &GameState->TransientArena;
 		Assets->JobQueue = Memory->DefaultJobQueue;
 		Assets->NextJob = 0;
 		for(

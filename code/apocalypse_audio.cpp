@@ -1,6 +1,7 @@
 #include "apocalypse_audio.h"
 #include "apocalypse_platform.h"
 #include "apocalypse_memory_arena.h"
+#include "apocalypse_file_io.h"
 
 void PlaySound(
 	playing_sound_list* PlayingSoundList, wav_tag_e Tag, memory_arena* Arena

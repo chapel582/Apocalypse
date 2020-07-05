@@ -88,9 +88,44 @@ void HandleDebugCycleCounters(game_memory* Memory)
 }
 // STOP SECTION: Performance counters
 
-debug_read_file_result DEBUGPlatformReadEntireFile(char* FileName)
+platform_read_file_result PlatformGetFileSize(
+	char* FileName, uint32_t* FileSize
+)
 {
-	debug_read_file_result Result = {};
+	platform_read_file_result Result = PlatformReadFileResult_Failure;
+	HANDLE FileHandle = INVALID_HANDLE_VALUE;
+
+	FileHandle = CreateFileA(
+		FileName, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0
+	);
+
+	LARGE_INTEGER LargeFileSize;
+	if(!GetFileSizeEx(FileHandle, &LargeFileSize))
+	{
+		// TODO: logging with getlasterror
+		goto error;
+	}
+	
+	*FileSize = SafeTruncateUInt64(LargeFileSize.QuadPart);
+	Result = PlatformReadFileResult_Success;
+	goto end;
+
+error:
+end:
+	if(FileHandle != INVALID_HANDLE_VALUE)
+	{
+		CloseHandle(FileHandle);
+	}
+	return Result;
+}
+
+platform_read_file_result PlatformReadFile(
+	char* FileName, void* Contents, uint32_t BytesToRead
+)
+{
+	// TODO: Probably need to add an offset and seek  option and a way to 
+	// CONT: maintain the handle
+	platform_read_file_result Result = PlatformReadFileResult_Failure;
 	HANDLE FileHandle = INVALID_HANDLE_VALUE;
 
 	FileHandle = CreateFileA(
@@ -100,30 +135,14 @@ debug_read_file_result DEBUGPlatformReadEntireFile(char* FileName)
 	{
 		goto error;
 	}
-	LARGE_INTEGER FileSize;
-	if(!GetFileSizeEx(FileHandle, &FileSize))
-	{
-		// TODO: logging with getlasterror
-		goto error;
-	}
-
-	uint32_t FileSize32 = SafeTruncateUInt64(FileSize.QuadPart);
-	Result.Contents = VirtualAlloc(
-		0, FileSize32, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE
-	);
-	if(Result.Contents == NULL)
-	{
-		// TODO: logging
-		goto error;
-	}
-
+	
 	DWORD BytesRead = 0;
 	if(
-		ReadFile(FileHandle, Result.Contents, FileSize32, &BytesRead, 0) &&
-		(FileSize32 == BytesRead)
+		ReadFile(FileHandle, Contents, BytesToRead, &BytesRead, 0) &&
+		(BytesToRead == BytesRead)
 	)
 	{
-		Result.ContentsSize = FileSize32;
+		Result = PlatformReadFileResult_Success;
 	}
 	else
 	{
@@ -134,28 +153,15 @@ debug_read_file_result DEBUGPlatformReadEntireFile(char* FileName)
 	goto end;
 
 error:
+end:
 	if(FileHandle != INVALID_HANDLE_VALUE)
 	{
 		CloseHandle(FileHandle);	
 	}
-	if(Result.Contents != NULL)
-	{
-		VirtualFree(Result.Contents, 0, MEM_RELEASE);
-		Result.Contents = NULL;
-	}
-end:
 	return Result;
 }
 
-void DEBUGPlatformFreeFileMemory(void* Memory)
-{
-	if(Memory)
-	{
-		VirtualFree(Memory, 0, MEM_RELEASE);		
-	}
-}
-
-bool DEBUGPlatformWriteEntireFile(
+bool PlatformWriteEntireFile(
 	char* FileName, void* Memory, uint32_t MemorySize
 )
 {

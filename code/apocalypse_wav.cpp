@@ -94,97 +94,100 @@ inline uint32_t GetChunkDataSize(riff_iterator Iter)
 	return Result;
 }
 
-loaded_wav DEBUGLoadWav(char* FileName)
+loaded_wav LoadWav(char* FileName, memory_arena* Arena)
 {
+	// TODO: bulletproof this function
+
 	loaded_wav Result = {};
 	
-	debug_read_file_result ReadResult = DEBUGPlatformReadEntireFile(FileName);    
-	if(ReadResult.ContentsSize != 0)
+	void* Contents;
+	platform_read_file_result ReadResult = ReadEntireFile(
+		FileName, Arena, &Contents
+	);
+	if(ReadResult != PlatformReadFileResult_Success)
 	{
-		WAVE_header* Header = (WAVE_header*) ReadResult.Contents;
-		ASSERT(Header->RIFFId == WAVEChunkId_RIFF);
-		ASSERT(Header->WAVEId == WAVEChunkId_WAVE);
-
-		uint32_t ChannelCount = 0;
-		uint32_t SampleDataSize = 0;
-		int16_t* SampleData = 0;
-		for(
-			riff_iterator Iter = (
-				ParseChunkAt(
-					Header + 1, ((uint8_t*) (Header + 1)) + Header->WavSize - 4
-				)
-			);
-			IsValid(Iter);
-			Iter = NextChunk(Iter)
-		)
-		{
-			switch(GetType(Iter))
-			{
-				case(WAVEChunkId_fmt):
-				{
-					WAVE_fmt* fmt = (WAVE_fmt*) GetChunkData(Iter);
-					ASSERT(fmt->wFormatTag == 1); // NOTE: Only support PCM
-					ASSERT(fmt->nSamplesPerSec == 48000);
-					ASSERT(fmt->wBitsPerSample == 16);
-					ASSERT(
-						fmt->nBlockAlign == (sizeof(int16_t) * fmt->nChannels)
-					);
-					ChannelCount = fmt->nChannels;
-					break;
-				}
-
-				case(WAVEChunkId_data):
-				{
-					SampleData = (int16_t*) GetChunkData(Iter);
-					SampleDataSize = GetChunkDataSize(Iter);
-					break;
-				}
-			}
-		}
-
-		ASSERT(ChannelCount && SampleData);
-
-		Result.ChannelCount = ChannelCount;
-		Result.SampleCount = SampleDataSize / (ChannelCount * sizeof(int16_t));
-		if(ChannelCount == 1)
-		{
-			Result.Samples[0] = SampleData;
-			Result.Samples[1] = 0;
-		}
-		else if(ChannelCount == 2)
-		{
-			Result.Samples[0] = SampleData;
-			Result.Samples[1] = SampleData + Result.SampleCount;
-
-#if 0
-			for(uint32 SampleIndex = 0;
-				SampleIndex < Result.SampleCount;
-				++SampleIndex)
-			{
-				SampleData[2*SampleIndex + 0] = (int16)SampleIndex;
-				SampleData[2*SampleIndex + 1] = (int16)SampleIndex;
-			}
-#endif
-			
-			for(
-				uint32_t SampleIndex = 0;
-				SampleIndex < Result.SampleCount;
-				SampleIndex++
-			)
-			{
-				int16_t Source = SampleData[2 * SampleIndex];
-				SampleData[2 * SampleIndex] = SampleData[SampleIndex];
-				SampleData[SampleIndex] = Source;
-			}
-		}
-		else
-		{
-			ASSERT(!"Invalid channel count in WAV file");
-		}
-
-		// TODO: Load right channels!
-		Result.ChannelCount = 1;
+		goto error;
 	}
 
+	WAVE_header* Header = (WAVE_header*) Contents;
+	ASSERT(Header->RIFFId == WAVEChunkId_RIFF);
+	ASSERT(Header->WAVEId == WAVEChunkId_WAVE);
+
+	uint32_t ChannelCount = 0;
+	uint32_t SampleDataSize = 0;
+	int16_t* SampleData = 0;
+	for(
+		riff_iterator Iter = (
+			ParseChunkAt(
+				Header + 1, ((uint8_t*) (Header + 1)) + Header->WavSize - 4
+			)
+		);
+		IsValid(Iter);
+		Iter = NextChunk(Iter)
+	)
+	{
+		switch(GetType(Iter))
+		{
+			case(WAVEChunkId_fmt):
+			{
+				WAVE_fmt* fmt = (WAVE_fmt*) GetChunkData(Iter);
+				ASSERT(fmt->wFormatTag == 1); // NOTE: Only support PCM
+				ASSERT(fmt->nSamplesPerSec == 48000);
+				ASSERT(fmt->wBitsPerSample == 16);
+				ASSERT(
+					fmt->nBlockAlign == (sizeof(int16_t) * fmt->nChannels)
+				);
+				ChannelCount = fmt->nChannels;
+				break;
+			}
+
+			case(WAVEChunkId_data):
+			{
+				SampleData = (int16_t*) GetChunkData(Iter);
+				SampleDataSize = GetChunkDataSize(Iter);
+				break;
+			}
+		}
+	}
+
+	ASSERT(ChannelCount && SampleData);
+
+	Result.ChannelCount = ChannelCount;
+	Result.SampleCount = SampleDataSize / (ChannelCount * sizeof(int16_t));
+	if(ChannelCount == 1)
+	{
+		Result.Samples[0] = SampleData;
+		Result.Samples[1] = 0;
+	}
+	else if(ChannelCount == 2)
+	{
+		Result.Samples[0] = SampleData;
+		Result.Samples[1] = SampleData + Result.SampleCount;
+
+
+		
+		for(
+			uint32_t SampleIndex = 0;
+			SampleIndex < Result.SampleCount;
+			SampleIndex++
+		)
+		{
+			int16_t Source = SampleData[2 * SampleIndex];
+			SampleData[2 * SampleIndex] = SampleData[SampleIndex];
+			SampleData[SampleIndex] = Source;
+		}
+	}
+	else
+	{
+		ASSERT(!"Invalid channel count in WAV file");
+	}
+
+	// TODO: Load right channels!
+	Result.ChannelCount = 1;
+
+	goto end;
+
+error:
+end:
 	return Result;
 }

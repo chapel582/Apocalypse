@@ -5,7 +5,7 @@
 void LoadBmpJob(void* Data)
 {
 	load_bmp_job* Args = (load_bmp_job*) Data;
-	*(Args->Result) = DEBUGLoadBmp(&Args->FileName[0]);
+	*(Args->Result) = LoadBmp(&Args->FileName[0], Args->MemoryArena);
 	Args->Info->State = AssetState_Loaded;
 }
 
@@ -62,6 +62,7 @@ loaded_bitmap* GetBitmap(assets* Assets, bitmap_tag_e Tag)
 			Args->Result = &(Assets->Bitmaps[Tag]);
 			Args->Info = Info;
 			Info->State = AssetState_Loading;
+			Args->MemoryArena = Assets->Arena;
 			PlatformAddJob(Assets->JobQueue, LoadBmpJob, Args);
 		}
 		return NULL;
@@ -71,7 +72,7 @@ loaded_bitmap* GetBitmap(assets* Assets, bitmap_tag_e Tag)
 void LoadWavJob(void* Data)
 {
 	load_wav_job* Args = (load_wav_job*) Data;
-	*(Args->Result) = DEBUGLoadWav(&Args->FileName[0]);
+	*(Args->Result) = LoadWav(&Args->FileName[0], Args->MemoryArena);
 	Args->Info->State = AssetState_Loaded;
 }
 
@@ -130,6 +131,7 @@ loaded_wav* GetWav(assets* Assets, wav_tag_e Tag)
 			Args->Result = &(Assets->Wavs[Tag]);
 			Args->Info = Info;
 			Info->State = AssetState_Loading;
+			Args->MemoryArena = Assets->Arena;
 			PlatformAddJob(Assets->JobQueue, LoadWavJob, Args);
 		}
 		Result = NULL;

@@ -31,15 +31,24 @@ inline uint32_t SafeTruncateUInt64(uint64_t Value)
 // TODO: remove DEBUG IO
 // NOTE: These are blocking calls that don't protect against lost data
 // CONT: they are intended for debug purposes only
-struct debug_read_file_result
+typedef enum
 {
-	uint32_t ContentsSize;
-	void* Contents;
+	PlatformReadFileResult_Success,
+	PlatformReadFileResult_Failure
+	// TODO: handle file DNE, permission errors, etc.
+} platform_read_file_result;
+struct platform_file_handle
+{
+	// TODO: have a way to keep a file handle open
 };
 
-debug_read_file_result DEBUGPlatformReadEntireFile(char* FileName);
-void DEBUGPlatformFreeFileMemory(void* Memory);
-bool DEBUGPlatformWriteEntireFile(
+platform_read_file_result PlatformGetFileSize(
+	char* FileName, uint32_t* FileSize
+);
+platform_read_file_result PlatformReadFile(
+	char* FileName, void* Contents, uint32_t BytesToRead
+);
+bool PlatformWriteEntireFile(
 	char* FileName, void* Memory, uint32_t MemorySize
 );
 

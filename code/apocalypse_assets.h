@@ -34,6 +34,7 @@ struct load_bmp_job
 	char FileName[256]; // TODO: Platform max path
 	loaded_bitmap* Result;
 	asset_info* Info;
+	memory_arena* MemoryArena;
 };
 
 typedef enum
@@ -48,10 +49,14 @@ struct load_wav_job
 	char FileName[256]; // TODO: Platform max path
 	loaded_wav* Result;
 	asset_info* Info;
+	memory_arena* MemoryArena;
 };
 
 struct assets
 {
+	memory_arena* Arena;
+	// TODO: replace arena with a general allocator
+
 	platform_job_queue* JobQueue;
 
 	load_bmp_job BitmapJobs[BitmapTag_Count]; // TODO: allocate/free these arguments dynamically

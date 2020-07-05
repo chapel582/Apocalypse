@@ -14,10 +14,11 @@ void InitMemArena(memory_arena* Arena, size_t TotalSize, uint8_t* Base)
 	Arena->Used = 0;
 }
 
+#define DEFAULT_ALIGNMENT 1
 #define PushStruct(Arena, Type, ...) (Type*) PushSize(Arena, sizeof(Type), ##__VA_ARGS__)
 #define PushArray(Arena, Count, Type, ...) (Type*) PushSize(Arena, (Count) * sizeof(Type), ##__VA_ARGS__)
 inline void* PushSize(
-	memory_arena* Arena, size_t SizeToPush, size_t Alignment = 1
+	memory_arena* Arena, size_t SizeToPush, size_t Alignment = DEFAULT_ALIGNMENT
 )
 {
 	// NOTE: find alignment

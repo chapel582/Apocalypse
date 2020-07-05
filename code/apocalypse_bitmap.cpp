@@ -1,5 +1,6 @@
 #include "apocalypse_bitmap.h"
 #include "apocalypse_platform.h"
+#include "apocalypse_file_io.h"
 
 #include <string.h>
 
@@ -29,21 +30,26 @@ struct bitmap_header
 };
 #pragma pack(pop)
 
-loaded_bitmap DEBUGLoadBmp(char* FileName)
+loaded_bitmap LoadBmp(char* FileName, memory_arena* Arena)
 {
+	// TODO: bulletproof this function
+	
 	// NOTE: this is not complete BMP loading code. Can't handle negative height
 	// CONT: or compression
 
 	loaded_bitmap Result = {};
-	debug_read_file_result ReadResult = DEBUGPlatformReadEntireFile(FileName);
-	if(ReadResult.ContentsSize == 0)
+	void* Contents;
+	platform_read_file_result ReadResult = ReadEntireFile(
+		FileName, Arena, &Contents
+	);
+	if(ReadResult != PlatformReadFileResult_Success)
 	{
-		goto end;
+		goto error;
 	}
 
-	bitmap_header* Header = (bitmap_header*) ReadResult.Contents;
+	bitmap_header* Header = (bitmap_header*) Contents;
 	uint32_t* Pixels = (uint32_t*) (
-		(uint8_t*) ReadResult.Contents + Header->BitmapOffset
+		(uint8_t*) Contents + Header->BitmapOffset
 	);
 	Result.Memory = Pixels;
 	Result.Width = Header->Width;
@@ -94,6 +100,9 @@ loaded_bitmap DEBUGLoadBmp(char* FileName)
 		((uint8_t*) Result.Memory) - Result.Pitch * (Result.Height - 1)
 	);
 #endif
+	goto end;
+
+error:
 end:
 	return Result;
 }
@@ -114,3 +123,5 @@ loaded_bitmap MakeEmptyBitmap(void* Memory, int32_t Width, int32_t Height)
 	memset(Result.Memory, 0, GetBitmapSize(Result.Width, Result.Height));
 	return Result;
 }
+
+// TODO: have a bitmap loading version that works with a general allocator

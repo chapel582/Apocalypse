@@ -17,12 +17,13 @@
 #include "apocalypse_audio.h"
 #include "apocalypse_audio.cpp"
 
+#include "apocalypse_particles.h"
+#include "apocalypse_particles.cpp"
+
 #include <string.h>
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
-
-#define PI32 3.14159265359f
 
 loaded_bitmap MakeEmptyBitmap(
 	memory_arena* Arena, int32_t Width, int32_t Height
@@ -189,6 +190,7 @@ void GameUpdateAndRender(
 	if(!Memory->IsInitialized)
 	{
 #if APOCALYPSE_RELEASE
+		// TODO: replace with bespoke random tool
 		// NOTE: only init rand tools if we're in a release build
 		srand(time(NULL));
 #endif
@@ -395,6 +397,32 @@ void GameUpdateAndRender(
 			WavTag_TestMusic,
 			&GameState->TransientArena
 		);
+
+		// TODO: remove me!
+		{
+			vector2 ScreenCenter = Vector2(
+				BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f
+			);
+			GameState->TestParticleSystem = MakeParticleSystem(
+				&GameState->TransientArena,
+				BitmapTag_TestBitmap,
+				1.0f,
+				Vector2(35.0f, 35.0f),
+				Vector2(45.0f, 45.0f),
+				ScreenCenter - Vector2(5.0f, 5.0f),
+				ScreenCenter + Vector2(5.0f, 5.0f),
+				PI32,
+				2 * PI32,
+				1.0f,
+				5.0f,
+				Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+				Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+				Vector4(0.0f, 0.0f, 0.0f, -0.01f),
+				Vector4(0.0f, 0.0f, 0.0f, -0.05f),
+				0.25f,
+				256
+			);
+		}
 	}
 
 	GameState->Time += DtForFrame;
@@ -560,6 +588,15 @@ void GameUpdateAndRender(
 		&RectBasis,
 		MakeRectangle(Vector2(0, 0), Vector2(25, 25)),
 		Vector4(1.0f, 1.0f, 1.0f, 1.0f)
+	);
+#endif
+
+#if 0 // NOTE: tests for particle systems
+	UpdateParticleSystem(&GameState->TestParticleSystem);
+	PushParticles(
+		&GameState->RenderGroup,
+		&GameState->Assets,
+		&GameState->TestParticleSystem
 	);
 #endif
 

@@ -8,6 +8,7 @@
 #include "apocalypse_render_group.h"
 #include "apocalypse_assets.h"
 #include "apocalypse_audio.h"
+#include "apocalypse_particles.h"
 
 #define MAX_CARDS_PER_SET 7
 
@@ -172,6 +173,8 @@ struct game_state
 	playing_sound_list PlayingSoundList;
 
 	float Time;
+
+	particle_system TestParticleSystem;
 
 	// SECTION START: Card Game Code
 	card* Cards;

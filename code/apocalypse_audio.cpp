@@ -39,6 +39,8 @@ void MixSounds(
 {
 	BEGIN_TIMED_BLOCK(MixAudio);
 
+	// TODO: fix clicking at end of audio
+
 	// NOTE: mix in float channels and then cast to int16_t so we don't get 
 	// CONT: unnecessary clipping/wrap-around
 	// TODO: PushArray is fast, but it might be faster to allocate this once

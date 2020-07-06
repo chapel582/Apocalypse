@@ -3,6 +3,7 @@
 #include "apocalypse_bitmap.h"
 #include "apocalypse_wav.h"
 
+// TODO: for standardness, will probably want to rename tags to handles 
 typedef enum 
 {
 	AssetType_Bitmap,

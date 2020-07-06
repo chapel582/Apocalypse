@@ -3,7 +3,9 @@
 #include "apocalypse_math.h"
 #include "apocalypse_rectangle.h"
 #include "apocalypse_vector.h"
+#include "apocalypse_bitmap.h"
 #include "apocalypse_assets.h"
+#include "apocalypse_particles.h"
 
 vector2 TransformVectorToBasis(basis* Basis, vector2 Vector)
 {
@@ -231,6 +233,29 @@ inline void PushSizedBitmap(
 	if(Bitmap)
 	{
 		PushSizedBitmap(Group, Bitmap, Center, SizedXAxis, SizedYAxis, Color);
+	}
+}
+
+void PushParticles(
+	render_group* Group, assets* Assets, particle_system* ParticleSystem
+)
+{
+	particle* Particle = &ParticleSystem->Particles[0];
+	for(uint32_t Index = 0; Index < ParticleSystem->ParticleCount; Index++)
+	{
+		if(Particle->State != ParticleState_Inactive)
+		{
+			PushSizedBitmap(
+				Group,
+				Assets,
+				ParticleSystem->ParticleBitmap,
+				Particle->Pos,
+				Vector2(Particle->Dim.X, 0.0f),
+				Vector2(0.0f, Particle->Dim.Y),
+				Particle->Color
+			);
+		}
+		Particle++;
 	}
 }
 

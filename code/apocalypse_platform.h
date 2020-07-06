@@ -21,6 +21,7 @@
 #define TERABYTES(Value) (1024LL * GIGABYTES(Value))
 
 #define BYTES_PER_PIXEL 4 
+#define PI32 3.14159265359f // TODO: find a better place for this?
 
 inline uint32_t SafeTruncateUInt64(uint64_t Value)
 {

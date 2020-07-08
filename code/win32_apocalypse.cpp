@@ -568,6 +568,31 @@ struct platform_mutex_handle
 	HANDLE Mutex;
 };
 
+platform_mutex_handle* PlatformCreateMutex()
+{
+	platform_mutex_handle* Result = (platform_mutex_handle*) VirtualAlloc(
+		0, sizeof(platform_mutex_handle), MEM_COMMIT, PAGE_READWRITE
+	);
+	Result->Mutex = CreateMutexA(NULL, false, NULL);
+	return Result;
+}
+
+void PlatformGetMutex(platform_mutex_handle* MutexHandle)
+{
+	WaitForSingleObject(MutexHandle->Mutex, INFINITE);
+}
+
+void PlatformReleaseMutex(platform_mutex_handle* MutexHandle)
+{
+	ReleaseMutex(MutexHandle->Mutex);
+}
+
+void PlatformFreeMutex(platform_mutex_handle* MutexHandle)
+{
+	CloseHandle(MutexHandle->Mutex);
+	VirtualFree(MutexHandle, 0, MEM_RELEASE);
+}
+
 struct platform_event_handle
 {
 	HANDLE Event;

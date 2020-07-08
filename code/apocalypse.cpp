@@ -205,7 +205,8 @@ void GameUpdateAndRender(
 		);
 
 		// TODO: do we want to be extra and make sure we pick up that last byte?
-		size_t TransientStorageDivision = Memory->TransientStorageSize / 3;
+		memory_arena AssetArena;
+		size_t TransientStorageDivision = Memory->TransientStorageSize / 4;
 		InitMemArena(
 			&GameState->TransientArena,
 			TransientStorageDivision,
@@ -220,6 +221,11 @@ void GameUpdateAndRender(
 			&GameState->FrameArena,
 			TransientStorageDivision,
 			GetEndOfArena(&GameState->RenderArena)
+		);
+		InitMemArena(
+			&AssetArena,
+			TransientStorageDivision,
+			GetEndOfArena(&GameState->FrameArena)
 		);
 
 		GameState->WorldToCamera = MakeBasis(
@@ -247,9 +253,11 @@ void GameUpdateAndRender(
 
 		assets* Assets = &GameState->Assets; 
 		*Assets = {}; 
-		Assets->Arena = &GameState->TransientArena;
+		Assets->Arena = AssetArena;
 		Assets->JobQueue = Memory->DefaultJobQueue;
-		Assets->NextJob = 0;
+		Assets->ArenaLock = PlatformCreateMutex();
+		Assets->AvailableListLock = PlatformCreateMutex();
+		Assets->AvailableHead = NULL;
 		for(
 			int InfoIndex = 0;
 			InfoIndex < ARRAY_COUNT(Assets->BitmapInfo);

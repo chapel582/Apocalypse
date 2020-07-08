@@ -94,7 +94,9 @@ inline uint32_t GetChunkDataSize(riff_iterator Iter)
 	return Result;
 }
 
-loaded_wav LoadWav(char* FileName, memory_arena* Arena)
+loaded_wav LoadWav(
+	char* FileName, memory_arena* Arena, platform_mutex_handle* ArenaLock
+)
 {
 	// TODO: bulletproof this function
 
@@ -102,7 +104,7 @@ loaded_wav LoadWav(char* FileName, memory_arena* Arena)
 	
 	void* Contents;
 	platform_read_file_result ReadResult = ReadEntireFile(
-		FileName, Arena, &Contents
+		FileName, Arena, ArenaLock, &Contents
 	);
 	if(ReadResult != PlatformReadFileResult_Success)
 	{

@@ -92,6 +92,15 @@ extern struct game_memory* DebugGlobalMemory;
 #endif // NOTE: APOCALYPSE_INTERNAL
 
 // SECTION START: Threading Code
+struct platform_mutex_handle;
+struct platform_semaphore_handle;
+struct platform_event_handle;
+
+platform_mutex_handle* PlatformCreateMutex();
+void PlatformGetMutex(platform_mutex_handle* MutexHandle);
+void PlatformReleaseMutex(platform_mutex_handle* MutexHandle);
+void PlatformFreeMutex(platform_mutex_handle* MutexHandle);
+
 typedef void platform_job_callback(void* Data);
 
 struct platform_job_queue_entry;
@@ -103,9 +112,6 @@ struct platform_job_queue_entry
 	platform_job_queue_entry* Next;
 };
 
-struct platform_mutex_handle;
-struct platform_semaphore_handle;
-struct platform_event_handle;
 struct platform_job_queue
 {
 	platform_job_queue_entry Entries[256];

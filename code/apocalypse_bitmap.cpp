@@ -30,7 +30,9 @@ struct bitmap_header
 };
 #pragma pack(pop)
 
-loaded_bitmap LoadBmp(char* FileName, memory_arena* Arena)
+loaded_bitmap LoadBmp(
+	char* FileName, memory_arena* Arena, platform_mutex_handle* ArenaLock
+)
 {
 	// TODO: bulletproof this function
 	
@@ -40,7 +42,7 @@ loaded_bitmap LoadBmp(char* FileName, memory_arena* Arena)
 	loaded_bitmap Result = {};
 	void* Contents;
 	platform_read_file_result ReadResult = ReadEntireFile(
-		FileName, Arena, &Contents
+		FileName, Arena, ArenaLock, &Contents
 	);
 	if(ReadResult != PlatformReadFileResult_Success)
 	{

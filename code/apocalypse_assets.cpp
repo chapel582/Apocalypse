@@ -1,12 +1,43 @@
 #include "apocalypse_assets.h"
 
 #include "apocalypse_bitmap.h"
+#include "apocalypse_wav.h"
+#include "apocalypse_platform.h"
+
+load_asset_job* GetJob(assets* Assets)
+{
+	load_asset_job* Job = NULL;
+	if(Assets->AvailableHead)
+	{
+		PlatformGetMutex(Assets->AvailableListLock);
+		Job = Assets->AvailableHead; 
+		Assets->AvailableHead = Assets->AvailableHead->Next;
+		PlatformReleaseMutex(Assets->AvailableListLock);
+	}
+	else
+	{
+		PlatformGetMutex(Assets->ArenaLock);
+		Job = PushStruct(&Assets->Arena, load_asset_job);
+		PlatformReleaseMutex(Assets->ArenaLock);
+	}
+	return Job;
+}
+
+void LoadJobCommonEnd(load_asset_job* Job)
+{
+	Job->Info->State = AssetState_Loaded;
+	PlatformGetMutex(Job->AvailableListLock);
+	Job->Next = *Job->AvailableHead;
+	*(Job->AvailableHead) = Job;
+	PlatformReleaseMutex(Job->AvailableListLock);
+}
 
 void LoadBmpJob(void* Data)
 {
-	load_bmp_job* Args = (load_bmp_job*) Data;
-	*(Args->Result) = LoadBmp(&Args->FileName[0], Args->MemoryArena);
-	Args->Info->State = AssetState_Loaded;
+	load_asset_job* Job = (load_asset_job*) Data;
+	loaded_bitmap* Result = (loaded_bitmap*) Job->Result;
+	*Result = LoadBmp(&Job->FileName[0], Job->MemoryArena, Job->ArenaLock);
+	LoadJobCommonEnd(Job);
 }
 
 loaded_bitmap* GetBitmap(assets* Assets, bitmap_tag_e Tag)
@@ -21,9 +52,8 @@ loaded_bitmap* GetBitmap(assets* Assets, bitmap_tag_e Tag)
 		if(Info->State == AssetState_Unloaded)
 		{		
 			// NOTE: Need to start loading bitmap
-			// TODO: see if there's a way to paramaterize this for loading 
-			// CONT: sounds
-			load_bmp_job* Args = &(Assets->BitmapJobs[Assets->NextJob++]);
+			load_asset_job* Args = GetJob(Assets);
+
 			switch(Tag)
 			{
 				case(BitmapTag_TestBitmap):
@@ -59,10 +89,15 @@ loaded_bitmap* GetBitmap(assets* Assets, bitmap_tag_e Tag)
 					break;
 				}
 			}
+			Info->State = AssetState_Loading;
+			
 			Args->Result = &(Assets->Bitmaps[Tag]);
 			Args->Info = Info;
-			Info->State = AssetState_Loading;
-			Args->MemoryArena = Assets->Arena;
+			Args->MemoryArena = &Assets->Arena;
+			Args->ArenaLock = Assets->ArenaLock;
+			Args->AvailableListLock = Assets->AvailableListLock;
+			Args->Next = NULL;
+			Args->AvailableHead = &Assets->AvailableHead;
 			PlatformAddJob(Assets->JobQueue, LoadBmpJob, Args);
 		}
 		return NULL;
@@ -71,9 +106,10 @@ loaded_bitmap* GetBitmap(assets* Assets, bitmap_tag_e Tag)
 
 void LoadWavJob(void* Data)
 {
-	load_wav_job* Args = (load_wav_job*) Data;
-	*(Args->Result) = LoadWav(&Args->FileName[0], Args->MemoryArena);
-	Args->Info->State = AssetState_Loaded;
+	load_asset_job* Job = (load_asset_job*) Data;
+	loaded_wav* Result = (loaded_wav*) Job->Result;
+	*Result = LoadWav(&Job->FileName[0], Job->MemoryArena, Job->ArenaLock);
+	LoadJobCommonEnd(Job);
 }
 
 loaded_wav* GetWav(assets* Assets, wav_tag_e Tag)
@@ -92,7 +128,8 @@ loaded_wav* GetWav(assets* Assets, wav_tag_e Tag)
 			// NOTE: start loading wav
 			// TODO: see if this can be parameterized with other assets
 			// TODO: allocate these args with the assets' general allocator
-			load_wav_job* Args = &(Assets->WavJobs[Assets->WavNextJob++]);
+			load_asset_job* Args = GetJob(Assets);
+
 			switch(Tag)
 			{
 				case(WavTag_Bloop00):
@@ -128,10 +165,15 @@ loaded_wav* GetWav(assets* Assets, wav_tag_e Tag)
 					break;
 				}
 			}
+			Info->State = AssetState_Loading;
+
 			Args->Result = &(Assets->Wavs[Tag]);
 			Args->Info = Info;
-			Info->State = AssetState_Loading;
-			Args->MemoryArena = Assets->Arena;
+			Args->MemoryArena = &Assets->Arena;
+			Args->ArenaLock = Assets->ArenaLock;
+			Args->AvailableListLock = Assets->AvailableListLock;
+			Args->Next = NULL;
+			Args->AvailableHead = &Assets->AvailableHead;
 			PlatformAddJob(Assets->JobQueue, LoadWavJob, Args);
 		}
 		Result = NULL;

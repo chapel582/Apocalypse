@@ -1,5 +1,6 @@
 #ifndef APOCALYPSE_ASSETS_H
 
+#include "apocalypse_platform.h"
 #include "apocalypse_bitmap.h"
 #include "apocalypse_wav.h"
 
@@ -22,6 +23,19 @@ struct asset_info
 	asset_state_e State;
 };
 
+struct load_asset_job;
+struct load_asset_job
+{
+	char FileName[256]; // TODO: Platform max path
+	void* Result;
+	asset_info* Info;
+	memory_arena* MemoryArena;
+	platform_mutex_handle* ArenaLock;
+	platform_mutex_handle* AvailableListLock;
+	load_asset_job* Next;
+	load_asset_job** AvailableHead;
+};
+
 typedef enum 
 {
 	BitmapTag_TestBitmap,
@@ -29,14 +43,6 @@ typedef enum
 	BitmapTag_TestBackground,
 	BitmapTag_Count
 } bitmap_tag_e;
-
-struct load_bmp_job
-{
-	char FileName[256]; // TODO: Platform max path
-	loaded_bitmap* Result;
-	asset_info* Info;
-	memory_arena* MemoryArena;
-};
 
 typedef enum
 {
@@ -46,28 +52,19 @@ typedef enum
 	WavTag_Count
 } wav_tag_e;
 
-struct load_wav_job
-{
-	char FileName[256]; // TODO: Platform max path
-	loaded_wav* Result;
-	asset_info* Info;
-	memory_arena* MemoryArena;
-};
-
 struct assets
 {
-	memory_arena* Arena;
-	// TODO: replace arena with a general allocator
-
+	memory_arena Arena;
+	platform_mutex_handle* ArenaLock;
+	
 	platform_job_queue* JobQueue;
 
-	load_bmp_job BitmapJobs[BitmapTag_Count]; // TODO: allocate/free these arguments dynamically
-	int NextJob;
+	platform_mutex_handle* AvailableListLock;
+	load_asset_job* AvailableHead;
+
 	asset_info BitmapInfo[BitmapTag_Count];
 	loaded_bitmap Bitmaps[BitmapTag_Count];
 
-	load_wav_job WavJobs[WavTag_Count]; // TODO: allocate/free these arguments dynamically
-	int WavNextJob;
 	asset_info WavInfo[WavTag_Count];
 	loaded_wav Wavs[WavTag_Count];
 

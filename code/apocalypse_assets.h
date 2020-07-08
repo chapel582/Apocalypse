@@ -42,7 +42,8 @@ typedef enum
 {
 	WavTag_Bloop00,
 	WavTag_Crack00,
-	WavTag_TestMusic
+	WavTag_TestMusic,
+	WavTag_Count
 } wav_tag_e;
 
 struct load_wav_job
@@ -65,10 +66,10 @@ struct assets
 	asset_info BitmapInfo[BitmapTag_Count];
 	loaded_bitmap Bitmaps[BitmapTag_Count];
 
-	load_wav_job WavJobs[BitmapTag_Count]; // TODO: allocate/free these arguments dynamically
+	load_wav_job WavJobs[WavTag_Count]; // TODO: allocate/free these arguments dynamically
 	int WavNextJob;
-	asset_info WavInfo[BitmapTag_Count];
-	loaded_wav Wavs[BitmapTag_Count];
+	asset_info WavInfo[WavTag_Count];
+	loaded_wav Wavs[WavTag_Count];
 
 	// TODO: get a general purpose memory allocator for asset data management
 	// TODO: have a way to track how stale an asset is

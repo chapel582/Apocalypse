@@ -4,7 +4,9 @@
 #include "apocalypse_file_io.h"
 
 void PlaySound(
-	playing_sound_list* PlayingSoundList, wav_tag_e Tag, memory_arena* Arena
+	playing_sound_list* PlayingSoundList,
+	wav_handle_e WavHandle,
+	memory_arena* Arena
 )
 {
 	if(!PlayingSoundList->FreePlayingSoundHead)
@@ -27,7 +29,7 @@ void PlaySound(
 	PlayingSound->SamplesPlayed = 0;
 	PlayingSound->Volume[0] = 1.0f;
 	PlayingSound->Volume[1] = 1.0f;
-	PlayingSound->Tag = Tag;
+	PlayingSound->WavHandle = WavHandle;
 }
 
 void MixSounds(
@@ -79,7 +81,7 @@ void MixSounds(
 	{
 		playing_sound* NextPlayingSound = PlayingSound->Next;
 		
-		loaded_wav* LoadedSound = GetWav(Assets, PlayingSound->Tag);
+		loaded_wav* LoadedSound = GetWav(Assets, PlayingSound->WavHandle);
 		bool FinishedPlaying = false;
 		if(LoadedSound != NULL)
 		{

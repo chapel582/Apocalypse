@@ -21,7 +21,7 @@ vector4 RandomizedVector4(vector4 Min, vector4 Max)
 
 particle_system MakeParticleSystem(
 	memory_arena* Arena,
-	bitmap_tag_e ParticleBitmap,
+	bitmap_handle_e ParticleBitmap,
 	float SpawnsPerFrame,
 	vector2 DimMin,
 	vector2 DimMax,

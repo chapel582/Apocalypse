@@ -156,14 +156,14 @@ inline void PushCenteredBitmap(
 inline void PushCenteredBitmap(
 	render_group* Group,
 	assets* Assets,
-	bitmap_tag_e Tag,
+	bitmap_handle_e BitmapHandle,
 	vector2 Center,
 	vector2 XAxis,
 	vector2 YAxis,
 	vector4 Color
 )
 {
-	loaded_bitmap* Bitmap = GetBitmap(Assets, Tag);
+	loaded_bitmap* Bitmap = GetBitmap(Assets, BitmapHandle);
 	if(Bitmap)
 	{
 		PushCenteredBitmap(Group, Bitmap, Center, XAxis, YAxis, Color);
@@ -222,14 +222,14 @@ inline void PushSizedBitmap(
 inline void PushSizedBitmap(
 	render_group* Group,
 	assets* Assets,
-	bitmap_tag_e Tag,
+	bitmap_handle_e BitmapHandle,
 	vector2 Center,
 	vector2 SizedXAxis,
 	vector2 SizedYAxis,
 	vector4 Color
 )
 {
-	loaded_bitmap* Bitmap = GetBitmap(Assets, Tag);
+	loaded_bitmap* Bitmap = GetBitmap(Assets, BitmapHandle);
 	if(Bitmap)
 	{
 		PushSizedBitmap(Group, Bitmap, Center, SizedXAxis, SizedYAxis, Color);
@@ -256,6 +256,27 @@ void PushParticles(
 			);
 		}
 		Particle++;
+	}
+}
+
+void PushGlyph(
+	render_group* Group,
+	assets* Assets,
+	font_handle_e FontHandle,
+	uint32_t CodePoint,
+	vector2 Center,
+	vector2 XAxis,
+	vector2 YAxis,
+	vector4 Color
+)
+{
+	loaded_glyph* Glyph = GetGlyph(Assets, FontHandle, CodePoint);
+	if(Glyph)
+	{
+		basis Basis = MakeBasis(Center, XAxis, YAxis);
+		PushBitmap(
+			Group, &Glyph->Bitmap, &Basis, Color
+		);
 	}
 }
 

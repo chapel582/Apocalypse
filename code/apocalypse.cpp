@@ -402,7 +402,7 @@ void GameUpdateAndRender(
 		// TODO: remove me!
 		PlaySound(
 			&GameState->PlayingSoundList,
-			WavTag_TestMusic,
+			WavHandle_TestMusic,
 			&GameState->TransientArena
 		);
 
@@ -413,7 +413,7 @@ void GameUpdateAndRender(
 			);
 			GameState->TestParticleSystem = MakeParticleSystem(
 				&GameState->TransientArena,
-				BitmapTag_TestBitmap,
+				BitmapHandle_TestBitmap,
 				1.0f,
 				Vector2(35.0f, 35.0f),
 				Vector2(45.0f, 45.0f),
@@ -467,7 +467,7 @@ void GameUpdateAndRender(
 			{
 				PlaySound(
 					&GameState->PlayingSoundList,
-					WavTag_Bloop00,
+					WavHandle_Bloop00,
 					&GameState->TransientArena
 				);
 				card* Card = &GameState->Cards[0];
@@ -533,7 +533,7 @@ void GameUpdateAndRender(
 	PushSizedBitmap(
 		&GameState->RenderGroup,
 		&GameState->Assets,
-		BitmapTag_TestBackground,
+		BitmapHandle_TestBackground,
 		Vector2((BackBuffer->Width / 2.0f), (BackBuffer->Height / 2.0f)),
 		Vector2(BackBuffer->Width, 0),
 		Vector2(0, BackBuffer->Height),
@@ -557,7 +557,7 @@ void GameUpdateAndRender(
 				PushSizedBitmap(
 					&GameState->RenderGroup,
 					&GameState->Assets,
-					BitmapTag_TestCard,
+					BitmapHandle_TestCard,
 					GetCenter(Card->Rectangle),
 					Vector2(Card->Rectangle.Dim.X, 0.0f),
 					Vector2(0.0f, Card->Rectangle.Dim.Y),
@@ -577,13 +577,27 @@ void GameUpdateAndRender(
 	vector2 Center = Vector2(
 		(BackBuffer->Width / 2.0f), (BackBuffer->Height / 2.0f)
 	);
-	vector2 XAxis = Vector2(CosVal, SinVal);
-	vector2 YAxis = Perpendicular(XAxis);
+	// vector2 XAxis = Vector2(CosVal, SinVal);
+	// vector2 YAxis = Perpendicular(XAxis);
 
-	PushCenteredBitmap(
+	// PushCenteredBitmap(
+	// 	&GameState->RenderGroup,
+	// 	&GameState->Assets,
+	// 	BitmapHandle_TestBitmap,
+	// 	Center,
+	// 	XAxis,
+	// 	YAxis,
+	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f)
+	// );
+
+	vector2 XAxis = Vector2(1, 0); 
+	vector2 YAxis = Perpendicular(XAxis); 
+
+	PushGlyph(
 		&GameState->RenderGroup,
 		&GameState->Assets,
-		BitmapTag_TestBitmap,
+		FontHandle_TestFont,
+		'A',
 		Center,
 		XAxis,
 		YAxis,

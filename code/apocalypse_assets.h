@@ -4,7 +4,6 @@
 #include "apocalypse_bitmap.h"
 #include "apocalypse_wav.h"
 
-#define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
 
 // TODO: for standardness, will probably want to rename tags to handles 
@@ -69,10 +68,14 @@ struct load_asset_job
 	uint32_t CodePoint;
 };
 
+struct loaded_font
+{
+	float PixelHeight;
+	stbtt_fontinfo StbFont;
+};
 struct loaded_glyph
 {
 	loaded_bitmap Bitmap;
-	// TODO: add other data
 };
 
 struct assets
@@ -92,7 +95,7 @@ struct assets
 	loaded_wav Wavs[WavHandle_Count];
 
 	asset_info FontInfo[FontHandle_Count];
-	stbtt_fontinfo Fonts[FontHandle_Count];
+	loaded_font Fonts[FontHandle_Count];
 	// TODO: add a BST for sparse glyph support. Use BST to determine if glyph
 	// CONT: is already loaded or not
 	asset_info GlyphInfo[256];
@@ -120,5 +123,7 @@ loaded_bitmap* GetBitmap(assets* Assets, bitmap_handle_e BitmapHandle);
 loaded_glyph* GetGlyph(
 	assets* Assets, font_handle_e FontHandle, uint32_t CodePoint
 );
+loaded_font* GetFont(assets* Assets, font_handle_e FontHandle);
+
 #define APOCALYPSE_ASSETS_H
 #endif 

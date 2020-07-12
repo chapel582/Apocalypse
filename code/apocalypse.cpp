@@ -20,6 +20,9 @@
 #include "apocalypse_particles.h"
 #include "apocalypse_particles.cpp"
 
+#define STB_TRUETYPE_IMPLEMENTATION
+#include "stb_truetype.h"
+
 #include <string.h>
 #include <math.h>
 #include <stdlib.h>
@@ -267,6 +270,33 @@ void GameUpdateAndRender(
 			asset_info* AssetInfo = &Assets->BitmapInfo[InfoIndex];
 			AssetInfo->State = AssetState_Unloaded;
 		}
+		for(
+			int InfoIndex = 0;
+			InfoIndex < ARRAY_COUNT(Assets->WavInfo);
+			InfoIndex++
+		)
+		{
+			asset_info* AssetInfo = &Assets->WavInfo[InfoIndex];
+			AssetInfo->State = AssetState_Unloaded;
+		}
+		for(
+			int InfoIndex = 0;
+			InfoIndex < ARRAY_COUNT(Assets->FontInfo);
+			InfoIndex++
+		)
+		{
+			asset_info* AssetInfo = &Assets->FontInfo[InfoIndex];
+			AssetInfo->State = AssetState_Unloaded;
+		}
+		for(
+			int InfoIndex = 0;
+			InfoIndex < ARRAY_COUNT(Assets->GlyphInfo);
+			InfoIndex++
+		)
+		{
+			asset_info* AssetInfo = &Assets->GlyphInfo[InfoIndex];
+			AssetInfo->State = AssetState_Unloaded;
+		}
 
 		GameState->MaxCards = Player_Count * CardSet_Count * MAX_CARDS_PER_SET;
 		GameState->Cards = PushArray(
@@ -400,11 +430,11 @@ void GameUpdateAndRender(
 		Memory->IsInitialized = true;
 
 		// TODO: remove me!
-		PlaySound(
-			&GameState->PlayingSoundList,
-			WavHandle_TestMusic,
-			&GameState->TransientArena
-		);
+		// PlaySound(
+		// 	&GameState->PlayingSoundList,
+		// 	WavHandle_TestMusic,
+		// 	&GameState->TransientArena
+		// );
 
 		// TODO: remove me!
 		{
@@ -590,19 +620,41 @@ void GameUpdateAndRender(
 	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f)
 	// );
 
-	vector2 XAxis = Vector2(1, 0); 
+	vector2 XAxis = Vector2(1.0f, 0.0f); 
 	vector2 YAxis = Perpendicular(XAxis); 
 
-	PushGlyph(
-		&GameState->RenderGroup,
-		&GameState->Assets,
-		FontHandle_TestFont,
-		'A',
-		Center,
-		XAxis,
-		YAxis,
-		Vector4(1.0f, 1.0f, 1.0f, 1.0f)
-	);
+	// PushGlyph(
+	// 	&GameState->RenderGroup,
+	// 	&GameState->Assets,
+	// 	FontHandle_TestFont,
+	// 	'q',
+	// 	Center,
+	// 	XAxis,
+	// 	YAxis,
+	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f)
+	// );
+	{
+		uint32_t TempBuffer[256];
+		char* TestString = "Helyo World.";
+		char* Char = TestString;
+		int WriteIndex = 0;
+		while(*Char != 0)
+		{
+			TempBuffer[WriteIndex++] = (uint32_t) *Char;
+			Char++;
+		}
+
+		PushText(
+			&GameState->RenderGroup,
+			&GameState->Assets,
+			FontHandle_TestFont,
+			&TempBuffer[0],
+			WriteIndex,
+			50.0f,
+			Center,
+			Vector4(1.0f, 1.0f, 1.0f, 1.0f)
+		);
+	}
 
 	basis RectBasis = MakeBasis(Vector2(0, 0), Vector2(1, 0), Vector2(0, 1));
 	PushRect(

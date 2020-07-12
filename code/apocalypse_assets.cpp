@@ -190,8 +190,11 @@ void LoadFontJob(void* VoidArgs)
 		goto error;
 	}
 
+	loaded_font* LoadedFont = (loaded_font*) Job->Result;
+	LoadedFont->PixelHeight = 128.0f;
+	stbtt_fontinfo* Font = &LoadedFont->StbFont;
 	stbtt_InitFont(
-		(stbtt_fontinfo*) Job->Result,
+		Font,
 		(uint8_t*) Contents,
 		stbtt_GetFontOffsetForIndex((uint8_t*) Contents, 0)
 	);
@@ -206,9 +209,9 @@ end:
 	return;
 }
 
-stbtt_fontinfo* GetFont(assets* Assets, font_handle_e FontHandle)
+loaded_font* GetFont(assets* Assets, font_handle_e FontHandle)
 {
-	stbtt_fontinfo* Result = NULL;
+	loaded_font* Result = NULL;
 	asset_info* Info = &(Assets->FontInfo[FontHandle]);
 	if(Assets->FontInfo[FontHandle].State == AssetState_Loaded)
 	{
@@ -249,13 +252,14 @@ void LoadGlyphJob(void* Data)
 	loaded_glyph* Result = (loaded_glyph*) Job->Result; 
 	uint32_t CodePoint = Job->CodePoint;
 	ASSERT(Assets->FontInfo[Job->FontHandle].State == AssetState_Loaded);
-	stbtt_fontinfo* Font = &Assets->Fonts[Job->FontHandle];
+	loaded_font* LoadedFont = &Assets->Fonts[Job->FontHandle];
+	stbtt_fontinfo* Font = &LoadedFont->StbFont;
 
 	int Width, Height, XOffset, YOffset;
 	uint8_t* MonoBitmap = stbtt_GetCodepointBitmap(
 		Font,
 		0,
-		stbtt_ScaleForPixelHeight(Font, 128.0f),
+		stbtt_ScaleForPixelHeight(Font, LoadedFont->PixelHeight),
 		CodePoint,
 		&Width,
 		&Height,
@@ -308,8 +312,8 @@ loaded_glyph* GetGlyph(
 	assets* Assets, font_handle_e FontHandle, uint32_t CodePoint
 )
 {
-	stbtt_fontinfo* Font = GetFont(Assets, FontHandle);
-	if(Font == NULL)
+	loaded_font* LoadedFont = GetFont(Assets, FontHandle);
+	if(LoadedFont == NULL)
 	{
 		return NULL;
 	}

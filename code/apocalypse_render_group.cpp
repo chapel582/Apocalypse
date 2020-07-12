@@ -1,5 +1,7 @@
 #include "apocalypse_render_group.h"
 
+#include "stb_truetype.h"
+
 #include "apocalypse_math.h"
 #include "apocalypse_rectangle.h"
 #include "apocalypse_vector.h"
@@ -259,7 +261,7 @@ void PushParticles(
 	}
 }
 
-void PushGlyph(
+inline void PushGlyph(
 	render_group* Group,
 	assets* Assets,
 	font_handle_e FontHandle,
@@ -270,6 +272,11 @@ void PushGlyph(
 	vector4 Color
 )
 {
+	if(CodePoint == ' ')
+	{
+		return;
+	}
+
 	loaded_glyph* Glyph = GetGlyph(Assets, FontHandle, CodePoint);
 	if(Glyph)
 	{
@@ -278,6 +285,88 @@ void PushGlyph(
 			Group, &Glyph->Bitmap, &Basis, Color
 		);
 	}
+}
+
+inline void PushText(
+	render_group* Group,
+	assets* Assets,
+	font_handle_e FontHandle,
+	uint32_t* CodePoints,
+	uint32_t CodePointCount,
+	float FontHeight, // NOTE: font height in world units
+	vector2 Center,
+	vector4 Color
+)
+{
+	loaded_font* LoadedFont = GetFont(Assets, FontHandle);
+	if(LoadedFont == NULL)
+	{
+		return;
+	}
+
+	vector2 CameraHeight = TransformVectorFromBasis(
+		Group->WorldToCamera, Vector2(0.0f, FontHeight)
+	);
+	vector2 PixelHeightV2 = TransformVectorFromBasis(
+		Group->WorldToCamera, CameraHeight
+	);
+	float PixelHeight = PixelHeightV2.Y;
+
+	// NOTE: everything after this point is in pixel space
+	stbtt_fontinfo* Font = &LoadedFont->StbFont;
+	int Ascent = 0;
+	int Baseline = 0;
+	float Scale = 2; // leave a little padding in case the character extends left
+	Scale = stbtt_ScaleForPixelHeight(Font, PixelHeight);
+	stbtt_GetFontVMetrics(Font, &Ascent, 0, 0);
+	Baseline = (int) (Ascent * Scale);
+
+	uint32_t* CodePointPtr = CodePoints;
+	vector2 YAxis = Vector2(0.0f, PixelHeight / LoadedFont->PixelHeight);
+	vector2 XAxis = -1.0f * Perpendicular(YAxis); // NOTE: want CW perp
+	vector2 Offset = Vector2(2.0f, 0.0f);
+	for(uint32_t Index = 0; Index < CodePointCount - 1; Index++)
+	{
+		uint32_t CodePoint = *CodePointPtr;
+		// NOTE: X0 is a signed value indicating the offset from the standard 
+		// CONT: advance / kern adjustment
+		// NOTE: Y0 is a signed value indicating the ascent/descent from the 
+		// CONT: baseline
+		int X0, Y0, X1, Y1;
+		stbtt_GetCodepointBox(Font, CodePoint, &X0, &Y0, &X1, &Y1);
+
+		PushGlyph(
+			Group,
+			Assets,
+			FontHandle,
+			CodePoint,
+			Center + Offset + (Scale * Vector2(X0, Y0)),
+			XAxis,
+			YAxis,
+			Color
+		);
+
+		int Advance, Lsb;
+		stbtt_GetCodepointHMetrics(Font, CodePoint, &Advance, &Lsb);
+		int Kern = stbtt_GetCodepointKernAdvance(
+			Font, CodePoint, *(CodePointPtr + 1)
+		);
+		Offset.X += Scale * (Advance + Kern);
+		
+		CodePointPtr++;
+	}
+	// NOTE: push the last glyph
+	uint32_t CodePoint = *CodePointPtr;
+	PushGlyph(
+		Group,
+		Assets,
+		FontHandle,
+		CodePoint,
+		Center + Offset,
+		XAxis,
+		YAxis,
+		Color
+	);
 }
 
 // TODO: make a push rect that doesn't require pushing a basis and will make it based on the rect you push

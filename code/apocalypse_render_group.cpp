@@ -314,17 +314,19 @@ inline void PushText(
 
 	// NOTE: everything after this point is in pixel space
 	stbtt_fontinfo* Font = &LoadedFont->StbFont;
+	float LPad = 2.0f; // NOTE: I believe there's a way to do this programatically using stbtt
 	int Ascent = 0;
-	int Baseline = 0;
-	float Scale = 2; // leave a little padding in case the character extends left
+	int Descent = 0;
+	int LineGap = 0;
+	float Scale; 
 	Scale = stbtt_ScaleForPixelHeight(Font, PixelHeight);
-	stbtt_GetFontVMetrics(Font, &Ascent, 0, 0);
-	Baseline = (int) (Ascent * Scale);
+	stbtt_GetFontVMetrics(Font, &Ascent, &Descent, &LineGap);
+	float YAdvance = Scale * (Ascent - Descent + LineGap);
 
 	uint32_t* CodePointPtr = CodePoints;
 	vector2 YAxis = Vector2(0.0f, PixelHeight / LoadedFont->PixelHeight);
 	vector2 XAxis = -1.0f * Perpendicular(YAxis); // NOTE: want CW perp
-	vector2 Offset = Vector2(2.0f, 0.0f);
+	vector2 Offset = Vector2(LPad, 0.0f);
 	for(uint32_t Index = 0; Index < CodePointCount - 1; Index++)
 	{
 		uint32_t CodePoint = *CodePointPtr;
@@ -335,23 +337,30 @@ inline void PushText(
 		int X0, Y0, X1, Y1;
 		stbtt_GetCodepointBox(Font, CodePoint, &X0, &Y0, &X1, &Y1);
 
-		PushGlyph(
-			Group,
-			Assets,
-			FontHandle,
-			CodePoint,
-			Center + Offset + (Scale * Vector2(X0, Y0)),
-			XAxis,
-			YAxis,
-			Color
-		);
-
-		int Advance, Lsb;
-		stbtt_GetCodepointHMetrics(Font, CodePoint, &Advance, &Lsb);
-		int Kern = stbtt_GetCodepointKernAdvance(
-			Font, CodePoint, *(CodePointPtr + 1)
-		);
-		Offset.X += Scale * (Advance + Kern);
+		if(CodePoint == '\n')
+		{
+			Offset.X = LPad;
+			Offset.Y -= YAdvance;
+		}
+		else
+		{
+			PushGlyph(
+				Group,
+				Assets,
+				FontHandle,
+				CodePoint,
+				Center + Offset + (Scale * Vector2(X0, Y0)),
+				XAxis,
+				YAxis,
+				Color
+			);
+			int Advance, Lsb;
+			stbtt_GetCodepointHMetrics(Font, CodePoint, &Advance, &Lsb);
+			int Kern = stbtt_GetCodepointKernAdvance(
+				Font, CodePoint, *(CodePointPtr + 1)
+			);
+			Offset.X += Scale * (Advance + Kern);
+		}
 		
 		CodePointPtr++;
 	}

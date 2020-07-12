@@ -620,15 +620,15 @@ void InitJobQueue(platform_job_queue* JobQueue, uint32_t ThreadCount)
 		0, sizeof(platform_semaphore_handle), MEM_COMMIT, PAGE_READWRITE
 	);
 	JobQueue->FilledSemaphore->Semaphore = CreateSemaphoreEx(
-		0, 0, ThreadCount, 0, 0, SEMAPHORE_ALL_ACCESS
+		0, 0, ARRAY_COUNT(JobQueue->Entries), 0, 0, SEMAPHORE_ALL_ACCESS
 	);
 	JobQueue->EmptySemaphore = (platform_semaphore_handle*) VirtualAlloc(
 		0, sizeof(platform_semaphore_handle), MEM_COMMIT, PAGE_READWRITE
 	);
 	JobQueue->EmptySemaphore->Semaphore = CreateSemaphoreEx(
 		0,
-		ARRAY_COUNT(JobQueue->Entries),
-		ThreadCount,
+		ARRAY_COUNT(JobQueue->Entries), // NOTE: Initial count
+		ARRAY_COUNT(JobQueue->Entries), // NOTE: max count
 		0,
 		0,
 		SEMAPHORE_ALL_ACCESS

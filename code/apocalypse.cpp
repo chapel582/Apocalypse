@@ -635,7 +635,7 @@ void GameUpdateAndRender(
 	// );
 	{
 		uint32_t TempBuffer[256];
-		char* TestString = "Helyo World.";
+		char* TestString = "Helyo World. Test test";
 		char* Char = TestString;
 		int WriteIndex = 0;
 		while(*Char != 0)

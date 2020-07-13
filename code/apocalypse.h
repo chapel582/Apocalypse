@@ -177,6 +177,7 @@ struct game_state
 	particle_system TestParticleSystem;
 
 	// SECTION START: Card Game Code
+	float TurnTimer;
 	card* Cards;
 	int MaxCards;
 	deck* Decks;

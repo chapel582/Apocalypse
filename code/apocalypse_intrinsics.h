@@ -35,7 +35,22 @@ int32_t RoundFloat32ToInt32(float Input)
 
 float Floor(float Value)
 {
-	return ((float) ((int32_t) (Value)));
+	return ((float) ((int32_t) Value));
+}
+
+int32_t Int32Floor(float Value)
+{
+	return ((int32_t) Value);
+}
+
+float Ceil(float Value)
+{
+	return Floor(Value) + 1.0f;
+}
+
+int32_t Int32Ceil(float Value)
+{
+	return Int32Floor(Value) + 1;
 }
 
 #define APOCALYPSE_INTRINSICS_H

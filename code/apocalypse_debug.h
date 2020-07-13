@@ -1,4 +1,4 @@
-#ifndef APOCALYPSE_DEBUG_MODULE
+#ifndef APOCALYPSE_DEBUG_H
 
 #include "apocalypse_platform.h"
 
@@ -27,5 +27,5 @@ struct timed_block
 
 #endif // NOTE: APOCALYPSE_INTERNAL
 
-#define APOCALYPSE_DEBUG_MODULE
+#define APOCALYPSE_DEBUG_H
 #endif

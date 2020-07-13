@@ -2,6 +2,7 @@
 #include "apocalypse_platform.h"
 #include "apocalypse_intrinsics.h"
 #include "apocalypse_debug.h"
+#include "apocalypse_string.h"
 
 #include "apocalypse_render_group.h"
 #include "apocalypse_render_group.cpp"
@@ -428,6 +429,8 @@ void GameUpdateAndRender(
 		DrawFullHand(GameState, Player_One, CardWidth, CardHeight);
 		DrawFullHand(GameState, Player_Two, CardWidth, CardHeight);
 
+		GameState->TurnTimer = 20.0f;
+
 		Memory->IsInitialized = true;
 
 		// TODO: remove me!
@@ -561,15 +564,36 @@ void GameUpdateAndRender(
 	// 	ScaleValue * Vector2(0.0f, 1.0f)
 	// );
 	PushClear(&GameState->RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
-	PushSizedBitmap(
-		&GameState->RenderGroup,
-		&GameState->Assets,
-		BitmapHandle_TestBackground,
-		Vector2((BackBuffer->Width / 2.0f), (BackBuffer->Height / 2.0f)),
-		Vector2(BackBuffer->Width, 0),
-		Vector2(0, BackBuffer->Height),
-		Vector4(1.0f, 1.0f, 1.0f, 1.0f)		
-	);
+	{
+		GameState->TurnTimer -= DtForFrame;
+
+		int32_t TurnTimerCeil = Int32Ceil(
+			GameState->TurnTimer
+		);
+		
+		char* TurnTimerString = PushArray(
+			&GameState->FrameArena, 10, char
+		);
+		UInt32ToString(TurnTimerString, 10, TurnTimerCeil);
+		PushText(
+			&GameState->RenderGroup,
+			&GameState->Assets,
+			FontHandle_TestFont,
+			TurnTimerString,
+			10,
+			50.0f,
+			Vector2(
+				BackBuffer->Width - 50.0f, 
+				(BackBuffer->Height / 2.0f)
+			),
+			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+			&GameState->FrameArena
+		);
+		if(GameState->TurnTimer <= 0)
+		{
+			GameState->TurnTimer = 20.0f;	
+		}
+	}
 	{
 		card* Card = &GameState->Cards[0];
 		for(
@@ -599,7 +623,17 @@ void GameUpdateAndRender(
 		}
 	}
 
-#if 1 // NOTE: tests for bitmaps
+#if 0 // NOTE: tests for bitmaps
+	PushSizedBitmap(
+		&GameState->RenderGroup,
+		&GameState->Assets,
+		BitmapHandle_TestBackground,
+		Vector2((BackBuffer->Width / 2.0f), (BackBuffer->Height / 2.0f)),
+		Vector2(BackBuffer->Width, 0),
+		Vector2(0, BackBuffer->Height),
+		Vector4(1.0f, 1.0f, 1.0f, 1.0f)		
+	);
+
 	float RotationalPeriod = 2.0f;
 	float Radians = (2 * PI32 * GameState->Time) / RotationalPeriod;
 	float CosVal = cosf(Radians);

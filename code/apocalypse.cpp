@@ -1,6 +1,7 @@
 #include "apocalypse.h"
 #include "apocalypse_platform.h"
 #include "apocalypse_intrinsics.h"
+#include "apocalypse_debug.h"
 
 #include "apocalypse_render_group.h"
 #include "apocalypse_render_group.cpp"
@@ -186,7 +187,7 @@ void GameUpdateAndRender(
 	DebugGlobalMemory = Memory;
 #endif 
 
-	BEGIN_TIMED_BLOCK(GameUpdateAndRender);
+	TIMED_BLOCK(GameUpdateAndRender);
 
 	ASSERT(sizeof(game_state) <= Memory->PermanentStorageSize);
 	game_state* GameState = (game_state*) Memory->PermanentStorage;
@@ -686,8 +687,6 @@ void GameUpdateAndRender(
 	RenderGroupToOutput(&GameState->RenderGroup, &DrawBuffer);
 	// SECTION STOP: Render
 	ResetMemArena(&GameState->FrameArena);
-
-	END_TIMED_BLOCK(GameUpdateAndRender);
 }
 
 void GameFillSound(game_memory* Memory, game_sound_output_buffer* SoundBuffer)

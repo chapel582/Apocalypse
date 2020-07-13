@@ -76,13 +76,17 @@ struct debug_cycle_counter
 extern struct game_memory* DebugGlobalMemory;
 
 #if _MSC_VER
-#define BEGIN_TIMED_BLOCK(ID) uint64_t StartCycleCount##ID = __rdtsc(); 
-#define END_TIMED_BLOCK(ID) DebugGlobalMemory->Counters[DebugCycleCounter_##ID].CycleCount += __rdtsc() - StartCycleCount##ID; DebugGlobalMemory->Counters[DebugCycleCounter_##ID].HitCount++;
-#define END_TIMED_BLOCK_COUNTED(ID, Count) DebugGlobalMemory->Counters[DebugCycleCounter_##ID].CycleCount += __rdtsc() - StartCycleCount##ID; DebugGlobalMemory->Counters[DebugCycleCounter_##ID].HitCount += (Count);
+#define PLATFORM_CYCLE_COUNT() (__rdtsc())
+#define END_TIMED_BLOCK_(Id, StartCycleCount) DebugGlobalMemory->Counters[Id].CycleCount += __rdtsc() - StartCycleCount; DebugGlobalMemory->Counters[Id].HitCount++;
+#define BEGIN_TIMED_BLOCK(Id) uint64_t StartCycleCount##Id = __rdtsc(); 
+#define END_TIMED_BLOCK(Id) END_TIMED_BLOCK_(DebugCycleCounter_##Id, StartCycleCount##Id)
+#define END_TIMED_BLOCK_COUNTED(Id, Count) DebugGlobalMemory->Counters[DebugCycleCounter_##Id].CycleCount += __rdtsc() - StartCycleCount##Id; DebugGlobalMemory->Counters[DebugCycleCounter_##Id].HitCount += (Count);
 #else
-#define BEGIN_TIMED_BLOCK(ID) 
-#define END_TIMED_BLOCK(ID)
-#define END_TIMED_BLOCK_COUNTED(ID, Count)
+#define BEGIN_TIMED_BLOCK(Id)
+#define END_TIMED_BLOCK_(Id, StartCycleCount)
+#define END_TIMED_BLOCK(Id)
+#define END_TIMED_BLOCK_COUNTED(Id, Count)
+#define PLATFORM_CYCLE_COUNT() 
 #endif
 
 #else // NOTE: !APOCALYPSE_INTERNAL

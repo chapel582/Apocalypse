@@ -608,54 +608,30 @@ void GameUpdateAndRender(
 	vector2 Center = Vector2(
 		(BackBuffer->Width / 2.0f), (BackBuffer->Height / 2.0f)
 	);
-	// vector2 XAxis = Vector2(CosVal, SinVal);
-	// vector2 YAxis = Perpendicular(XAxis);
+	vector2 XAxis = Vector2(CosVal, SinVal);
+	vector2 YAxis = Perpendicular(XAxis);
 
-	// PushCenteredBitmap(
-	// 	&GameState->RenderGroup,
-	// 	&GameState->Assets,
-	// 	BitmapHandle_TestBitmap,
-	// 	Center,
-	// 	XAxis,
-	// 	YAxis,
-	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f)
-	// );
+	PushCenteredBitmap(
+		&GameState->RenderGroup,
+		&GameState->Assets,
+		BitmapHandle_TestBitmap,
+		Center,
+		XAxis,
+		YAxis,
+		Vector4(1.0f, 1.0f, 1.0f, 1.0f)
+	);
 
-	vector2 XAxis = Vector2(1.0f, 0.0f); 
-	vector2 YAxis = Perpendicular(XAxis); 
-
-	// PushGlyph(
-	// 	&GameState->RenderGroup,
-	// 	&GameState->Assets,
-	// 	FontHandle_TestFont,
-	// 	'q',
-	// 	Center,
-	// 	XAxis,
-	// 	YAxis,
-	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f)
-	// );
-	{
-		uint32_t TempBuffer[256];
-		char* TestString = "Helyo World. Test test.\nA new line.\nAnother new line.\nThe final line.";
-		char* Char = TestString;
-		int WriteIndex = 0;
-		while(*Char != 0)
-		{
-			TempBuffer[WriteIndex++] = (uint32_t) *Char;
-			Char++;
-		}
-
-		PushText(
-			&GameState->RenderGroup,
-			&GameState->Assets,
-			FontHandle_TestFont,
-			&TempBuffer[0],
-			WriteIndex,
-			50.0f,
-			Center,
-			Vector4(1.0f, 1.0f, 1.0f, 1.0f)
-		);
-	}
+	PushText(
+		&GameState->RenderGroup,
+		&GameState->Assets,
+		FontHandle_TestFont,
+		"A hello world\nA test is here\nAnother line\nA\nA\nA\nA\nA",
+		256,
+		50.0f,
+		Center + Vector2(0.0f, (BackBuffer->Height / 4.0f)),
+		Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+		&GameState->FrameArena
+	);
 
 	basis RectBasis = MakeBasis(Vector2(0, 0), Vector2(1, 0), Vector2(0, 1));
 	PushRect(

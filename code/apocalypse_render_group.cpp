@@ -287,6 +287,35 @@ inline void PushGlyph(
 	}
 }
 
+inline void PushOffsetGlyph(
+	render_group* Group,
+	assets* Assets,
+	font_handle_e FontHandle,
+	stbtt_fontinfo* Font,
+	uint32_t CodePoint,
+	float Scale,
+	vector2 XAxis,
+	vector2 YAxis,
+	vector2 LeftBaselinePoint,
+	vector2 Offset,
+	vector4 Color
+)
+{
+	// NOTE: function pulled out for use in PushText only
+	int X0, Y0, X1, Y1;
+	stbtt_GetCodepointBox(Font, CodePoint, &X0, &Y0, &X1, &Y1);
+	PushGlyph(
+		Group,
+		Assets,
+		FontHandle,
+		CodePoint,
+		LeftBaselinePoint + Offset + (Scale * Vector2(X0, Y0)),
+		XAxis,
+		YAxis,
+		Color
+	);
+}
+
 inline void PushText(
 	render_group* Group,
 	assets* Assets,
@@ -294,7 +323,7 @@ inline void PushText(
 	uint32_t* CodePoints,
 	uint32_t CodePointCount,
 	float FontHeight, // NOTE: font height in world units
-	vector2 Center,
+	vector2 LeftBaselinePoint,
 	vector4 Color
 )
 {
@@ -334,9 +363,6 @@ inline void PushText(
 		// CONT: advance / kern adjustment
 		// NOTE: Y0 is a signed value indicating the ascent/descent from the 
 		// CONT: baseline
-		int X0, Y0, X1, Y1;
-		stbtt_GetCodepointBox(Font, CodePoint, &X0, &Y0, &X1, &Y1);
-
 		if(CodePoint == '\n')
 		{
 			Offset.X = LPad;
@@ -344,14 +370,17 @@ inline void PushText(
 		}
 		else
 		{
-			PushGlyph(
+			PushOffsetGlyph(
 				Group,
 				Assets,
 				FontHandle,
+				Font,
 				CodePoint,
-				Center + Offset + (Scale * Vector2(X0, Y0)),
+				Scale,
 				XAxis,
 				YAxis,
+				LeftBaselinePoint,
+				Offset,
 				Color
 			);
 			int Advance, Lsb;
@@ -366,14 +395,62 @@ inline void PushText(
 	}
 	// NOTE: push the last glyph
 	uint32_t CodePoint = *CodePointPtr;
-	PushGlyph(
+	PushOffsetGlyph(
 		Group,
 		Assets,
 		FontHandle,
+		Font,
 		CodePoint,
-		Center + Offset,
+		Scale,
 		XAxis,
 		YAxis,
+		LeftBaselinePoint,
+		Offset,
+		Color
+	);
+}
+
+inline void PushText(
+	render_group* Group,
+	assets* Assets,
+	font_handle_e FontHandle,
+	char* CodePoints,
+	uint32_t MaxCodePointCount,
+	float FontHeight, // NOTE: font height in world units
+	vector2 LeftBaselinePoint,
+	vector4 Color,
+	memory_arena* FrameArena // NOTE: this function will leak if you don't
+	// CONT: regularly clear the arena. Hence, FrameArena
+)
+{
+	// NOTE: this function is slower than just keeping your code in 4-byte
+	// CONT: codepoints all the time. If you need speed, store your data as 
+	// CONT: 4-byte codepoints and use the codepoint version of this function
+	uint32_t* TempBuffer = PushArray(
+		FrameArena, MaxCodePointCount + 1, uint32_t
+	);
+	char* Char = CodePoints;
+	uint32_t* WriteIndex = 0;
+	uint32_t Index;
+	for(Index = 0; Index < MaxCodePointCount; Index++)
+	{
+		if(*Char == 0)
+		{
+			break;
+		}
+		TempBuffer[Index] = (uint32_t) *Char;
+		Char++;
+	}
+	TempBuffer[Index] = 0;
+
+	PushText(
+		Group,
+		Assets,
+		FontHandle,
+		TempBuffer,
+		Index,
+		FontHeight,
+		LeftBaselinePoint,
 		Color
 	);
 }

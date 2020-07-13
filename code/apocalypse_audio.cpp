@@ -39,7 +39,7 @@ void MixSounds(
 	playing_sound_list* PlayingSoundList
 )
 {
-	BEGIN_TIMED_BLOCK(MixAudio);
+	TIMED_BLOCK(MixAudio);
 
 	// TODO: fix clicking at end of audio
 
@@ -54,8 +54,8 @@ void MixSounds(
 	__m128* Channel1 = PushArray(FrameArena, SampleCountOverFour, __m128, 16);
 
 	// NOTE: clear mixer channels
-	BEGIN_TIMED_BLOCK(MixAudio_Init);
 	{
+		TIMED_BLOCK(MixAudio_Init);
 		// TODO: handle intrinsics on different platforms
 		// TODO: maybe pull this out to intrinsics for fast zero setting?
 		__m128 FourByZero = _mm_set1_ps(0.0f);
@@ -71,7 +71,6 @@ void MixSounds(
 			*Dest1++ = FourByZero;
 		}
 	}
-	END_TIMED_BLOCK(MixAudio_Init);
 	
 	playing_sound* PrevPlayingSound = NULL;
 	for(
@@ -182,8 +181,9 @@ void MixSounds(
 		PlayingSound = NextPlayingSound;
 	}
 
-	BEGIN_TIMED_BLOCK(SetAudioSample);
+	
 	{ 
+		TIMED_BLOCK(SetAudioSample);
 		//NOTE: 16-bit conversion
 		__m128* Source0 = Channel0;
 		__m128* Source1 = Channel1;
@@ -212,7 +212,4 @@ void MixSounds(
 			*SampleOut++ = S01;
 		}
 	}
-	END_TIMED_BLOCK_COUNTED(SetAudioSample, SoundBuffer->SampleCount);
-
-	END_TIMED_BLOCK(MixAudio);
 }

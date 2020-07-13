@@ -787,7 +787,7 @@ void DrawBitmapQuickly(
 	vector4 Color
 )
 {
-	BEGIN_TIMED_BLOCK(DrawBitmapQuickly);
+	TIMED_BLOCK(DrawBitmapQuickly);
 
 	__m128 WideOne = _mm_set1_ps(1.0f);
 	__m128 WideZero = _mm_set1_ps(0.0f);
@@ -1009,7 +1009,6 @@ void DrawBitmapQuickly(
 	}
 
 	END_TIMED_BLOCK_COUNTED(ProcessPixel, (MaxX - MinX) * (MaxY - MinY));
-	END_TIMED_BLOCK(DrawBitmapQuickly);
 }
 
 void Clear(loaded_bitmap* Buffer, vector4 Color)
@@ -1028,7 +1027,7 @@ void RenderGroupToOutput(
 	render_group* RenderGroup, loaded_bitmap* Target
 )
 {
-	BEGIN_TIMED_BLOCK(RenderGroupToOutput);
+	TIMED_BLOCK(RenderGroupToOutput);
 	for(
 		uint8_t* CurrentAddress = RenderGroup->Arena->Base;
 		CurrentAddress <= (RenderGroup->LastEntry);
@@ -1087,5 +1086,4 @@ void RenderGroupToOutput(
 		}
 	}
 	ResetMemArena(RenderGroup->Arena);
-	END_TIMED_BLOCK(RenderGroupToOutput);
 }

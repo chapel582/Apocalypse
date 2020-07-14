@@ -377,9 +377,14 @@ void GameUpdateAndRender(
 			// SECTION STOP: Shuffle deck
 		}
 
-		GameState->Hands = PushArray(&GameState->Arena, Player_Count, card_set);
+		GameState->PlayerResources = PushArray(
+			&GameState->TransientArena, Player_Count, player_resources
+		);
+		GameState->Hands = PushArray(
+			&GameState->TransientArena, Player_Count, card_set
+		);
 		GameState->Tableaus = PushArray(
-			&GameState->Arena, Player_Count, card_set
+			&GameState->TransientArena, Player_Count, card_set
 		);
 
 		float CardWidth = 60.0f;
@@ -422,6 +427,19 @@ void GameUpdateAndRender(
 		DrawFullHand(GameState, Player_Two, CardWidth, CardHeight);
 
 		GameState->TurnTimer = 20.0f;
+
+		for(int PlayerIndex = 0; PlayerIndex < Player_Count; PlayerIndex++)
+		{
+			player_resources* PlayerResources = (
+				&GameState->PlayerResources[PlayerIndex]
+			);
+			// TODO: initialize to 0?
+			PlayerResources->Red = 1;
+			PlayerResources->Green = 0; 
+			PlayerResources->Blue = 0; 
+			PlayerResources->White = 0; 
+			PlayerResources->Black = 0;  
+		}
 
 		Memory->IsInitialized = true;
 
@@ -556,6 +574,7 @@ void GameUpdateAndRender(
 	// 	ScaleValue * Vector2(0.0f, 1.0f)
 	// );
 	PushClear(&GameState->RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
+	// SECTION START: Turn timer update
 	{
 		GameState->TurnTimer -= DtForFrame;
 
@@ -586,6 +605,72 @@ void GameUpdateAndRender(
 			GameState->TurnTimer = 20.0f;	
 		}
 	}
+	// SECTION STOP: Turn timer update
+	// SECTION START: Player resource push
+	{
+		uint32_t MaxResourceStringSize = 40;
+		char* ResourceString = PushArray(
+			&GameState->FrameArena, MaxResourceStringSize, char
+		);
+		float Padding = 15.0f;
+
+		player_resources* PlayerResources = (
+			&GameState->PlayerResources[Player_One]
+		);
+		snprintf(
+			ResourceString,
+			MaxResourceStringSize,
+			"R:%d\nG:%d\nB:%d\nW:%d\nB:%d",
+			PlayerResources->Red,
+			PlayerResources->Green,
+			PlayerResources->Blue,
+			PlayerResources->White,
+			PlayerResources->Black
+		);
+			
+		PushText(
+			&GameState->RenderGroup,
+			&GameState->Assets,
+			FontHandle_TestFont,
+			ResourceString,
+			MaxResourceStringSize,
+			15.0f,
+			Vector2(
+				BackBuffer->Width - 50.0f, 
+				BackBuffer->Height / 2.0f - Padding
+			),
+			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+			&GameState->FrameArena
+		);
+
+		PlayerResources = &GameState->PlayerResources[Player_Two];
+		snprintf(
+			ResourceString,
+			MaxResourceStringSize,
+			"R:%d\nG:%d\nB:%d\nW:%d\nB:%d",
+			PlayerResources->Red,
+			PlayerResources->Green,
+			PlayerResources->Blue,
+			PlayerResources->White,
+			PlayerResources->Black
+		);	
+		PushText(
+			&GameState->RenderGroup,
+			&GameState->Assets,
+			FontHandle_TestFont,
+			ResourceString,
+			MaxResourceStringSize,
+			15.0f,
+			Vector2(
+				BackBuffer->Width - 50.0f, 
+				(BackBuffer->Height / 2.0f) + 80.0f + Padding
+			),
+			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+			&GameState->FrameArena
+		);
+	}
+	// SECTION STOP: Player resource push
+	// SECTION START: Cards update
 	{
 		card* Card = &GameState->Cards[0];
 		for(
@@ -614,6 +699,7 @@ void GameUpdateAndRender(
 			Card++;
 		}
 	}
+	// SECTION STOP: Cards update
 
 #if 0 // NOTE: tests for bitmaps
 	PushSizedBitmap(

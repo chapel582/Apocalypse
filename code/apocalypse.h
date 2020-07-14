@@ -129,6 +129,15 @@ void OutDeckToInDeck(deck* Deck, deck_card* DeckCard)
 	);
 }
 
+struct player_resources
+{
+	int32_t Red;
+	int32_t Green;
+	int32_t Blue;
+	int32_t White;
+	int32_t Black;
+};
+
 struct card
 {
 	rectangle Rectangle;
@@ -178,6 +187,7 @@ struct game_state
 
 	// SECTION START: Card Game Code
 	float TurnTimer;
+	player_resources* PlayerResources;
 	card* Cards;
 	int MaxCards;
 	deck* Decks;

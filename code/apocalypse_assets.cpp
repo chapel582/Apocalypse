@@ -191,7 +191,7 @@ void LoadFontJob(void* VoidArgs)
 	}
 
 	loaded_font* LoadedFont = (loaded_font*) Job->Result;
-	LoadedFont->PixelHeight = 128.0f;
+	LoadedFont->PixelHeight = 256.0f;
 	stbtt_fontinfo* Font = &LoadedFont->StbFont;
 	stbtt_InitFont(
 		Font,

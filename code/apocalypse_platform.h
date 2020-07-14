@@ -54,45 +54,14 @@ bool PlatformWriteEntireFile(
 );
 
 #if APOCALYPSE_INTERNAL
-enum
-{
-	DebugCycleCounter_GameUpdateAndRender,
-	DebugCycleCounter_RenderGroupToOutput,
-	DebugCycleCounter_DrawBitmapQuickly,
-	DebugCycleCounter_ProcessPixel,
-	DebugCycleCounter_MixAudio,
-	DebugCycleCounter_MixAudio_Init,
-	DebugCycleCounter_MixAudioSample,
-	DebugCycleCounter_SetAudioSample,
-	DebugCycleCounter_Count
-};
-
-struct debug_cycle_counter
-{
-	uint64_t CycleCount;
-	uint32_t HitCount;
-};
-
-extern struct game_memory* DebugGlobalMemory;
 
 #if _MSC_VER
 #define PLATFORM_CYCLE_COUNT() (__rdtsc())
-#define END_TIMED_BLOCK_(Id, StartCycleCount) DebugGlobalMemory->Counters[Id].CycleCount += __rdtsc() - StartCycleCount; DebugGlobalMemory->Counters[Id].HitCount++;
-#define BEGIN_TIMED_BLOCK(Id) uint64_t StartCycleCount##Id = __rdtsc(); 
-#define END_TIMED_BLOCK(Id) END_TIMED_BLOCK_(DebugCycleCounter_##Id, StartCycleCount##Id)
-#define END_TIMED_BLOCK_COUNTED(Id, Count) DebugGlobalMemory->Counters[DebugCycleCounter_##Id].CycleCount += __rdtsc() - StartCycleCount##Id; DebugGlobalMemory->Counters[DebugCycleCounter_##Id].HitCount += (Count);
 #else
-#define BEGIN_TIMED_BLOCK(Id)
-#define END_TIMED_BLOCK_(Id, StartCycleCount)
-#define END_TIMED_BLOCK(Id)
-#define END_TIMED_BLOCK_COUNTED(Id, Count)
 #define PLATFORM_CYCLE_COUNT() 
 #endif
 
 #else // NOTE: !APOCALYPSE_INTERNAL
-#define BEGIN_TIMED_BLOCK(ID) 
-#define END_TIMED_BLOCK(ID)
-#define END_TIMED_BLOCK_COUNTED(ID, Count)
 #endif // NOTE: APOCALYPSE_INTERNAL
 
 // SECTION START: Threading Code
@@ -147,10 +116,6 @@ struct game_memory
 	void* TransientStorage;
 
 	platform_job_queue* DefaultJobQueue;
-
-#if APOCALYPSE_INTERNAL
-	debug_cycle_counter Counters[DebugCycleCounter_Count];
-#endif
 };
 
 struct game_offscreen_buffer

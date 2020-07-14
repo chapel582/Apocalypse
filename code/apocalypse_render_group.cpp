@@ -864,7 +864,7 @@ void DrawBitmapQuickly(
 	vector4 Color
 )
 {
-	TIMED_BLOCK(DrawBitmapQuickly);
+	TIMED_BLOCK();
 
 	__m128 WideOne = _mm_set1_ps(1.0f);
 	__m128 WideZero = _mm_set1_ps(0.0f);
@@ -966,126 +966,126 @@ void DrawBitmapQuickly(
 		MinX * BYTES_PER_PIXEL +
 		MinY * Buffer->Pitch 
 	);
-	BEGIN_TIMED_BLOCK(ProcessPixel);
-	for(int Y = MinY; Y < MaxY; Y++)
 	{
-		uint32_t* Pixel = (uint32_t*) Row;
-		for(int X = MinX; X < MaxX; X++)
+		TIMED_BLOCK((MaxX - MinX) * (MaxY - MinY));
+		for(int Y = MinY; Y < MaxY; Y++)
 		{
-			vector2 Point = Vector2(X, Y);
-			vector2 PointOffsetFromOrigin = Point - Origin;
-			// NOTE: U and V are calculated this way because 
-			// CONT: Inner(PointOffsetFromOrigin, XAxis) is the projection of 
-			// CONT: X, Y along the XAxis in pixels, scaled by XAxis mag,
-			// CONT: so we divide by the magnitude twice, which is MagSquared
-			float U = Inner(PointOffsetFromOrigin, XAxisOverLengthSquared);
-			float V = Inner(PointOffsetFromOrigin, YAxisOverLengthSquared);
-			if(
-				(U >= 0.0f) && 
-				(U <= 1.0f) &&
-				(V >= 0.0f) &&
-				(V <= 1.0f)
-			)
+			uint32_t* Pixel = (uint32_t*) Row;
+			for(int X = MinX; X < MaxX; X++)
 			{
-				// TODO: formalize texture boundaries
-				// NOTE: U and V are then used to find the sample within the 
-				// CONT: texture 
-				float tX = U * ((float)(Texture->Width - 2));
-				float tY = V * ((float)(Texture->Height - 2));
-				
-				int32_t iX = (int32_t) tX;
-				int32_t iY = (int32_t) tY;
+				vector2 Point = Vector2(X, Y);
+				vector2 PointOffsetFromOrigin = Point - Origin;
+				// NOTE: U and V are calculated this way because 
+				// CONT: Inner(PointOffsetFromOrigin, XAxis) is the projection of 
+				// CONT: X, Y along the XAxis in pixels, scaled by XAxis mag,
+				// CONT: so we divide by the magnitude twice, which is MagSquared
+				float U = Inner(PointOffsetFromOrigin, XAxisOverLengthSquared);
+				float V = Inner(PointOffsetFromOrigin, YAxisOverLengthSquared);
+				if(
+					(U >= 0.0f) && 
+					(U <= 1.0f) &&
+					(V >= 0.0f) &&
+					(V <= 1.0f)
+				)
+				{
+					// TODO: formalize texture boundaries
+					// NOTE: U and V are then used to find the sample within the 
+					// CONT: texture 
+					float tX = U * ((float)(Texture->Width - 2));
+					float tY = V * ((float)(Texture->Height - 2));
+					
+					int32_t iX = (int32_t) tX;
+					int32_t iY = (int32_t) tY;
 
-				float fX = tX - ((float) iX);
-				float fY = tY - ((float) iY);
-				__m128 WideFX = _mm_set1_ps(fX);
-				__m128 OneMinusFX = _mm_sub_ps(WideOne, WideFX);
-				__m128 WideFY = _mm_set1_ps(fY);
-				__m128 OneMinusFY = _mm_sub_ps(WideOne, WideFY);
+					float fX = tX - ((float) iX);
+					float fY = tY - ((float) iY);
+					__m128 WideFX = _mm_set1_ps(fX);
+					__m128 OneMinusFX = _mm_sub_ps(WideOne, WideFX);
+					__m128 WideFY = _mm_set1_ps(fY);
+					__m128 OneMinusFY = _mm_sub_ps(WideOne, WideFY);
 
-				// NOTE: lerp based on texels below above and to the right
-				// bilinear_sample Sample = BilinearSample(Texture, iX, iY);
-				uint8_t* TexelPtr = (
-					((uint8_t*)Texture->Memory) + 
-					iY * Texture->Pitch + 
-					iX * sizeof(uint32_t)
-				);
-				uint32_t SampleA = *(uint32_t*) (TexelPtr);
-				uint32_t SampleB = *(uint32_t*) (TexelPtr + sizeof(uint32_t));
-				uint32_t SampleC = *(uint32_t*) (TexelPtr + Texture->Pitch);
-				uint32_t SampleD = *(uint32_t*) (
-					TexelPtr + Texture->Pitch + sizeof(uint32_t)
-				);
+					// NOTE: lerp based on texels below above and to the right
+					// bilinear_sample Sample = BilinearSample(Texture, iX, iY);
+					uint8_t* TexelPtr = (
+						((uint8_t*)Texture->Memory) + 
+						iY * Texture->Pitch + 
+						iX * sizeof(uint32_t)
+					);
+					uint32_t SampleA = *(uint32_t*) (TexelPtr);
+					uint32_t SampleB = *(uint32_t*) (TexelPtr + sizeof(uint32_t));
+					uint32_t SampleC = *(uint32_t*) (TexelPtr + Texture->Pitch);
+					uint32_t SampleD = *(uint32_t*) (
+						TexelPtr + Texture->Pitch + sizeof(uint32_t)
+					);
 
-				// TODO: Color.a!!
-				__m128 TexelA = VectorizedUnpack4x8(SampleA);
-				__m128 TexelB = VectorizedUnpack4x8(SampleB);
-				__m128 TexelC = VectorizedUnpack4x8(SampleC);
-				__m128 TexelD = VectorizedUnpack4x8(SampleD);
+					// TODO: Color.a!!
+					__m128 TexelA = VectorizedUnpack4x8(SampleA);
+					__m128 TexelB = VectorizedUnpack4x8(SampleB);
+					__m128 TexelC = VectorizedUnpack4x8(SampleC);
+					__m128 TexelD = VectorizedUnpack4x8(SampleD);
 
-				// NOTE: normalized texel colors
-				TexelA = _mm_mul_ps(TexelA, WideInv255);
-				TexelB = _mm_mul_ps(TexelB, WideInv255);
-				TexelC = _mm_mul_ps(TexelC, WideInv255);
-				TexelD = _mm_mul_ps(TexelD, WideInv255);
+					// NOTE: normalized texel colors
+					TexelA = _mm_mul_ps(TexelA, WideInv255);
+					TexelB = _mm_mul_ps(TexelB, WideInv255);
+					TexelC = _mm_mul_ps(TexelC, WideInv255);
+					TexelD = _mm_mul_ps(TexelD, WideInv255);
 
-				// NOTE: Lerp to bilinear blend texel
-				__m128 Texel = _mm_add_ps(
-					_mm_mul_ps(
-						OneMinusFY,
-						_mm_add_ps(
-							_mm_mul_ps(OneMinusFX, TexelA),
-							_mm_mul_ps(WideFX, TexelB) 
+					// NOTE: Lerp to bilinear blend texel
+					__m128 Texel = _mm_add_ps(
+						_mm_mul_ps(
+							OneMinusFY,
+							_mm_add_ps(
+								_mm_mul_ps(OneMinusFX, TexelA),
+								_mm_mul_ps(WideFX, TexelB) 
+							)
+						),
+						_mm_mul_ps(
+							WideFY,
+							_mm_add_ps(
+								_mm_mul_ps(OneMinusFX, TexelC),
+								_mm_mul_ps(WideFX, TexelD)
+							)
 						)
-					),
-					_mm_mul_ps(
-						WideFY,
-						_mm_add_ps(
-							_mm_mul_ps(OneMinusFX, TexelC),
-							_mm_mul_ps(WideFX, TexelD)
-						)
-					)
-				);
+					);
 
-				// NOTE: mask with color
-				Texel = _mm_mul_ps(Texel, WideColor);
+					// NOTE: mask with color
+					Texel = _mm_mul_ps(Texel, WideColor);
 
-				// NOTE: Clamping
-				// NOTE: the point of the clamping is to normalize the color 
-				// CONT: before converting to 255 color
-				Texel = _mm_min_ps(_mm_max_ps(Texel, WideZero), WideOne);
+					// NOTE: Clamping
+					// NOTE: the point of the clamping is to normalize the color 
+					// CONT: before converting to 255 color
+					Texel = _mm_min_ps(_mm_max_ps(Texel, WideZero), WideOne);
 
-				// NOTE: blend with source
-				__m128 NormalizedAlpha = _mm_set1_ps(
-					GET_FLOAT_FROM_MM128(&Texel, 3)
-				);
-				__m128 OneMinusNormalizedAlpha = _mm_sub_ps(
-					WideOne, NormalizedAlpha
-				);
-				__m128 SourceColor = VectorizedUnpack4x8(*Pixel);
-				SourceColor = _mm_mul_ps(SourceColor, WideInv255);
-				__m128 NormalFinalColor = _mm_add_ps(
-					_mm_mul_ps(OneMinusNormalizedAlpha, SourceColor),
-					_mm_mul_ps(NormalizedAlpha, Texel)
-				);
-				__m128 FinalColor255 = _mm_mul_ps(NormalFinalColor, Wide255);
+					// NOTE: blend with source
+					__m128 NormalizedAlpha = _mm_set1_ps(
+						GET_FLOAT_FROM_MM128(&Texel, 3)
+					);
+					__m128 OneMinusNormalizedAlpha = _mm_sub_ps(
+						WideOne, NormalizedAlpha
+					);
+					__m128 SourceColor = VectorizedUnpack4x8(*Pixel);
+					SourceColor = _mm_mul_ps(SourceColor, WideInv255);
+					__m128 NormalFinalColor = _mm_add_ps(
+						_mm_mul_ps(OneMinusNormalizedAlpha, SourceColor),
+						_mm_mul_ps(NormalizedAlpha, Texel)
+					);
+					__m128 FinalColor255 = _mm_mul_ps(NormalFinalColor, Wide255);
 
-				float R = GET_FLOAT_FROM_MM128(&FinalColor255, 0);
-				float G = GET_FLOAT_FROM_MM128(&FinalColor255, 1);
-				float B = GET_FLOAT_FROM_MM128(&FinalColor255, 2);
-				*Pixel = (
-					(((uint32_t) 0xFF) << 24) | 
-					(((uint32_t) (R + 0.5f)) << 16) |
-					(((uint32_t) (G + 0.5f)) << 8) |
-					((uint32_t) (B + 0.5f))
-				);
+					float R = GET_FLOAT_FROM_MM128(&FinalColor255, 0);
+					float G = GET_FLOAT_FROM_MM128(&FinalColor255, 1);
+					float B = GET_FLOAT_FROM_MM128(&FinalColor255, 2);
+					*Pixel = (
+						(((uint32_t) 0xFF) << 24) | 
+						(((uint32_t) (R + 0.5f)) << 16) |
+						(((uint32_t) (G + 0.5f)) << 8) |
+						((uint32_t) (B + 0.5f))
+					);
+				}
+				Pixel++;
 			}
-			Pixel++;
+			Row += Buffer->Pitch;
 		}
-		Row += Buffer->Pitch;
-	}
-
-	END_TIMED_BLOCK_COUNTED(ProcessPixel, (MaxX - MinX) * (MaxY - MinY));
+	}	
 }
 
 void Clear(loaded_bitmap* Buffer, vector4 Color)
@@ -1104,7 +1104,7 @@ void RenderGroupToOutput(
 	render_group* RenderGroup, loaded_bitmap* Target
 )
 {
-	TIMED_BLOCK(RenderGroupToOutput);
+	TIMED_BLOCK();
 	for(
 		uint8_t* CurrentAddress = RenderGroup->Arena->Base;
 		CurrentAddress <= (RenderGroup->LastEntry);

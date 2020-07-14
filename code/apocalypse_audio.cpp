@@ -39,7 +39,7 @@ void MixSounds(
 	playing_sound_list* PlayingSoundList
 )
 {
-	TIMED_BLOCK(MixAudio);
+	TIMED_BLOCK();
 
 	// TODO: fix clicking at end of audio
 
@@ -55,7 +55,7 @@ void MixSounds(
 
 	// NOTE: clear mixer channels
 	{
-		TIMED_BLOCK(MixAudio_Init);
+		TIMED_BLOCK();
 		// TODO: handle intrinsics on different platforms
 		// TODO: maybe pull this out to intrinsics for fast zero setting?
 		__m128 FourByZero = _mm_set1_ps(0.0f);
@@ -97,62 +97,61 @@ void MixSounds(
 				SamplesToMix = SoundBuffer->SampleCount;
 			}
 
-			BEGIN_TIMED_BLOCK(MixAudioSample);
-			__m128 Volume0 = _mm_set1_ps(PlayingSound->Volume[0]);
-			__m128 Volume1 = _mm_set1_ps(PlayingSound->Volume[1]);
-			__m128* Dest0 = Channel0;
-			__m128* Dest1 = Channel1;
-
-			uint32_t FinalSampleIndex = (
-				PlayingSound->SamplesPlayed + SamplesToMix
-			);
-			uint32_t SampleIndex;
-			for(
-				SampleIndex = PlayingSound->SamplesPlayed;
-				SampleIndex < FinalSampleIndex;
-				SampleIndex += 4
-			)
 			{
-				// TODO: load stereo sound
-				__m128i WideSample0_16 = _mm_loadu_si128(
-					(__m128i*) &LoadedSound->Samples[0][SampleIndex]
-				);
-				__m128i WideSample0_32 = _mm_cvtepi16_epi32(WideSample0_16);
-				__m128 WideSample0 = _mm_cvtepi32_ps(WideSample0_32);
-				__m128 WideDest0 = *Dest0;
-				__m128 WideDest1 = *Dest1;
+				TIMED_BLOCK(SamplesToMix);
+				__m128 Volume0 = _mm_set1_ps(PlayingSound->Volume[0]);
+				__m128 Volume1 = _mm_set1_ps(PlayingSound->Volume[1]);
+				__m128* Dest0 = Channel0;
+				__m128* Dest1 = Channel1;
 
-				WideDest0 = _mm_add_ps(
-					WideDest0, _mm_mul_ps(Volume0, WideSample0)
+				uint32_t FinalSampleIndex = (
+					PlayingSound->SamplesPlayed + SamplesToMix
 				);
-				WideDest1 = _mm_add_ps(
-					WideDest1, _mm_mul_ps(Volume1, WideSample0)
-				);
-				*Dest0++ = WideDest0;
-				*Dest1++ = WideDest1;
-			}
-			uint32_t Overshoot = SampleIndex - FinalSampleIndex;
-			if(Overshoot)
-			{
-				float* OvershootDest0 = (float*) Dest0;
-				float* OvershootDest1 = (float*) Dest1;
+				uint32_t SampleIndex;
 				for(
-					uint32_t RemainderIndex = 0;
-					RemainderIndex < Overshoot;
-					RemainderIndex++
+					SampleIndex = PlayingSound->SamplesPlayed;
+					SampleIndex < FinalSampleIndex;
+					SampleIndex += 4
 				)
 				{
 					// TODO: load stereo sound
-					float SampleValue = (
-						LoadedSound->Samples[0][SampleIndex - RemainderIndex]
+					__m128i WideSample0_16 = _mm_loadu_si128(
+						(__m128i*) &LoadedSound->Samples[0][SampleIndex]
 					);
-					*OvershootDest0-- = SampleValue;
-					*OvershootDest1-- = SampleValue;
+					__m128i WideSample0_32 = _mm_cvtepi16_epi32(WideSample0_16);
+					__m128 WideSample0 = _mm_cvtepi32_ps(WideSample0_32);
+					__m128 WideDest0 = *Dest0;
+					__m128 WideDest1 = *Dest1;
+
+					WideDest0 = _mm_add_ps(
+						WideDest0, _mm_mul_ps(Volume0, WideSample0)
+					);
+					WideDest1 = _mm_add_ps(
+						WideDest1, _mm_mul_ps(Volume1, WideSample0)
+					);
+					*Dest0++ = WideDest0;
+					*Dest1++ = WideDest1;
+				}
+				uint32_t Overshoot = SampleIndex - FinalSampleIndex;
+				if(Overshoot)
+				{
+					float* OvershootDest0 = (float*) Dest0;
+					float* OvershootDest1 = (float*) Dest1;
+					for(
+						uint32_t RemainderIndex = 0;
+						RemainderIndex < Overshoot;
+						RemainderIndex++
+					)
+					{
+						// TODO: load stereo sound
+						float SampleValue = (
+							LoadedSound->Samples[0][SampleIndex - RemainderIndex]
+						);
+						*OvershootDest0-- = SampleValue;
+						*OvershootDest1-- = SampleValue;
+					}
 				}
 			}
-			END_TIMED_BLOCK_COUNTED(
-				MixAudioSample, (PlayingSound->SamplesPlayed + SamplesToMix)
-			);
 
 			PlayingSound->SamplesPlayed += SamplesToMix;
 			FinishedPlaying = (
@@ -183,7 +182,7 @@ void MixSounds(
 
 	
 	{ 
-		TIMED_BLOCK(SetAudioSample);
+		TIMED_BLOCK();
 		//NOTE: 16-bit conversion
 		__m128* Source0 = Channel0;
 		__m128* Source1 = Channel1;

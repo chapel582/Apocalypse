@@ -56,32 +56,34 @@ inline float Win32GetSecondsElapsed(int64_t Start, int64_t End)
 	return Result;
 }
 
-void HandleDebugCycleCounters(game_memory* Memory)
+// TODO: remove me once debug overlay is available
+void HandleDebugCycleCounters()
 {
 #if APOCALYPSE_INTERNAL
 	OutputDebugStringA("DEBUG CYCLE COUNTS:\n");
 	for(
 		int CounterIndex = 0;
-		CounterIndex < ARRAY_COUNT(Memory->Counters);
+		CounterIndex < ARRAY_COUNT(GlobalDebugRecords);
 		CounterIndex++
 	)
 	{
-		debug_cycle_counter* Counter = Memory->Counters + CounterIndex;
-		if(Counter->HitCount)
+		debug_record* Record = &GlobalDebugRecords[CounterIndex];
+		if(Record->HitCount)
 		{
 			char TextBuffer[256];
 			sprintf_s(
 				&TextBuffer[0],
 				sizeof(TextBuffer),
-				"  %d: %I64ucy %uh %I64ucy/h\n",
-				CounterIndex,
-				Counter->CycleCount,
-				Counter->HitCount,
-				Counter->CycleCount / Counter->HitCount
+				"  %s:%s: %I64ucy %uh %I64ucy/h\n",
+				Record->FileName,
+				Record->FunctionName,
+				Record->CycleCount,
+				Record->HitCount,
+				Record->CycleCount / Record->HitCount
 			);
 			OutputDebugStringA(TextBuffer);
-			Counter->HitCount = 0;
-			Counter->CycleCount = 0;
+			Record->HitCount = 0;
+			Record->CycleCount = 0;
 		}
 	}
 #endif
@@ -1288,7 +1290,7 @@ int CALLBACK WinMain(
 				}
 				// SECTION STOP: Fixing frame rate to constant
 
-				HandleDebugCycleCounters(&GameMemory);
+				HandleDebugCycleCounters();
 
 				uint64_t FrameEndCycle = __rdtsc();
 				int64_t FrameEndCounter = Win32GetWallClock();

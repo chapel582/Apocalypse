@@ -172,10 +172,6 @@ void DrawFullHand(
 	AlignCardSet(&GameState->Hands[Player]);
 }
 
-#if APOCALYPSE_INTERNAL
-game_memory* DebugGlobalMemory;
-#endif 
-
 void GameUpdateAndRender(
 	game_memory* Memory,
 	game_offscreen_buffer* BackBuffer,
@@ -184,11 +180,7 @@ void GameUpdateAndRender(
 	float DtForFrame
 )
 {
-#if APOCALYPSE_INTERNAL
-	DebugGlobalMemory = Memory;
-#endif 
-
-	TIMED_BLOCK(GameUpdateAndRender);
+	TIMED_BLOCK();
 
 	ASSERT(sizeof(game_state) <= Memory->PermanentStorageSize);
 	game_state* GameState = (game_state*) Memory->PermanentStorage;

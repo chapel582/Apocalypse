@@ -774,6 +774,7 @@ void GameUpdateAndRender(
 
 	RenderGroupToOutput(&GameState->RenderGroup, &DrawBuffer);
 	// SECTION STOP: Render
+
 	ResetMemArena(&GameState->FrameArena);
 }
 
@@ -788,4 +789,79 @@ void GameFillSound(game_memory* Memory, game_sound_output_buffer* SoundBuffer)
 		&GameState->Assets,
 		&GameState->PlayingSoundList
 	);
+}
+
+void HandleGameDebug(game_memory* Memory, game_offscreen_buffer* BackBuffer)
+{
+	ASSERT(sizeof(game_state) <= Memory->PermanentStorageSize);
+	game_state* GameState = (game_state*) Memory->PermanentStorage;
+	// if(GameState->OverlayDebugInfo)
+	{
+		loaded_bitmap DrawBuffer = {};
+		DrawBuffer.Width = BackBuffer->Width;
+		DrawBuffer.Height = BackBuffer->Height;
+		DrawBuffer.Pitch = BackBuffer->Pitch;
+		DrawBuffer.Memory = BackBuffer->Memory;
+
+		uint32_t MaxDebugInfoStringSize = 1024; 
+		char* DebugInfoString = PushArray(
+			&GameState->FrameArena, MaxDebugInfoStringSize, char
+		);
+		char* CopyTo = DebugInfoString;
+		uint32_t CharactersRemaining = MaxDebugInfoStringSize;
+		for(
+			uint32_t DebugRecordIndex = 0; 
+			DebugRecordIndex < MAX_DEBUG_RECORDS;
+			DebugRecordIndex++
+		)
+		{
+			debug_record* DebugRecord = &GlobalDebugRecords[DebugRecordIndex];
+			if(DebugRecord->HitCount)
+			{
+				// TODO: replace with os non-specific path delimiters
+				char* LastDelimiter = FindLast(
+					DebugRecord->FileName, 256, '\\'
+				);
+				if(LastDelimiter == NULL)
+				{
+					continue;
+				}
+
+				char* FileName = LastDelimiter + 1;
+				int WrittenBytes = snprintf(
+					CopyTo,
+					CharactersRemaining,
+					"%s:%s:%d %I64ucy %uh %I64ucy/h\n",
+					FileName,
+					DebugRecord->FunctionName,
+					DebugRecord->LineNumber,
+					DebugRecord->CycleCount,
+					DebugRecord->HitCount,
+					DebugRecord->CycleCount / DebugRecord->HitCount
+				);
+				CopyTo += WrittenBytes;
+				CharactersRemaining -= WrittenBytes;
+				DebugRecord->CycleCount = 0;
+				DebugRecord->HitCount = 0;
+			}
+		}
+
+		PushText(
+			&GameState->RenderGroup,
+			&GameState->Assets,
+			FontHandle_TestFont,
+			DebugInfoString,
+			MaxDebugInfoStringSize,
+			20.0f,
+			Vector2(
+				0.0f, 
+				BackBuffer->Height - 30.0f
+			),
+			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+			&GameState->FrameArena
+		);
+
+		RenderGroupToOutput(&GameState->RenderGroup, &DrawBuffer);	
+		ResetMemArena(&GameState->FrameArena);
+	}
 }

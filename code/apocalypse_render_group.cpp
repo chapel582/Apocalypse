@@ -272,7 +272,9 @@ inline void PushGlyph(
 	vector4 Color
 )
 {
-	if(CodePoint == ' ')
+	// TODO: consider if there's a better way to handle avoiding white space 
+	// CONT: than spending two comparisons for every push
+	if(CodePoint == ' ' || CodePoint == '\n')
 	{
 		return;
 	}

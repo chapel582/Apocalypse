@@ -183,6 +183,9 @@ struct game_state
 
 	float Time;
 
+	bool OverlayDebugInfo;
+
+	// TODO: remove test particle system
 	particle_system TestParticleSystem;
 
 	// SECTION START: Card Game Code

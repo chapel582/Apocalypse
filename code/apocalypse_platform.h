@@ -195,6 +195,7 @@ void GameUpdateAndRender(
 );
 
 void GameFillSound(game_memory* Memory, game_sound_output_buffer* SoundBuffer);
+void HandleGameDebug(game_memory* Memory, game_offscreen_buffer* BackBuffer);
 
 #define APOCALYPSE_PLATFORM_H
 #endif

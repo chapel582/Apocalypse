@@ -55,39 +55,6 @@ inline float Win32GetSecondsElapsed(int64_t Start, int64_t End)
 	);
 	return Result;
 }
-
-// TODO: remove me once debug overlay is available
-void HandleDebugCycleCounters()
-{
-#if APOCALYPSE_INTERNAL
-	OutputDebugStringA("DEBUG CYCLE COUNTS:\n");
-	for(
-		int CounterIndex = 0;
-		CounterIndex < ARRAY_COUNT(GlobalDebugRecords);
-		CounterIndex++
-	)
-	{
-		debug_record* Record = &GlobalDebugRecords[CounterIndex];
-		if(Record->HitCount)
-		{
-			char TextBuffer[256];
-			sprintf_s(
-				&TextBuffer[0],
-				sizeof(TextBuffer),
-				"  %s:%s: %I64ucy %uh %I64ucy/h\n",
-				Record->FileName,
-				Record->FunctionName,
-				Record->CycleCount,
-				Record->HitCount,
-				Record->CycleCount / Record->HitCount
-			);
-			OutputDebugStringA(TextBuffer);
-			Record->HitCount = 0;
-			Record->CycleCount = 0;
-		}
-	}
-#endif
-}
 // STOP SECTION: Performance counters
 
 platform_read_file_result PlatformGetFileSize(
@@ -1290,7 +1257,7 @@ int CALLBACK WinMain(
 				}
 				// SECTION STOP: Fixing frame rate to constant
 
-				HandleDebugCycleCounters();
+				HandleGameDebug(&GameMemory, &BackBuffer);
 
 				uint64_t FrameEndCycle = __rdtsc();
 				int64_t FrameEndCounter = Win32GetWallClock();

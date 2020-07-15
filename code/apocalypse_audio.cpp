@@ -5,7 +5,7 @@
 
 void PlaySound(
 	playing_sound_list* PlayingSoundList,
-	wav_handle_e WavHandle,
+	wav_handle WavHandle,
 	memory_arena* Arena
 )
 {

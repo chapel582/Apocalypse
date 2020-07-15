@@ -158,7 +158,7 @@ inline void PushCenteredBitmap(
 inline void PushCenteredBitmap(
 	render_group* Group,
 	assets* Assets,
-	bitmap_handle_e BitmapHandle,
+	bitmap_handle BitmapHandle,
 	vector2 Center,
 	vector2 XAxis,
 	vector2 YAxis,
@@ -224,7 +224,7 @@ inline void PushSizedBitmap(
 inline void PushSizedBitmap(
 	render_group* Group,
 	assets* Assets,
-	bitmap_handle_e BitmapHandle,
+	bitmap_handle BitmapHandle,
 	vector2 Center,
 	vector2 SizedXAxis,
 	vector2 SizedYAxis,
@@ -264,7 +264,7 @@ void PushParticles(
 inline void PushGlyph(
 	render_group* Group,
 	assets* Assets,
-	font_handle_e FontHandle,
+	font_handle FontHandle,
 	uint32_t CodePoint,
 	vector2 Center,
 	vector2 XAxis,
@@ -292,7 +292,7 @@ inline void PushGlyph(
 inline void PushOffsetGlyph(
 	render_group* Group,
 	assets* Assets,
-	font_handle_e FontHandle,
+	font_handle FontHandle,
 	stbtt_fontinfo* Font,
 	uint32_t CodePoint,
 	float Scale,
@@ -321,7 +321,7 @@ inline void PushOffsetGlyph(
 inline void PushText(
 	render_group* Group,
 	assets* Assets,
-	font_handle_e FontHandle,
+	font_handle FontHandle,
 	uint32_t* CodePoints,
 	uint32_t CodePointCount,
 	float FontHeight, // NOTE: font height in world units
@@ -415,7 +415,7 @@ inline void PushText(
 inline void PushText(
 	render_group* Group,
 	assets* Assets,
-	font_handle_e FontHandle,
+	font_handle FontHandle,
 	char* CodePoints,
 	uint32_t MaxCodePointCount,
 	float FontHeight, // NOTE: font height in world units

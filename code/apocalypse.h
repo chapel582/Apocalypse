@@ -17,14 +17,14 @@ typedef enum
 	Player_One,
 	Player_Two,
 	Player_Count
-} player_e;
+} player_id;
 
 typedef enum
 {
 	CardSet_Hand,
 	CardSet_Tableau,
 	CardSet_Count
-} card_set_e;
+} card_set_handle;
 
 struct deck_card;
 struct deck_card
@@ -147,7 +147,7 @@ struct card
 	int GreenCost;
 	int BlueCost;
 	bool Active;
-	player_e Owner;
+	player_id Owner;
 };
 
 struct card_set

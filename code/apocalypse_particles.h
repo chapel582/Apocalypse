@@ -21,7 +21,7 @@ struct particle
 
 struct particle_system
 {
-	bitmap_handle_e ParticleBitmap;
+	bitmap_handle ParticleBitmap;
 
 	uint32_t IntSpawnsPerFrame;
 	float FracSpawnsPerFrame;

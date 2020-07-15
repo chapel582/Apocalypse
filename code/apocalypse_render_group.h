@@ -61,11 +61,11 @@ typedef enum
 	EntryType_Bitmap,
 	EntryType_Rectangle,
 	EntryType_CoordinateSystem
-} entry_type_e;
+} entry_type;
 
 struct render_entry_header
 {	
-	entry_type_e Type;
+	entry_type Type;
 };
 
 struct render_entry_clear

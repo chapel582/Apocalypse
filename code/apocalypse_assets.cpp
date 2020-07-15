@@ -43,7 +43,7 @@ void LoadBmpJob(void* Data)
 	LoadJobCommonEnd(Job);
 }
 
-loaded_bitmap* GetBitmap(assets* Assets, bitmap_handle_e BitmapHandle)
+loaded_bitmap* GetBitmap(assets* Assets, bitmap_handle BitmapHandle)
 {
 	asset_info* Info = &(Assets->BitmapInfo[BitmapHandle]);
 	if(Info->State == AssetState_Loaded)
@@ -112,7 +112,7 @@ void LoadWavJob(void* Data)
 	LoadJobCommonEnd(Job);
 }
 
-loaded_wav* GetWav(assets* Assets, wav_handle_e WavHandle)
+loaded_wav* GetWav(assets* Assets, wav_handle WavHandle)
 {
 	asset_info* Info = &(Assets->WavInfo[WavHandle]);
 
@@ -209,7 +209,7 @@ end:
 	return;
 }
 
-loaded_font* GetFont(assets* Assets, font_handle_e FontHandle)
+loaded_font* GetFont(assets* Assets, font_handle FontHandle)
 {
 	loaded_font* Result = NULL;
 	asset_info* Info = &(Assets->FontInfo[FontHandle]);
@@ -309,7 +309,7 @@ void LoadGlyphJob(void* Data)
 }
 
 loaded_glyph* GetGlyph(
-	assets* Assets, font_handle_e FontHandle, uint32_t CodePoint
+	assets* Assets, font_handle FontHandle, uint32_t CodePoint
 )
 {
 	loaded_font* LoadedFont = GetFont(Assets, FontHandle);

@@ -11,18 +11,18 @@ typedef enum
 {
 	AssetType_Bitmap,
 	AssetType_Wav
-} asset_type_e;
+} asset_type;
 
 typedef enum
 {
 	AssetState_Unloaded,
 	AssetState_Loading,
 	AssetState_Loaded
-} asset_state_e;
+} asset_state;
 
 struct asset_info
 {
-	asset_state_e State;
+	asset_state State;
 };
 
 typedef enum 
@@ -31,7 +31,7 @@ typedef enum
 	BitmapHandle_TestCard,
 	BitmapHandle_TestBackground,
 	BitmapHandle_Count
-} bitmap_handle_e;
+} bitmap_handle;
 
 typedef enum
 {
@@ -39,13 +39,13 @@ typedef enum
 	WavHandle_Crack00,
 	WavHandle_TestMusic,
 	WavHandle_Count
-} wav_handle_e;
+} wav_handle;
 
 typedef enum
 {
 	FontHandle_TestFont,
 	FontHandle_Count
-} font_handle_e;
+} font_handle;
 
 struct assets;
 struct load_asset_job;
@@ -64,7 +64,7 @@ struct load_asset_job
 	// NOTE: if other args start getting too big, we can have each asset type have
 	// CONT: its own job structure and list
 	// NOTE: for glyph loading
-	font_handle_e FontHandle;
+	font_handle FontHandle;
 	uint32_t CodePoint;
 };
 
@@ -119,11 +119,11 @@ inline void InitAssetJobCommon(
 	Job->AvailableHead = &Assets->AvailableHead;
 }
 
-loaded_bitmap* GetBitmap(assets* Assets, bitmap_handle_e BitmapHandle);
+loaded_bitmap* GetBitmap(assets* Assets, bitmap_handle BitmapHandle);
 loaded_glyph* GetGlyph(
-	assets* Assets, font_handle_e FontHandle, uint32_t CodePoint
+	assets* Assets, font_handle FontHandle, uint32_t CodePoint
 );
-loaded_font* GetFont(assets* Assets, font_handle_e FontHandle);
+loaded_font* GetFont(assets* Assets, font_handle FontHandle);
 
 #define APOCALYPSE_ASSETS_H
 #endif 

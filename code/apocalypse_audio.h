@@ -4,7 +4,7 @@ struct playing_sound
 {
 	uint32_t SamplesPlayed;
 	float Volume[2];
-	wav_handle_e WavHandle;
+	wav_handle WavHandle;
 	playing_sound* Next;
 };
 

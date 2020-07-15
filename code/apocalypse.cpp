@@ -112,7 +112,7 @@ void RemoveCardAndAlign(card_set* CardSet, card* Card)
 }
 
 void DrawFullHand(
-	game_state* GameState, player_e Player, float CardWidth, float CardHeight
+	game_state* GameState, player_id Player, float CardWidth, float CardHeight
 )
 {
 	deck* Deck = &GameState->Decks[Player];

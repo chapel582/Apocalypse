@@ -596,20 +596,36 @@ void GameUpdateAndRender(
 		int32_t TurnTimerCeil = Int32Ceil(
 			GameState->TurnTimer
 		);
-		
+		uint32_t MaxTurnTimerCharacters = 10;
 		char* TurnTimerString = PushArray(
-			&GameState->FrameArena, 10, char
+			&GameState->FrameArena, MaxTurnTimerCharacters, char
 		);
-		UInt32ToString(TurnTimerString, 10, TurnTimerCeil);
+		char* PlayerIndicator = NULL;
+		if(GameState->CurrentTurn == Player_One)
+		{
+			PlayerIndicator = "P1";
+		}
+		else if(GameState->CurrentTurn == Player_Two)
+		{
+			PlayerIndicator = "P2";
+		}
+		ASSERT(PlayerIndicator != NULL);
+		snprintf(
+			TurnTimerString,
+			MaxTurnTimerCharacters,
+			"%s: %d",
+			PlayerIndicator,
+			TurnTimerCeil
+		);
 		PushText(
 			&GameState->RenderGroup,
 			&GameState->Assets,
 			FontHandle_TestFont,
 			TurnTimerString,
-			10,
+			MaxTurnTimerCharacters,
 			50.0f,
 			Vector2(
-				BackBuffer->Width - 50.0f, 
+				BackBuffer->Width - 150.0f, 
 				(BackBuffer->Height / 2.0f)
 			),
 			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
@@ -617,10 +633,14 @@ void GameUpdateAndRender(
 		);
 		if(GameState->TurnTimer <= 0)
 		{
-			GameState->TurnTimer = 20.0f;	
+			GameState->TurnTimer = 20.0f;
+			GameState->CurrentTurn = (
+				(GameState->CurrentTurn	== Player_Two) ? Player_One : Player_Two
+			);
 		}
 	}
 	// SECTION STOP: Turn timer update
+
 	// SECTION START: Player resource push
 	{
 		uint32_t MaxResourceStringSize = 40;

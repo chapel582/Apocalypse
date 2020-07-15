@@ -189,6 +189,7 @@ struct game_state
 	particle_system TestParticleSystem;
 
 	// SECTION START: Card Game Code
+	player_id CurrentTurn;
 	float TurnTimer;
 	player_resources* PlayerResources;
 	card* Cards;

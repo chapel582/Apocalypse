@@ -555,6 +555,21 @@ void GameUpdateAndRender(
 			{
 				if(KeyboardEvent->IsDown != KeyboardEvent->WasDown)
 				{
+					switch(KeyboardEvent->Code)
+					{
+						case(0x44): // NOTE: D V-code
+						{
+							// TODO: consider pulling this predicate out to an 
+							// CONT: inline function called "KeyUp" or something
+							if(!KeyboardEvent->IsDown && KeyboardEvent->WasDown)
+							{
+								GameState->OverlayDebugInfo = (
+									!GameState->OverlayDebugInfo
+								);
+							}
+							break;
+						}
+					}
 				}
 			}
 
@@ -795,7 +810,7 @@ void HandleGameDebug(game_memory* Memory, game_offscreen_buffer* BackBuffer)
 {
 	ASSERT(sizeof(game_state) <= Memory->PermanentStorageSize);
 	game_state* GameState = (game_state*) Memory->PermanentStorage;
-	// if(GameState->OverlayDebugInfo)
+	if(GameState->OverlayDebugInfo)
 	{
 		loaded_bitmap DrawBuffer = {};
 		DrawBuffer.Width = BackBuffer->Width;

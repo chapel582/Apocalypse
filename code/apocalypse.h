@@ -24,14 +24,31 @@ typedef enum
 	CardSet_Hand,
 	CardSet_Tableau,
 	CardSet_Count
-} card_set_handle;
+} card_set_type;
+
+struct player_resources
+{
+	int32_t Red;
+	int32_t Green;
+	int32_t Blue;
+	int32_t White;
+	int32_t Black;
+};
+
+inline void ChangeResources(player_resources* Target, player_resources* Delta)
+{
+	Target->Red += Delta->Red;
+	Target->Green += Delta->Green;
+	Target->Blue += Delta->Blue;
+	Target->White += Delta->White;
+	Target->Black += Delta->Black;
+}
 
 struct deck_card;
 struct deck_card
 {
-	int RedCost;
-	int GreenCost;
-	int BlueCost;
+	player_resources PlayDelta[Player_Count];
+	player_resources TapDelta[Player_Count];
 	deck_card* Next;
 	deck_card* Previous;
 };
@@ -129,23 +146,14 @@ void OutDeckToInDeck(deck* Deck, deck_card* DeckCard)
 	);
 }
 
-struct player_resources
-{
-	int32_t Red;
-	int32_t Green;
-	int32_t Blue;
-	int32_t White;
-	int32_t Black;
-};
-
 struct card
 {
 	rectangle Rectangle;
+	card_set_type SetType;
 	float TimeLeft;
 	vector4 Color;
-	int RedCost;
-	int GreenCost;
-	int BlueCost;
+	player_resources PlayDelta[Player_Count];
+	player_resources TapDelta[Player_Count];
 	bool Active;
 	player_id Owner;
 };
@@ -157,6 +165,7 @@ struct card_set
 	float ScreenWidth;
 	float CardWidth;
 	float YPos;
+	card_set_type Type;
 };
 
 struct game_state

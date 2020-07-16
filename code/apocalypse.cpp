@@ -53,6 +53,7 @@ bool AddCardToSet(card_set* CardSet, card* Card)
 			return true;
 		}
 	}
+	Card->SetType = CardSet->Type;
 	ASSERT(false);
 	return false;
 }
@@ -160,9 +161,15 @@ void DrawFullHand(
 		
 		deck_card* CardToDraw = Deck->OutOfDeck;
 		ASSERT(CardToDraw != NULL);	
-		Card->RedCost = CardToDraw->RedCost;
-		Card->GreenCost = CardToDraw->GreenCost;
-		Card->BlueCost = CardToDraw->BlueCost;
+		for(
+			int PlayerIndex = 0;
+			PlayerIndex < Player_Count;
+			PlayerIndex++
+		)
+		{
+			Card->PlayDelta[PlayerIndex] = CardToDraw->PlayDelta[PlayerIndex];
+			Card->TapDelta[PlayerIndex] = CardToDraw->TapDelta[PlayerIndex];
+		}
 		Card->Owner = Player;
 		AddCardToSet(&GameState->Hands[Player], Card);
 
@@ -309,9 +316,28 @@ void GameUpdateAndRender(
 
 				deck_card* DeckCard = &Deck->Cards[0];
 				*DeckCard = {};
-				DeckCard->RedCost = 0;
-				DeckCard->GreenCost = 0;
-				DeckCard->BlueCost = 0;
+				for(
+					int DeltaIndex = 0;
+					DeltaIndex < Player_Count;
+					DeltaIndex++
+				)
+				{
+					player_resources* ResourceDelta = (
+						&DeckCard->PlayDelta[DeltaIndex]
+					);
+					ResourceDelta->Red = -1;
+					ResourceDelta->Green = 1;
+					ResourceDelta->Blue = (rand() % 10) - 5;
+					ResourceDelta->White = (rand() % 10) - 5;
+					ResourceDelta->Black = (rand() % 10) - 5;
+
+					ResourceDelta = &DeckCard->TapDelta[DeltaIndex];
+					ResourceDelta->Red = 1;
+					ResourceDelta->Green = -1;
+					ResourceDelta->Blue = (rand() % 10) - 5;
+					ResourceDelta->White = (rand() % 10) - 5;
+					ResourceDelta->Black = (rand() % 10) - 5;
+				}
 				DeckCard->Next = NULL;
 				DeckCard->Previous = NULL;
 				Deck->OutOfDeck = DeckCard;
@@ -325,9 +351,29 @@ void GameUpdateAndRender(
 					deck_card* PrevDeckCard = &Deck->Cards[CardIndex - 1];
 					DeckCard = &Deck->Cards[CardIndex];
 					*DeckCard = {};
-					DeckCard->RedCost = CardIndex;
-					DeckCard->GreenCost = 2 * CardIndex;
-					DeckCard->BlueCost = 3 * CardIndex;
+					for(
+						int DeltaIndex = 0;
+						DeltaIndex < Player_Count;
+						DeltaIndex++
+					)
+					{
+						player_resources* ResourceDelta = (
+							&DeckCard->PlayDelta[DeltaIndex]
+						);
+						ResourceDelta->Red = -1;
+						ResourceDelta->Green = 1;
+						ResourceDelta->Blue = (rand() % 10) - 5;
+						ResourceDelta->White = (rand() % 10) - 5;
+						ResourceDelta->Black = (rand() % 10) - 5;
+
+						ResourceDelta = &DeckCard->TapDelta[DeltaIndex];
+						ResourceDelta->Red = 1;
+						ResourceDelta->Green = -1;
+						ResourceDelta->Blue = (rand() % 10) - 5;
+						ResourceDelta->White = (rand() % 10) - 5;
+						ResourceDelta->Black = (rand() % 10) - 5;
+					}
+
 					DeckCard->Next = NULL;
 					DeckCard->Previous = PrevDeckCard;
 					PrevDeckCard->Next = DeckCard;
@@ -363,10 +409,6 @@ void GameUpdateAndRender(
 				{
 					deck_card* PrevDeckCard = &Deck->Cards[CardIndex - 1];
 					DeckCard = &Deck->Cards[CardIndex];
-					*DeckCard = {};
-					DeckCard->RedCost = CardIndex;
-					DeckCard->GreenCost = 2 * CardIndex;
-					DeckCard->BlueCost = 3 * CardIndex;
 					DeckCard->Next = NULL;
 					DeckCard->Previous = PrevDeckCard;
 					PrevDeckCard->Next = DeckCard;
@@ -398,24 +440,28 @@ void GameUpdateAndRender(
 		float ScreenWidthInWorld = ScreenDimInWorld.X;
 		
 		card_set* CardSet = &GameState->Hands[Player_One];
+		CardSet->Type = CardSet_Hand;
 		CardSet->CardCount = 0;
 		CardSet->ScreenWidth = ScreenWidthInWorld;
 		CardSet->YPos = 0.0f;
 		CardSet->CardWidth = CardWidth;
 
 		CardSet = &GameState->Hands[Player_Two];
+		CardSet->Type = CardSet_Hand;
 		CardSet->CardCount = 0;
 		CardSet->ScreenWidth = ScreenWidthInWorld;
 		CardSet->YPos = ScreenDimInWorld.Y - CardHeight;
 		CardSet->CardWidth = CardWidth;
 
 		CardSet = &GameState->Tableaus[Player_One];
+		CardSet->Type = CardSet_Tableau;
 		CardSet->CardCount = 0;
 		CardSet->ScreenWidth = ScreenWidthInWorld;
 		CardSet->YPos = CardHeight + HandTableauMargin;
 		CardSet->CardWidth = CardWidth;
 
 		CardSet = &GameState->Tableaus[Player_Two];
+		CardSet->Type = CardSet_Tableau;
 		CardSet->CardCount = 0;
 		CardSet->ScreenWidth = ScreenWidthInWorld;
 		CardSet->YPos = (
@@ -434,11 +480,11 @@ void GameUpdateAndRender(
 				&GameState->PlayerResources[PlayerIndex]
 			);
 			// TODO: initialize to 0?
-			PlayerResources->Red = 1;
-			PlayerResources->Green = 0; 
-			PlayerResources->Blue = 0; 
-			PlayerResources->White = 0; 
-			PlayerResources->Black = 0;  
+			PlayerResources->Red = rand() % 10;
+			PlayerResources->Green = rand() % 10; 
+			PlayerResources->Blue = rand() % 10; 
+			PlayerResources->White = rand() % 10; 
+			PlayerResources->Black = rand() % 10;  
 		}
 
 		Memory->IsInitialized = true;
@@ -526,12 +572,45 @@ void GameUpdateAndRender(
 						PointInRectangle(MouseEventWorldPos, Card->Rectangle)
 					)
 					{
-						RemoveCardAndAlign(
-							&GameState->Hands[Card->Owner], Card
-						);
-						AddCardAndAlign(
-							&GameState->Tableaus[Card->Owner], Card
-						);
+						if(Card->SetType == CardSet_Hand)
+						{
+							RemoveCardAndAlign(
+								&GameState->Hands[Card->Owner], Card
+							);
+							AddCardAndAlign(
+								&GameState->Tableaus[Card->Owner], Card
+							);
+
+							for(
+								int PlayerIndex = 0; 
+								PlayerIndex < Player_Count;
+								PlayerIndex++
+							)
+							{
+								ChangeResources(
+									&GameState->PlayerResources[PlayerIndex],
+									&Card->PlayDelta[PlayerIndex]
+								);
+							}
+						}
+						else if(Card->SetType == CardSet_Tableau)
+						{
+							for(
+								int PlayerIndex = 0; 
+								PlayerIndex < Player_Count;
+								PlayerIndex++
+							)
+							{
+								ChangeResources(
+									&GameState->PlayerResources[PlayerIndex],
+									&Card->TapDelta[PlayerIndex]
+								);
+							}
+						}
+						else
+						{
+							ASSERT(false);
+						}
 						break;
 					}
 					Card++;
@@ -588,14 +667,41 @@ void GameUpdateAndRender(
 	// 	ScaleValue * Vector2(1.0f, 0.0f),
 	// 	ScaleValue * Vector2(0.0f, 1.0f)
 	// );
-	PushClear(&GameState->RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
 	// SECTION START: Turn timer update
 	{
 		GameState->TurnTimer -= DtForFrame;
+		if(GameState->TurnTimer <= 0)
+		{
+			GameState->TurnTimer = 20.0f;
+			GameState->CurrentTurn = (
+				(GameState->CurrentTurn	== Player_Two) ? Player_One : Player_Two
+			);
+		}
+	}
+	// SECTION STOP: Turn timer update
+	// SECTION START: Card update
+	{
+		card* Card = &GameState->Cards[0];
+		for(
+			int CardIndex = 0;
+			CardIndex < GameState->MaxCards;
+			CardIndex++
+		)
+		{
+			if(Card->Active)
+			{
+				Card->TimeLeft -= DtForFrame;
+			}
+			Card++;
+		}
+	}
+	// SECTION STOP: Card update
 
-		int32_t TurnTimerCeil = Int32Ceil(
-			GameState->TurnTimer
-		);
+	// SECTION START: Push render entries
+	PushClear(&GameState->RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
+	// SECTION START: Push turn timer
+	{
+		int32_t TurnTimerCeil = Int32Ceil(GameState->TurnTimer);
 		uint32_t MaxTurnTimerCharacters = 10;
 		char* TurnTimerString = PushArray(
 			&GameState->FrameArena, MaxTurnTimerCharacters, char
@@ -631,17 +737,34 @@ void GameUpdateAndRender(
 			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
 			&GameState->FrameArena
 		);
-		if(GameState->TurnTimer <= 0)
+	}
+	// SECTION STOP: Push turn timer
+	// SECTION START: Push cards
+	{
+		card* Card = &GameState->Cards[0];
+		for(
+			int CardIndex = 0;
+			CardIndex < GameState->MaxCards;
+			CardIndex++
+		)
 		{
-			GameState->TurnTimer = 20.0f;
-			GameState->CurrentTurn = (
-				(GameState->CurrentTurn	== Player_Two) ? Player_One : Player_Two
-			);
+			if(Card->Active)
+			{
+				PushSizedBitmap(
+					&GameState->RenderGroup,
+					&GameState->Assets,
+					BitmapHandle_TestCard,
+					GetCenter(Card->Rectangle),
+					Vector2(Card->Rectangle.Dim.X, 0.0f),
+					Vector2(0.0f, Card->Rectangle.Dim.Y),
+					Card->Color
+				);
+			}
+			Card++;
 		}
 	}
-	// SECTION STOP: Turn timer update
-
-	// SECTION START: Player resource push
+	// SECTION STOP: Push cards
+	// SECTION START: Push resources
 	{
 		uint32_t MaxResourceStringSize = 40;
 		char* ResourceString = PushArray(
@@ -704,37 +827,8 @@ void GameUpdateAndRender(
 			&GameState->FrameArena
 		);
 	}
-	// SECTION STOP: Player resource push
-	// SECTION START: Cards update
-	{
-		card* Card = &GameState->Cards[0];
-		for(
-			int CardIndex = 0;
-			CardIndex < GameState->MaxCards;
-			CardIndex++
-		)
-		{
-			if(Card->Active)
-			{
-				Card->TimeLeft -= DtForFrame;
-				if(Card->TimeLeft <= 0)
-				{
-					// Card->Active = false;
-				}
-				PushSizedBitmap(
-					&GameState->RenderGroup,
-					&GameState->Assets,
-					BitmapHandle_TestCard,
-					GetCenter(Card->Rectangle),
-					Vector2(Card->Rectangle.Dim.X, 0.0f),
-					Vector2(0.0f, Card->Rectangle.Dim.Y),
-					Card->Color
-				);
-			}
-			Card++;
-		}
-	}
-	// SECTION STOP: Cards update
+	// SECTION STOP: Push resources
+	// SECTION STOP: Player render entries
 
 #if 0 // NOTE: tests for bitmaps
 	PushSizedBitmap(

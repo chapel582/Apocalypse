@@ -24,6 +24,7 @@ debug_record GlobalDebugRecords[MAX_DEBUG_RECORDS];
 struct timed_block
 {
 	debug_record* Record;
+	uint64_t StartCycleCount;
 
 	timed_block(
 		int Id,
@@ -35,16 +36,16 @@ struct timed_block
 	{
 		ASSERT(Id < MAX_DEBUG_RECORDS);
 		Record = &GlobalDebugRecords[Id]; 
-		Record->CycleCount -= PLATFORM_CYCLE_COUNT();
 		Record->FileName = FileName;
 		Record->FunctionName = FunctionName;
 		Record->LineNumber = LineNumber;
 		Record->HitCount += 1;
+		StartCycleCount = PLATFORM_CYCLE_COUNT();
 	}
 
 	~timed_block()
 	{
-		Record->CycleCount += PLATFORM_CYCLE_COUNT();
+		Record->CycleCount += PLATFORM_CYCLE_COUNT() - StartCycleCount;
 	}
 };
 

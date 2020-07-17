@@ -191,7 +191,7 @@ void LoadFontJob(void* VoidArgs)
 	}
 
 	loaded_font* LoadedFont = (loaded_font*) Job->Result;
-	LoadedFont->PixelHeight = 256.0f;
+	LoadedFont->PixelHeight = Job->PixelHeight;
 	stbtt_fontinfo* Font = &LoadedFont->StbFont;
 	stbtt_InitFont(
 		Font,
@@ -229,6 +229,17 @@ loaded_font* GetFont(assets* Assets, font_handle FontHandle)
 					sizeof(Job->FileName),
 					"../data/arial.ttf"
 				);
+				Job->PixelHeight = 256.0f;
+				break;
+			}
+			case(FontHandle_LiberationMonoRegular):
+			{
+				strcpy_s(
+					Job->FileName,
+					sizeof(Job->FileName),
+					"../data/LiberationMono-Regular.ttf"
+				);
+				Job->PixelHeight = 20.0f;
 				break;
 			}
 			default:

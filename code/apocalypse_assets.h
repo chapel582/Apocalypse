@@ -44,6 +44,7 @@ typedef enum
 typedef enum
 {
 	FontHandle_TestFont,
+	FontHandle_LiberationMonoRegular,
 	FontHandle_Count
 } font_handle;
 
@@ -61,11 +62,13 @@ struct load_asset_job
 	load_asset_job* Next;
 	load_asset_job** AvailableHead;
 
-	// NOTE: if other args start getting too big, we can have each asset type have
-	// CONT: its own job structure and list
+	// NOTE: if other args start getting too big, we can have each asset type 
+	// CONT: have its own job structure and list
+	
 	// NOTE: for glyph loading
 	font_handle FontHandle;
 	uint32_t CodePoint;
+	float PixelHeight;
 };
 
 struct loaded_font

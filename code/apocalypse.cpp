@@ -289,14 +289,19 @@ void GameUpdateAndRender(
 			asset_info* AssetInfo = &Assets->FontInfo[InfoIndex];
 			AssetInfo->State = AssetState_Unloaded;
 		}
-		for(
-			int InfoIndex = 0;
-			InfoIndex < ARRAY_COUNT(Assets->GlyphInfo);
-			InfoIndex++
-		)
+		for(int FontHandle = 0; FontHandle < FontHandle_Count; FontHandle++)
 		{
-			asset_info* AssetInfo = &Assets->GlyphInfo[InfoIndex];
-			AssetInfo->State = AssetState_Unloaded;
+			for(
+				int InfoIndex = 0;
+				InfoIndex < ARRAY_COUNT(Assets->GlyphInfo);
+				InfoIndex++
+			)
+			{
+				asset_info* AssetInfo = (
+					&Assets->GlyphInfo[FontHandle][InfoIndex]
+				);
+				AssetInfo->State = AssetState_Unloaded;
+			}
 		}
 
 		GameState->MaxCards = Player_Count * CardSet_Count * MAX_CARDS_PER_SET;

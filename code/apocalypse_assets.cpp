@@ -232,12 +232,12 @@ loaded_font* GetFont(assets* Assets, font_handle FontHandle)
 				Job->PixelHeight = 256.0f;
 				break;
 			}
-			case(FontHandle_LiberationMonoRegular):
+			case(FontHandle_DebugFont):
 			{
 				strcpy_s(
 					Job->FileName,
 					sizeof(Job->FileName),
-					"../data/LiberationMono-Regular.ttf"
+					"../data/cour.ttf"
 				);
 				Job->PixelHeight = 20.0f;
 				break;
@@ -329,10 +329,10 @@ loaded_glyph* GetGlyph(
 		return NULL;
 	}
 
-	asset_info* Info = &(Assets->GlyphInfo[CodePoint]);
+	asset_info* Info = &(Assets->GlyphInfo[FontHandle][CodePoint]);
 	if(Info->State == AssetState_Loaded)
 	{
-		return &(Assets->Glyphs[CodePoint]);
+		return &(Assets->Glyphs[FontHandle][CodePoint]);
 	}
 	else
 	{
@@ -344,7 +344,7 @@ loaded_glyph* GetGlyph(
 			Info->State = AssetState_Loading;
 			
 			InitAssetJobCommon(
-				Job, Assets, &Assets->Glyphs[CodePoint], Info
+				Job, Assets, &Assets->Glyphs[FontHandle][CodePoint], Info
 			);
 			Job->FontHandle = FontHandle;
 			Job->CodePoint = CodePoint;

@@ -44,7 +44,7 @@ typedef enum
 typedef enum
 {
 	FontHandle_TestFont,
-	FontHandle_LiberationMonoRegular,
+	FontHandle_DebugFont,
 	FontHandle_Count
 } font_handle;
 
@@ -101,8 +101,8 @@ struct assets
 	loaded_font Fonts[FontHandle_Count];
 	// TODO: add a BST for sparse glyph support. Use BST to determine if glyph
 	// CONT: is already loaded or not
-	asset_info GlyphInfo[256];
-	loaded_glyph Glyphs[256];
+	asset_info GlyphInfo[FontHandle_Count][256];
+	loaded_glyph Glyphs[FontHandle_Count][256];
 };
 
 inline void InitAssetJobCommon(

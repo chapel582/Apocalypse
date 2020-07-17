@@ -6,7 +6,7 @@ struct bit_scan_result
 	bool Found;
 };
 
-bit_scan_result FindLeastSignificantSetBit(uint32_t Input)
+inline bit_scan_result FindLeastSignificantSetBit(uint32_t Input)
 {
 	bit_scan_result Result = {};
 #if COMPILER_MSVC
@@ -28,29 +28,41 @@ bit_scan_result FindLeastSignificantSetBit(uint32_t Input)
 	return Result;
 }
 
-int32_t RoundFloat32ToInt32(float Input)
+inline int32_t RoundFloat32ToInt32(float Input)
 {
 	return (int32_t) (Input + 0.5f);
 }
 
-float Floor(float Value)
+inline float Floor(float Value)
 {
 	return ((float) ((int32_t) Value));
 }
 
-int32_t Int32Floor(float Value)
+inline int32_t Int32Floor(float Value)
 {
 	return ((int32_t) Value);
 }
 
-float Ceil(float Value)
+inline float Ceil(float Value)
 {
 	return Floor(Value) + 1.0f;
 }
 
-int32_t Int32Ceil(float Value)
+inline int32_t Int32Ceil(float Value)
 {
 	return Int32Floor(Value) + 1;
+}
+
+inline uint64_t AtomicAddUint64(uint64_t volatile* Addend, uint64_t Value)
+{
+	uint64_t Result = _InterlockedExchangeAdd64((__int64*) Addend, Value);
+	return Result;
+}
+
+inline uint32_t AtomicAddUint32(uint32_t volatile* Addend, uint32_t Value)
+{
+	uint32_t Result = _InterlockedExchangeAdd((long*) Addend, Value);
+	return Result;
 }
 
 #define APOCALYPSE_INTRINSICS_H

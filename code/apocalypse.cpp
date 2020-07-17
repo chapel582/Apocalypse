@@ -965,8 +965,7 @@ void HandleGameDebug(game_memory* Memory, game_offscreen_buffer* BackBuffer)
 				int WrittenBytes = snprintf(
 					CopyTo,
 					CharactersRemaining,
-					"%s:%s:%d %I64ucy %uh %I64ucy/h\n",
-					FileName,
+					"%s:%d %I64ucy %uh %I64ucy/h\n",
 					DebugRecord->FunctionName,
 					DebugRecord->LineNumber,
 					DebugRecord->CycleCount,

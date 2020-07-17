@@ -39,7 +39,7 @@ struct timed_block
 		Record->FileName = FileName;
 		Record->FunctionName = FunctionName;
 		Record->LineNumber = LineNumber;
-		Record->HitCount += 1;
+		AtomicAddUint32(&Record->HitCount, HitCount);
 		StartCycleCount = PLATFORM_CYCLE_COUNT();
 	}
 

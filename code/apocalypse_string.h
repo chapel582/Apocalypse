@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 
 uint32_t UInt32ToString(
 	char* Buffer, uint32_t MaxBufferSize, uint32_t Input
@@ -48,6 +49,45 @@ char* FindLast(char* String, uint32_t MaxStringSize, char SearchFor)
 	}
 
 	return Result;
+}
+
+struct string_appender
+{
+	uint32_t MaxStringSize;
+	uint32_t CharactersRemaining;
+	char* String;
+	char* CopyTo;
+};
+
+inline string_appender MakeStringAppender(char* String, uint32_t MaxStringSize)
+{
+	string_appender Result = {};
+	Result.String = String;
+	Result.CopyTo = Result.String; 
+	Result.MaxStringSize = MaxStringSize;
+	Result.CharactersRemaining = MaxStringSize;
+	return Result;
+}
+
+void AppendToString(string_appender* StringAppender, char* FormatString, ...)
+{
+	va_list ArgPtr;
+	va_start(ArgPtr, FormatString);
+	int WrittenBytes = vsnprintf(
+		StringAppender->CopyTo,
+		StringAppender->CharactersRemaining,
+		FormatString,
+		ArgPtr
+	);
+	va_end(ArgPtr);
+	
+	StringAppender->CopyTo += WrittenBytes;
+	StringAppender->CharactersRemaining -= WrittenBytes;
+}
+
+inline void TerminateString(string_appender* StringAppender)
+{
+	*StringAppender->CopyTo = 0;
 }
 
 #define APOCALYPSE_STRING_H

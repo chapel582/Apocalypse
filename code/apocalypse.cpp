@@ -907,16 +907,16 @@ void GameUpdateAndRender(
 						Card->Color
 					);
 
-					uint32_t MaxCharacters = 2 * MAX_RESOURCE_STRING_SIZE;
-					uint32_t CharactersRemaining = MaxCharacters;
-					char* ResourceString = PushArray(
-						&GameState->FrameArena,
-						MaxCharacters,
-						char
-					);
-					*ResourceString = 0;
-					char* CopyTo = ResourceString;
-					bool NonZeroDelta = false;
+					// uint32_t MaxCharacters = 4 * MAX_RESOURCE_STRING_SIZE;
+					// uint32_t CharactersRemaining = MaxCharacters;
+					// char* ResourceString = PushArray(
+					// 	&GameState->FrameArena,
+					// 	MaxCharacters,
+					// 	char
+					// );
+					// *ResourceString = 0;
+					// char* CopyTo = ResourceString;
+					// bool NonZeroDelta = false;
 					// for(
 					// 	int PlayDeltaIndex = 0;
 					// 	PlayDeltaIndex < PlayerResource_Count;
@@ -1124,8 +1124,11 @@ void HandleGameDebug(game_memory* Memory, game_offscreen_buffer* BackBuffer)
 		char* DebugInfoString = PushArray(
 			&GameState->FrameArena, MaxDebugInfoStringSize, char
 		);
-		char* CopyTo = DebugInfoString;
-		uint32_t CharactersRemaining = MaxDebugInfoStringSize;
+		string_appender StringAppender = MakeStringAppender(
+			DebugInfoString, MaxDebugInfoStringSize
+		);
+		// char* CopyTo = DebugInfoString;
+		// uint32_t CharactersRemaining = MaxDebugInfoStringSize;
 		for(
 			uint32_t DebugRecordIndex = 0; 
 			DebugRecordIndex < MAX_DEBUG_RECORDS;
@@ -1135,10 +1138,8 @@ void HandleGameDebug(game_memory* Memory, game_offscreen_buffer* BackBuffer)
 			debug_record* DebugRecord = &GlobalDebugRecords[DebugRecordIndex];
 			if(DebugRecord->HitCount)
 			{
-				// TODO: replace with os non-specific path delimiters
-				int WrittenBytes = snprintf(
-					CopyTo,
-					CharactersRemaining,
+				AppendToString(
+					&StringAppender,
 					"%s:%d %I64ucy %uh %I64ucy/h\n",
 					DebugRecord->FunctionName,
 					DebugRecord->LineNumber,
@@ -1146,12 +1147,23 @@ void HandleGameDebug(game_memory* Memory, game_offscreen_buffer* BackBuffer)
 					DebugRecord->HitCount,
 					DebugRecord->CycleCount / DebugRecord->HitCount
 				);
-				CopyTo += WrittenBytes;
-				CharactersRemaining -= WrittenBytes;
+				// int WrittenBytes = snprintf(
+				// 	CopyTo,
+				// 	CharactersRemaining,
+				// 	"%s:%d %I64ucy %uh %I64ucy/h\n",
+				// 	DebugRecord->FunctionName,
+				// 	DebugRecord->LineNumber,
+				// 	DebugRecord->CycleCount,
+				// 	DebugRecord->HitCount,
+				// 	DebugRecord->CycleCount / DebugRecord->HitCount
+				// );
+				// CopyTo += WrittenBytes;
+				// CharactersRemaining -= WrittenBytes;
 				DebugRecord->CycleCount = 0;
 				DebugRecord->HitCount = 0;
 			}
 		}
+		TerminateString(&StringAppender);
 
 		PushText(
 			&GameState->RenderGroup,

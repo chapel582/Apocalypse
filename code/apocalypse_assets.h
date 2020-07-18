@@ -28,8 +28,9 @@ struct asset_info
 typedef enum 
 {
 	BitmapHandle_TestBitmap,
-	BitmapHandle_TestCard,
 	BitmapHandle_TestBackground,
+	BitmapHandle_TestCard,
+	BitmapHandle_TestCard2,
 	BitmapHandle_Count
 } bitmap_handle;
 

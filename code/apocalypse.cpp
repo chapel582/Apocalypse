@@ -758,7 +758,7 @@ void GameUpdateAndRender(
 				PushSizedBitmap(
 					&GameState->RenderGroup,
 					&GameState->Assets,
-					BitmapHandle_TestCard,
+					BitmapHandle_TestCard2,
 					GetCenter(Card->Rectangle),
 					Vector2(Card->Rectangle.Dim.X, 0.0f),
 					Vector2(0.0f, Card->Rectangle.Dim.Y),

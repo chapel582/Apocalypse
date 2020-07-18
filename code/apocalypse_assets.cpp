@@ -68,6 +68,15 @@ loaded_bitmap* GetBitmap(assets* Assets, bitmap_handle BitmapHandle)
 					);
 					break;
 				}
+				case(BitmapHandle_TestBackground):
+				{
+					strcpy_s(
+						Job->FileName,
+						sizeof(Job->FileName),
+						"../data/test_background.bmp"
+					);
+					break;
+				}
 				case(BitmapHandle_TestCard):
 				{
 					strcpy_s(
@@ -77,12 +86,12 @@ loaded_bitmap* GetBitmap(assets* Assets, bitmap_handle BitmapHandle)
 					);
 					break;
 				}
-				case(BitmapHandle_TestBackground):
+				case(BitmapHandle_TestCard2):
 				{
 					strcpy_s(
 						Job->FileName,
 						sizeof(Job->FileName),
-						"../data/test_background.bmp"
+						"../data/test_card2.bmp"
 					);
 					break;
 				}

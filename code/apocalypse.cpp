@@ -38,6 +38,54 @@ loaded_bitmap MakeEmptyBitmap(
 	return MakeEmptyBitmap(Memory, Width, Height);
 }
 
+#define MAX_RESOURCE_STRING_SIZE 40
+void FormatResourceString(
+	char* ResourceString, player_resources* PlayerResources
+)
+{
+	snprintf(
+		ResourceString,
+		MAX_RESOURCE_STRING_SIZE,
+		"R:%d\nG:%d\nBlu:%d\nW:%d\nBla:%d",
+		PlayerResources->Resources[PlayerResource_Red],
+		PlayerResources->Resources[PlayerResource_Green],
+		PlayerResources->Resources[PlayerResource_Blue],
+		PlayerResources->Resources[PlayerResource_White],
+		PlayerResources->Resources[PlayerResource_Black]
+	);
+}
+
+inline char* GetResourceInitial(player_resource_type ResourceType)
+{
+	switch(ResourceType)
+	{
+		case(PlayerResource_Red):
+		{
+			return "R";
+		}
+		case(PlayerResource_Green):
+		{
+			return "G";
+		}
+		case(PlayerResource_Blue):
+		{
+			return "Blu";
+		}
+		case(PlayerResource_White):
+		{
+			return "W";
+		}
+		case(PlayerResource_Black):
+		{
+			return "Bla";
+		}
+		default:
+		{
+			ASSERT(false);
+		}
+	}
+}
+
 bool AddCardToSet(card_set* CardSet, card* Card)
 {
 	for(int Index = 0; Index < ARRAY_COUNT(CardSet->Cards); Index++)
@@ -330,18 +378,42 @@ void GameUpdateAndRender(
 					player_resources* ResourceDelta = (
 						&DeckCard->PlayDelta[DeltaIndex]
 					);
-					ResourceDelta->Red = -1;
-					ResourceDelta->Green = 1;
-					ResourceDelta->Blue = (rand() % 10) - 5;
-					ResourceDelta->White = (rand() % 10) - 5;
-					ResourceDelta->Black = (rand() % 10) - 5;
+					SetResource(ResourceDelta, PlayerResource_Red, -1);
+					SetResource(ResourceDelta, PlayerResource_Green, 1);
+					SetResource(
+						ResourceDelta,
+						PlayerResource_Blue,
+						(rand() % 10) - 5
+					);
+					SetResource(
+						ResourceDelta,
+						PlayerResource_White,
+						(rand() % 10) - 5
+					);
+					SetResource(
+						ResourceDelta,
+						PlayerResource_Black,
+						(rand() % 10) - 5
+					);
 
 					ResourceDelta = &DeckCard->TapDelta[DeltaIndex];
-					ResourceDelta->Red = 1;
-					ResourceDelta->Green = -1;
-					ResourceDelta->Blue = (rand() % 10) - 5;
-					ResourceDelta->White = (rand() % 10) - 5;
-					ResourceDelta->Black = (rand() % 10) - 5;
+					SetResource(ResourceDelta, PlayerResource_Red, 1);
+					SetResource(ResourceDelta, PlayerResource_Green, -1);
+					SetResource(
+						ResourceDelta,
+						PlayerResource_Blue,
+						(rand() % 10) - 5
+					);
+					SetResource(
+						ResourceDelta,
+						PlayerResource_White,
+						(rand() % 10) - 5
+					);
+					SetResource(
+						ResourceDelta,
+						PlayerResource_Black,
+						(rand() % 10) - 5
+					);
 				}
 				DeckCard->Next = NULL;
 				DeckCard->Previous = NULL;
@@ -365,18 +437,42 @@ void GameUpdateAndRender(
 						player_resources* ResourceDelta = (
 							&DeckCard->PlayDelta[DeltaIndex]
 						);
-						ResourceDelta->Red = -1;
-						ResourceDelta->Green = 1;
-						ResourceDelta->Blue = (rand() % 10) - 5;
-						ResourceDelta->White = (rand() % 10) - 5;
-						ResourceDelta->Black = (rand() % 10) - 5;
+						SetResource(ResourceDelta, PlayerResource_Red, -1);
+						SetResource(ResourceDelta, PlayerResource_Green, 1);
+						SetResource(
+							ResourceDelta,
+							PlayerResource_Blue,
+							(rand() % 10) - 5
+						);
+						SetResource(
+							ResourceDelta,
+							PlayerResource_White,
+							(rand() % 10) - 5
+						);
+						SetResource(
+							ResourceDelta,
+							PlayerResource_Black,
+							(rand() % 10) - 5
+						);
 
 						ResourceDelta = &DeckCard->TapDelta[DeltaIndex];
-						ResourceDelta->Red = 1;
-						ResourceDelta->Green = -1;
-						ResourceDelta->Blue = (rand() % 10) - 5;
-						ResourceDelta->White = (rand() % 10) - 5;
-						ResourceDelta->Black = (rand() % 10) - 5;
+						SetResource(ResourceDelta, PlayerResource_Red, -1);
+						SetResource(ResourceDelta, PlayerResource_Green, 1);
+						SetResource(
+							ResourceDelta,
+							PlayerResource_Blue,
+							(rand() % 10) - 5
+						);
+						SetResource(
+							ResourceDelta,
+							PlayerResource_White,
+							(rand() % 10) - 5
+						);
+						SetResource(
+							ResourceDelta,
+							PlayerResource_Black,
+							(rand() % 10) - 5
+						);
 					}
 
 					DeckCard->Next = NULL;
@@ -491,11 +587,11 @@ void GameUpdateAndRender(
 				&GameState->PlayerResources[PlayerIndex]
 			);
 			// TODO: initialize to 0?
-			PlayerResources->Red = rand() % 10;
-			PlayerResources->Green = rand() % 10; 
-			PlayerResources->Blue = rand() % 10; 
-			PlayerResources->White = rand() % 10; 
-			PlayerResources->Black = rand() % 10;  
+			SetResource(PlayerResources, PlayerResource_Red, rand() % 10);
+			SetResource(PlayerResources, PlayerResource_Green, rand() % 10);
+			SetResource(PlayerResources, PlayerResource_Blue, rand() % 10);
+			SetResource(PlayerResources, PlayerResource_White, rand() % 10);
+			SetResource(PlayerResources, PlayerResource_Black, rand() % 10);
 		}
 
 		Memory->IsInitialized = true;
@@ -810,6 +906,67 @@ void GameUpdateAndRender(
 						GameState->InfoCardYScale,
 						Card->Color
 					);
+
+					uint32_t MaxCharacters = 2 * MAX_RESOURCE_STRING_SIZE;
+					uint32_t CharactersRemaining = MaxCharacters;
+					char* ResourceString = PushArray(
+						&GameState->FrameArena,
+						MaxCharacters,
+						char
+					);
+					*ResourceString = 0;
+					char* CopyTo = ResourceString;
+					bool NonZeroDelta = false;
+					// for(
+					// 	int PlayDeltaIndex = 0;
+					// 	PlayDeltaIndex < PlayerResource_Count;
+					// 	PlayDeltaIndex++
+					// )
+					// {
+					// 	uint32_t Delta = (
+					// 		Card->PlayDelta.Resources[PlayDeltaIndex]
+					// 	);
+					// 	if(Delta != 0)
+					// 	{
+					// 		if(!NonZeroDelta)
+					// 		{
+					// 			int BytesWritten = snprintf(
+					// 				CopyTo, CharactersRemaining, "PlayDelta\n"
+					// 			);
+					// 			CopyTo += BytesWritten;
+					// 			CharactersRemaining -= BytesWritten;
+					// 			NonZeroDelta = true;
+					// 		}
+					// 		int BytesWritten = snprintf(
+					// 			CopyTo,
+					// 			CharactersRemaining,
+					// 			"%s: %d\n",
+					// 			GetResourceInitial(PlayDeltaIndex),
+					// 			Delta
+					// 		);
+					// 		CopyTo += BytesWritten;
+					// 		CharactersRemaining -= BytesWritten;
+					// 	}
+					// }
+					// // for(
+					// // 	int TapDeltaIndex = 0;
+					// // 	TapDeltaIndex < PlayerResource_Count;
+					// // 	TapDeltaIndex++
+					// // )
+					// // {
+					// // 	strncat();	
+					// // }
+					// PushText(
+					// 	&GameState->RenderGroup,
+					// 	&GameState->Assets,
+					// 	FontHandle_TestFont,
+					// 	ResourceString,
+					// 	MaxCharacters,
+					// 	20.0f,
+					// 	GameState->InfoCardCenter,
+					// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+					// 	&GameState->FrameArena
+					// );
 				}
 			}
 			Card++;
@@ -818,32 +975,19 @@ void GameUpdateAndRender(
 	// SECTION STOP: Push cards
 	// SECTION START: Push resources
 	{
-		uint32_t MaxResourceStringSize = 40;
 		char* ResourceString = PushArray(
-			&GameState->FrameArena, MaxResourceStringSize, char
+			&GameState->FrameArena, MAX_RESOURCE_STRING_SIZE, char
+		);
+		FormatResourceString(
+			ResourceString, &GameState->PlayerResources[Player_One]
 		);
 		float Padding = 15.0f;
-
-		player_resources* PlayerResources = (
-			&GameState->PlayerResources[Player_One]
-		);
-		snprintf(
-			ResourceString,
-			MaxResourceStringSize,
-			"R:%d\nG:%d\nB:%d\nW:%d\nB:%d",
-			PlayerResources->Red,
-			PlayerResources->Green,
-			PlayerResources->Blue,
-			PlayerResources->White,
-			PlayerResources->Black
-		);
-			
 		PushText(
 			&GameState->RenderGroup,
 			&GameState->Assets,
 			FontHandle_TestFont,
 			ResourceString,
-			MaxResourceStringSize,
+			MAX_RESOURCE_STRING_SIZE,
 			15.0f,
 			Vector2(
 				BackBuffer->Width - 50.0f, 
@@ -853,23 +997,15 @@ void GameUpdateAndRender(
 			&GameState->FrameArena
 		);
 
-		PlayerResources = &GameState->PlayerResources[Player_Two];
-		snprintf(
-			ResourceString,
-			MaxResourceStringSize,
-			"R:%d\nG:%d\nB:%d\nW:%d\nB:%d",
-			PlayerResources->Red,
-			PlayerResources->Green,
-			PlayerResources->Blue,
-			PlayerResources->White,
-			PlayerResources->Black
-		);	
+		FormatResourceString(
+			ResourceString, &GameState->PlayerResources[Player_Two]
+		);
 		PushText(
 			&GameState->RenderGroup,
 			&GameState->Assets,
 			FontHandle_TestFont,
 			ResourceString,
-			MaxResourceStringSize,
+			MAX_RESOURCE_STRING_SIZE,
 			15.0f,
 			Vector2(
 				BackBuffer->Width - 50.0f, 
@@ -1000,15 +1136,6 @@ void HandleGameDebug(game_memory* Memory, game_offscreen_buffer* BackBuffer)
 			if(DebugRecord->HitCount)
 			{
 				// TODO: replace with os non-specific path delimiters
-				char* LastDelimiter = FindLast(
-					DebugRecord->FileName, 256, '\\'
-				);
-				if(LastDelimiter == NULL)
-				{
-					continue;
-				}
-
-				char* FileName = LastDelimiter + 1;
 				int WrittenBytes = snprintf(
 					CopyTo,
 					CharactersRemaining,

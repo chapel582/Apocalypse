@@ -26,22 +26,34 @@ typedef enum
 	CardSet_Count
 } card_set_type;
 
+typedef enum 
+{
+	PlayerResource_Red,
+	PlayerResource_Green,
+	PlayerResource_Blue,
+	PlayerResource_White,
+	PlayerResource_Black,
+	PlayerResource_Count	
+} player_resource_type;
+
 struct player_resources
 {
-	int32_t Red;
-	int32_t Green;
-	int32_t Blue;
-	int32_t White;
-	int32_t Black;
+	int32_t Resources[PlayerResource_Count];
 };
 
 inline void ChangeResources(player_resources* Target, player_resources* Delta)
 {
-	Target->Red += Delta->Red;
-	Target->Green += Delta->Green;
-	Target->Blue += Delta->Blue;
-	Target->White += Delta->White;
-	Target->Black += Delta->Black;
+	for(int Index = 0; Index < PlayerResource_Count; Index++)
+	{
+		Target->Resources[Index] += Delta->Resources[Index];
+	}
+}
+
+inline void SetResource(
+	player_resources* Resources, player_resource_type Type, int32_t SetTo
+)
+{
+	Resources->Resources[Type] = SetTo;
 }
 
 struct deck_card;

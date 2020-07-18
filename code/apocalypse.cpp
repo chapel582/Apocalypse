@@ -82,7 +82,25 @@ inline char* GetResourceInitial(player_resource_type ResourceType)
 		default:
 		{
 			ASSERT(false);
+			return NULL;
 		}
+	}
+}
+
+inline player_id GetOpponent(player_id Player)
+{
+	if(Player == Player_One)
+	{
+		return Player_Two;
+	}
+	else if(Player == Player_Two)
+	{
+		return Player_One;
+	}
+	else
+	{
+		ASSERT(false);
+		return Player_Count;
 	}
 }
 
@@ -225,6 +243,41 @@ void DrawFullHand(
 		Card++;
 	}
 	AlignCardSet(&GameState->Hands[Player]);
+}
+
+void AppendResourceStringToInfoCard(
+	card* Card,
+	player_resources* Deltas,
+	string_appender* StringAppender,
+	char* SelfOrOpp,
+	char* DeltaType
+)
+{
+	bool NonZeroDelta = false;
+	for(
+		int DeltaIndex = 0;
+		DeltaIndex < PlayerResource_Count;
+		DeltaIndex++
+	)
+	{
+		uint32_t Delta = Deltas->Resources[DeltaIndex];
+		if(Delta != 0)
+		{
+			if(!NonZeroDelta)
+			{
+				AppendToString(
+					StringAppender, "%s: %s\n", SelfOrOpp, DeltaType
+				);
+				NonZeroDelta = true;
+			}
+			AppendToString(
+				StringAppender,
+				"%s: %d\n",
+				GetResourceInitial((player_resource_type) DeltaIndex),
+				Delta
+			);
+		}
+	}
 }
 
 void GameUpdateAndRender(
@@ -907,66 +960,57 @@ void GameUpdateAndRender(
 						Card->Color
 					);
 
-					// uint32_t MaxCharacters = 4 * MAX_RESOURCE_STRING_SIZE;
-					// uint32_t CharactersRemaining = MaxCharacters;
-					// char* ResourceString = PushArray(
-					// 	&GameState->FrameArena,
-					// 	MaxCharacters,
-					// 	char
-					// );
-					// *ResourceString = 0;
-					// char* CopyTo = ResourceString;
-					// bool NonZeroDelta = false;
-					// for(
-					// 	int PlayDeltaIndex = 0;
-					// 	PlayDeltaIndex < PlayerResource_Count;
-					// 	PlayDeltaIndex++
-					// )
-					// {
-					// 	uint32_t Delta = (
-					// 		Card->PlayDelta.Resources[PlayDeltaIndex]
-					// 	);
-					// 	if(Delta != 0)
-					// 	{
-					// 		if(!NonZeroDelta)
-					// 		{
-					// 			int BytesWritten = snprintf(
-					// 				CopyTo, CharactersRemaining, "PlayDelta\n"
-					// 			);
-					// 			CopyTo += BytesWritten;
-					// 			CharactersRemaining -= BytesWritten;
-					// 			NonZeroDelta = true;
-					// 		}
-					// 		int BytesWritten = snprintf(
-					// 			CopyTo,
-					// 			CharactersRemaining,
-					// 			"%s: %d\n",
-					// 			GetResourceInitial(PlayDeltaIndex),
-					// 			Delta
-					// 		);
-					// 		CopyTo += BytesWritten;
-					// 		CharactersRemaining -= BytesWritten;
-					// 	}
-					// }
-					// // for(
-					// // 	int TapDeltaIndex = 0;
-					// // 	TapDeltaIndex < PlayerResource_Count;
-					// // 	TapDeltaIndex++
-					// // )
-					// // {
-					// // 	strncat();	
-					// // }
-					// PushText(
-					// 	&GameState->RenderGroup,
-					// 	&GameState->Assets,
-					// 	FontHandle_TestFont,
-					// 	ResourceString,
-					// 	MaxCharacters,
-					// 	20.0f,
-					// 	GameState->InfoCardCenter,
-					// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-					// 	&GameState->FrameArena
-					// );
+					uint32_t MaxCharacters = 4 * MAX_RESOURCE_STRING_SIZE;
+					char* ResourceString = PushArray(
+						&GameState->FrameArena,
+						MaxCharacters,
+						char
+					);
+					string_appender StringAppender = MakeStringAppender(
+						ResourceString, MaxCharacters 
+					);
+					AppendResourceStringToInfoCard(
+						Card,
+						&Card->PlayDelta[Card->Owner],
+						&StringAppender,
+						"Self",
+						"Play"
+					);
+					AppendResourceStringToInfoCard(
+						Card,
+						&Card->TapDelta[Card->Owner],
+						&StringAppender,
+						"Self",
+						"Tap"
+					);
+
+					player_id Opp = GetOpponent(Card->Owner);
+					AppendResourceStringToInfoCard(
+						Card,
+						&Card->PlayDelta[Opp],
+						&StringAppender,
+						"Opp",
+						"Play"
+					);
+					AppendResourceStringToInfoCard(
+						Card,
+						&Card->TapDelta[Opp],
+						&StringAppender,
+						"Opp",
+						"Tap"
+					);
+
+					PushText(
+						&GameState->RenderGroup,
+						&GameState->Assets,
+						FontHandle_TestFont,
+						ResourceString,
+						MaxCharacters,
+						20.0f,
+						GameState->InfoCardCenter,
+						Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+						&GameState->FrameArena
+					);
 				}
 			}
 			Card++;
@@ -1127,8 +1171,6 @@ void HandleGameDebug(game_memory* Memory, game_offscreen_buffer* BackBuffer)
 		string_appender StringAppender = MakeStringAppender(
 			DebugInfoString, MaxDebugInfoStringSize
 		);
-		// char* CopyTo = DebugInfoString;
-		// uint32_t CharactersRemaining = MaxDebugInfoStringSize;
 		for(
 			uint32_t DebugRecordIndex = 0; 
 			DebugRecordIndex < MAX_DEBUG_RECORDS;
@@ -1147,18 +1189,6 @@ void HandleGameDebug(game_memory* Memory, game_offscreen_buffer* BackBuffer)
 					DebugRecord->HitCount,
 					DebugRecord->CycleCount / DebugRecord->HitCount
 				);
-				// int WrittenBytes = snprintf(
-				// 	CopyTo,
-				// 	CharactersRemaining,
-				// 	"%s:%d %I64ucy %uh %I64ucy/h\n",
-				// 	DebugRecord->FunctionName,
-				// 	DebugRecord->LineNumber,
-				// 	DebugRecord->CycleCount,
-				// 	DebugRecord->HitCount,
-				// 	DebugRecord->CycleCount / DebugRecord->HitCount
-				// );
-				// CopyTo += WrittenBytes;
-				// CharactersRemaining -= WrittenBytes;
 				DebugRecord->CycleCount = 0;
 				DebugRecord->HitCount = 0;
 			}

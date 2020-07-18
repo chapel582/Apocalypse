@@ -1000,14 +1000,14 @@ void GameUpdateAndRender(
 						"Tap"
 					);
 
-					PushText(
+					PushTextTopLeft(
 						&GameState->RenderGroup,
 						&GameState->Assets,
 						FontHandle_TestFont,
 						ResourceString,
 						MaxCharacters,
 						20.0f,
-						GameState->InfoCardCenter,
+						Vector2(0.0f, (float) BackBuffer->Height),
 						Vector4(1.0f, 1.0f, 1.0f, 1.0f),
 						&GameState->FrameArena
 					);

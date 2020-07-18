@@ -266,7 +266,7 @@ inline void PushGlyph(
 	assets* Assets,
 	font_handle FontHandle,
 	uint32_t CodePoint,
-	vector2 Center,
+	vector2 BottomLeft,
 	vector2 XAxis,
 	vector2 YAxis,
 	vector4 Color
@@ -282,7 +282,7 @@ inline void PushGlyph(
 	loaded_glyph* Glyph = GetGlyph(Assets, FontHandle, CodePoint);
 	if(Glyph)
 	{
-		basis Basis = MakeBasis(Center, XAxis, YAxis);
+		basis Basis = MakeBasis(BottomLeft, XAxis, YAxis);
 		PushBitmap(
 			Group, &Glyph->Bitmap, &Basis, Color
 		);
@@ -339,18 +339,18 @@ inline void PushText(
 		Group->WorldToCamera, Vector2(0.0f, FontHeight)
 	);
 	vector2 PixelHeightV2 = TransformVectorFromBasis(
-		Group->WorldToCamera, CameraHeight
+		Group->CameraToScreen, CameraHeight
 	);
 	float PixelHeight = PixelHeightV2.Y;
 
 	// NOTE: everything after this point is in pixel space
 	stbtt_fontinfo* Font = &LoadedFont->StbFont;
-	float LPad = 2.0f; // NOTE: I believe there's a way to do this programatically using stbtt
+	// TODO: is there a way to get LPad programatically using stbtt?
+	float LPad = 2.0f; 
 	int Ascent = 0;
 	int Descent = 0;
 	int LineGap = 0;
-	float Scale; 
-	Scale = stbtt_ScaleForPixelHeight(Font, PixelHeight);
+	float Scale = stbtt_ScaleForPixelHeight(Font, PixelHeight);
 	stbtt_GetFontVMetrics(Font, &Ascent, &Descent, &LineGap);
 	float YAdvance = Scale * (Ascent - Descent + LineGap);
 
@@ -425,7 +425,12 @@ inline void PushText(
 	// CONT: regularly clear the arena. Hence, FrameArena
 )
 {
-	// NOTE: this function is slower than just keeping your code in 4-byte
+	/* NOTE: 
+	This fucntion pushes text with a baseline at LeftBaselinePoint.Y startin at
+	LeftBaselinePoint.X
+	*/
+
+	// NOTE: this function is slower than just keeping your text in 4-byte
 	// CONT: codepoints all the time. If you need speed, store your data as 
 	// CONT: 4-byte codepoints and use the codepoint version of this function
 	uint32_t* TempBuffer = PushArray(
@@ -454,6 +459,67 @@ inline void PushText(
 		FontHeight,
 		LeftBaselinePoint,
 		Color
+	);
+}
+
+inline void PushTextTopLeft(
+	render_group* Group,
+	assets* Assets,
+	font_handle FontHandle,
+	char* CodePoints,
+	uint32_t MaxCodePointCount,
+	float FontHeight, // NOTE: font height in world units
+	vector2 TopLeft,
+	vector4 Color,
+	memory_arena* FrameArena // NOTE: this function will leak if you don't
+	// CONT: regularly clear the arena. Hence, FrameArena
+)
+{
+	/* NOTE: 
+		this function is for pushing text that aligns with a top 
+		left corner. e.g. the highest ascending glyph won't go exceed TopLeft.Y,
+		and  the farthest back glyph won't go beyond the TopLeft.X
+	*/
+	loaded_font* LoadedFont = GetFont(Assets, FontHandle);
+	if(LoadedFont == NULL)
+	{
+		return;
+	}
+
+	vector2 CameraHeight = TransformVectorFromBasis(
+		Group->WorldToCamera, Vector2(0.0f, FontHeight)
+	);
+	vector2 PixelHeightV2 = TransformVectorFromBasis(
+		Group->CameraToScreen, CameraHeight
+	);
+	float PixelHeight = PixelHeightV2.Y;
+
+	// NOTE: everything after this point is in pixel space
+	stbtt_fontinfo* Font = &LoadedFont->StbFont;
+	// TODO: Get LPad programatically using stbtt?
+	float LPad = 2.0f; 
+	int Ascent = 0;
+	float Scale = stbtt_ScaleForPixelHeight(Font, PixelHeight);
+	stbtt_GetFontVMetrics(Font, &Ascent, NULL, NULL);
+	float ScaledAscent = Scale * Ascent;
+	vector2 AscentWorldHeight = TransformVectorToBasis(
+		Group->CameraToScreen, Vector2(0.0f, ScaledAscent)
+	);
+	vector2 AscentCameraHeight = TransformVectorToBasis(
+		Group->WorldToCamera, AscentWorldHeight
+	);
+	vector2 Baseline = TopLeft - AscentCameraHeight;
+
+	PushText(
+		Group,
+		Assets,
+		FontHandle,
+		CodePoints,
+		MaxCodePointCount,
+		FontHeight,
+		Baseline,
+		Color,
+		FrameArena
 	);
 }
 

@@ -474,6 +474,12 @@ void GameUpdateAndRender(
 		);
 		CardSet->CardWidth = CardWidth;
 		
+		GameState->InfoCardCenter = Vector2(
+			BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f
+		);
+		GameState->InfoCardXScale = Vector2(0.33f, 0.0f);
+		GameState->InfoCardYScale = Perpendicular(GameState->InfoCardXScale);
+
 		DrawFullHand(GameState, Player_One, CardWidth, CardHeight);
 		DrawFullHand(GameState, Player_Two, CardWidth, CardHeight);
 
@@ -621,6 +627,33 @@ void GameUpdateAndRender(
 					Card++;
 				}
 			}
+			else if(MouseEvent->Type == MouseMove)
+			{
+				card* Card = &GameState->Cards[0];
+				for(
+					int CardIndex = 0;
+					CardIndex < GameState->MaxCards;
+					CardIndex++
+				)
+				{
+					if(Card->Active)
+					{
+						if(
+							PointInRectangle(
+								MouseEventWorldPos, Card->Rectangle
+							)
+						)
+						{
+							Card->HoveredOver = true;							
+						}
+						else
+						{
+							Card->HoveredOver = false;
+						}
+					}
+					Card++;
+				}
+			}
 
 			UserEventIndex++;
 		}
@@ -647,6 +680,8 @@ void GameUpdateAndRender(
 							// CONT: inline function called "KeyUp" or something
 							if(!KeyboardEvent->IsDown && KeyboardEvent->WasDown)
 							{
+								// TODO: use console commands or something for 
+								// CONT: debug mode
 								GameState->OverlayDebugInfo = (
 									!GameState->OverlayDebugInfo
 								);
@@ -764,6 +799,18 @@ void GameUpdateAndRender(
 					Vector2(0.0f, Card->Rectangle.Dim.Y),
 					Card->Color
 				);
+				if(Card->HoveredOver)
+				{
+					PushCenteredBitmap(
+						&GameState->RenderGroup,
+						&GameState->Assets,
+						BitmapHandle_TestCard2,
+						GameState->InfoCardCenter,
+						GameState->InfoCardXScale,
+						GameState->InfoCardYScale,
+						Card->Color
+					);
+				}
 			}
 			Card++;
 		}

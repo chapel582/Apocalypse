@@ -155,6 +155,7 @@ struct card
 	player_resources PlayDelta[Player_Count];
 	player_resources TapDelta[Player_Count];
 	bool Active;
+	bool HoveredOver;
 	player_id Owner;
 };
 
@@ -206,6 +207,9 @@ struct game_state
 	deck* Decks;
 	card_set* Hands;
 	card_set* Tableaus;
+	vector2 InfoCardCenter;
+	vector2 InfoCardXScale;
+	vector2 InfoCardYScale;
 	// SECTION STOP: Card GameCode
 };
 

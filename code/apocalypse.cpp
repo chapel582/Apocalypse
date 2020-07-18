@@ -626,8 +626,10 @@ void GameUpdateAndRender(
 		GameState->InfoCardCenter = Vector2(
 			BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f
 		);
-		GameState->InfoCardXScale = Vector2(0.33f, 0.0f);
-		GameState->InfoCardYScale = Perpendicular(GameState->InfoCardXScale);
+
+		vector2 ScaledInfoCardDim = 0.33f * Vector2(600.0f, 900.0f);
+		GameState->InfoCardXBound = Vector2(ScaledInfoCardDim.X, 0.0f);
+		GameState->InfoCardYBound = Vector2(0.0f, ScaledInfoCardDim.Y);
 
 		DrawFullHand(GameState, Player_One, CardWidth, CardHeight);
 		DrawFullHand(GameState, Player_Two, CardWidth, CardHeight);
@@ -950,13 +952,13 @@ void GameUpdateAndRender(
 				);
 				if(Card->HoveredOver)
 				{
-					PushCenteredBitmap(
+					PushSizedBitmap(
 						&GameState->RenderGroup,
 						&GameState->Assets,
 						BitmapHandle_TestCard2,
 						GameState->InfoCardCenter,
-						GameState->InfoCardXScale,
-						GameState->InfoCardYScale,
+						GameState->InfoCardXBound,
+						GameState->InfoCardYBound,
 						Card->Color
 					);
 
@@ -1000,6 +1002,11 @@ void GameUpdateAndRender(
 						"Tap"
 					);
 
+					vector2 TopLeft = (
+						GameState->InfoCardCenter - 
+						0.5f * GameState->InfoCardXBound + 
+						0.5f * GameState->InfoCardYBound
+					);
 					PushTextTopLeft(
 						&GameState->RenderGroup,
 						&GameState->Assets,
@@ -1007,7 +1014,7 @@ void GameUpdateAndRender(
 						ResourceString,
 						MaxCharacters,
 						20.0f,
-						Vector2(0.0f, (float) BackBuffer->Height),
+						TopLeft,
 						Vector4(1.0f, 1.0f, 1.0f, 1.0f),
 						&GameState->FrameArena
 					);

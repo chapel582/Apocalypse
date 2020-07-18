@@ -220,8 +220,8 @@ struct game_state
 	card_set* Hands;
 	card_set* Tableaus;
 	vector2 InfoCardCenter;
-	vector2 InfoCardXScale;
-	vector2 InfoCardYScale;
+	vector2 InfoCardXBound;
+	vector2 InfoCardYBound;
 	// SECTION STOP: Card GameCode
 };
 

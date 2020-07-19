@@ -106,22 +106,24 @@ inline player_id GetOpponent(player_id Player)
 
 bool AddCardToSet(card_set* CardSet, card* Card)
 {
+	bool Result = false;
 	for(int Index = 0; Index < ARRAY_COUNT(CardSet->Cards); Index++)
 	{
 		if(CardSet->Cards[Index] == Card)
 		{
-			return false;
+			Result = false;
+			break;
 		}
 		else if(CardSet->Cards[Index] == NULL)
 		{
 			CardSet->Cards[Index] = Card;
 			CardSet->CardCount++;
-			return true;
+			Result = true;
+			break;
 		}
 	}
 	Card->SetType = CardSet->Type;
-	ASSERT(false);
-	return false;
+	return Result;
 }
 
 void AlignCardSet(card_set* CardSet)
@@ -288,16 +290,16 @@ void InitDeckCard(deck_card* DeckCard)
 		player_resources* ResourceDelta = &DeckCard->PlayDelta[DeltaIndex];
 		SetResource(ResourceDelta, PlayerResource_Red, -1);
 		SetResource(ResourceDelta, PlayerResource_Green, 1);
-		SetResource(ResourceDelta, PlayerResource_Blue, (rand() % 10) - 5);
-		SetResource(ResourceDelta, PlayerResource_White, (rand() % 10) - 5);
-		SetResource(ResourceDelta, PlayerResource_Black, (rand() % 10) - 5);
+		SetResource(ResourceDelta, PlayerResource_Blue, 0);
+		SetResource(ResourceDelta, PlayerResource_White, 0);
+		SetResource(ResourceDelta, PlayerResource_Black, 0);
 
 		ResourceDelta = &DeckCard->TapDelta[DeltaIndex];
 		SetResource(ResourceDelta, PlayerResource_Red, 1);
 		SetResource(ResourceDelta, PlayerResource_Green, -1);
-		SetResource(ResourceDelta, PlayerResource_Blue, (rand() % 10) - 5);
-		SetResource(ResourceDelta, PlayerResource_White, (rand() % 10) - 5);
-		SetResource(ResourceDelta, PlayerResource_Black, (rand() % 10) - 5);
+		SetResource(ResourceDelta, PlayerResource_Blue, 0);
+		SetResource(ResourceDelta, PlayerResource_White, 0);
+		SetResource(ResourceDelta, PlayerResource_Black, 0);
 	}
 
 	DeckCard->TapsAvailable = 1;
@@ -674,16 +676,20 @@ void GameUpdateAndRender(
 						}
 						else if(Card->SetType == CardSet_Tableau)
 						{
-							for(
-								int PlayerIndex = 0; 
-								PlayerIndex < Player_Count;
-								PlayerIndex++
-							)
+							if(Card->TimesTapped < Card->TapsAvailable)
 							{
-								ChangeResources(
-									&GameState->PlayerResources[PlayerIndex],
-									&Card->TapDelta[PlayerIndex]
-								);
+								for(
+									int PlayerIndex = 0; 
+									PlayerIndex < Player_Count;
+									PlayerIndex++
+								)
+								{
+									ChangeResources(
+										&GameState->PlayerResources[PlayerIndex],
+										&Card->TapDelta[PlayerIndex]
+									);
+								}
+								Card->TimesTapped++;
 							}
 						}
 						else
@@ -778,12 +784,21 @@ void GameUpdateAndRender(
 	// SECTION START: Turn timer update
 	{
 		GameState->TurnTimer -= DtForFrame;
+		// NOTE: switch turns
 		if(GameState->TurnTimer <= 0)
 		{
 			GameState->TurnTimer = 20.0f;
 			GameState->CurrentTurn = (
 				(GameState->CurrentTurn	== Player_Two) ? Player_One : Player_Two
 			);
+			for(int CardIndex = 0; CardIndex < GameState->MaxCards; CardIndex++)
+			{
+				card* Card = &GameState->Cards[CardIndex];
+				if(Card->Active)
+				{
+					Card->TimesTapped = 0;
+				}
+			}
 		}
 	}
 	// SECTION STOP: Turn timer update
@@ -918,6 +933,15 @@ void GameUpdateAndRender(
 						"Opp",
 						"Tap"
 					);
+
+					if(Card->SetType == CardSet_Tableau)
+					{
+						AppendToString(
+							&StringAppender,
+							"TapsLeft: %d\n",
+							Card->TapsAvailable - Card->TimesTapped
+						);
+					}
 
 					vector2 TopLeft = (
 						GameState->InfoCardCenter - 

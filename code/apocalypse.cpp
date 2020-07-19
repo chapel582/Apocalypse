@@ -225,7 +225,7 @@ void DrawFullHand(
 			Color->B = 1.0f;
 		}
 		
-		deck_card* CardToDraw = Deck->OutOfDeck;
+		deck_card* CardToDraw = Deck->InDeck;
 		ASSERT(CardToDraw != NULL);	
 		for(
 			int PlayerIndex = 0;
@@ -235,6 +235,7 @@ void DrawFullHand(
 		{
 			Card->PlayDelta[PlayerIndex] = CardToDraw->PlayDelta[PlayerIndex];
 			Card->TapDelta[PlayerIndex] = CardToDraw->TapDelta[PlayerIndex];
+			Card->TapsAvailable = CardToDraw->TapsAvailable;
 		}
 		Card->Owner = Player;
 		AddCardToSet(&GameState->Hands[Player], Card);
@@ -278,6 +279,28 @@ void AppendResourceStringToInfoCard(
 			);
 		}
 	}
+}
+
+void InitDeckCard(deck_card* DeckCard)
+{
+	for(int DeltaIndex = 0; DeltaIndex < Player_Count; DeltaIndex++)
+	{
+		player_resources* ResourceDelta = &DeckCard->PlayDelta[DeltaIndex];
+		SetResource(ResourceDelta, PlayerResource_Red, -1);
+		SetResource(ResourceDelta, PlayerResource_Green, 1);
+		SetResource(ResourceDelta, PlayerResource_Blue, (rand() % 10) - 5);
+		SetResource(ResourceDelta, PlayerResource_White, (rand() % 10) - 5);
+		SetResource(ResourceDelta, PlayerResource_Black, (rand() % 10) - 5);
+
+		ResourceDelta = &DeckCard->TapDelta[DeltaIndex];
+		SetResource(ResourceDelta, PlayerResource_Red, 1);
+		SetResource(ResourceDelta, PlayerResource_Green, -1);
+		SetResource(ResourceDelta, PlayerResource_Blue, (rand() % 10) - 5);
+		SetResource(ResourceDelta, PlayerResource_White, (rand() % 10) - 5);
+		SetResource(ResourceDelta, PlayerResource_Black, (rand() % 10) - 5);
+	}
+
+	DeckCard->TapsAvailable = 1;
 }
 
 void GameUpdateAndRender(
@@ -422,52 +445,7 @@ void GameUpdateAndRender(
 
 				deck_card* DeckCard = &Deck->Cards[0];
 				*DeckCard = {};
-				for(
-					int DeltaIndex = 0;
-					DeltaIndex < Player_Count;
-					DeltaIndex++
-				)
-				{
-					player_resources* ResourceDelta = (
-						&DeckCard->PlayDelta[DeltaIndex]
-					);
-					SetResource(ResourceDelta, PlayerResource_Red, -1);
-					SetResource(ResourceDelta, PlayerResource_Green, 1);
-					SetResource(
-						ResourceDelta,
-						PlayerResource_Blue,
-						(rand() % 10) - 5
-					);
-					SetResource(
-						ResourceDelta,
-						PlayerResource_White,
-						(rand() % 10) - 5
-					);
-					SetResource(
-						ResourceDelta,
-						PlayerResource_Black,
-						(rand() % 10) - 5
-					);
-
-					ResourceDelta = &DeckCard->TapDelta[DeltaIndex];
-					SetResource(ResourceDelta, PlayerResource_Red, 1);
-					SetResource(ResourceDelta, PlayerResource_Green, -1);
-					SetResource(
-						ResourceDelta,
-						PlayerResource_Blue,
-						(rand() % 10) - 5
-					);
-					SetResource(
-						ResourceDelta,
-						PlayerResource_White,
-						(rand() % 10) - 5
-					);
-					SetResource(
-						ResourceDelta,
-						PlayerResource_Black,
-						(rand() % 10) - 5
-					);
-				}
+				InitDeckCard(DeckCard);
 				DeckCard->Next = NULL;
 				DeckCard->Previous = NULL;
 				Deck->OutOfDeck = DeckCard;
@@ -478,62 +456,17 @@ void GameUpdateAndRender(
 					CardIndex++
 				)
 				{
-					deck_card* PrevDeckCard = &Deck->Cards[CardIndex - 1];
+					deck_card* OldHead = Deck->OutOfDeck;
 					DeckCard = &Deck->Cards[CardIndex];
 					*DeckCard = {};
-					for(
-						int DeltaIndex = 0;
-						DeltaIndex < Player_Count;
-						DeltaIndex++
-					)
-					{
-						player_resources* ResourceDelta = (
-							&DeckCard->PlayDelta[DeltaIndex]
-						);
-						SetResource(ResourceDelta, PlayerResource_Red, -1);
-						SetResource(ResourceDelta, PlayerResource_Green, 1);
-						SetResource(
-							ResourceDelta,
-							PlayerResource_Blue,
-							(rand() % 10) - 5
-						);
-						SetResource(
-							ResourceDelta,
-							PlayerResource_White,
-							(rand() % 10) - 5
-						);
-						SetResource(
-							ResourceDelta,
-							PlayerResource_Black,
-							(rand() % 10) - 5
-						);
+					InitDeckCard(DeckCard);
 
-						ResourceDelta = &DeckCard->TapDelta[DeltaIndex];
-						SetResource(ResourceDelta, PlayerResource_Red, -1);
-						SetResource(ResourceDelta, PlayerResource_Green, 1);
-						SetResource(
-							ResourceDelta,
-							PlayerResource_Blue,
-							(rand() % 10) - 5
-						);
-						SetResource(
-							ResourceDelta,
-							PlayerResource_White,
-							(rand() % 10) - 5
-						);
-						SetResource(
-							ResourceDelta,
-							PlayerResource_Black,
-							(rand() % 10) - 5
-						);
-					}
-
-					DeckCard->Next = NULL;
-					DeckCard->Previous = PrevDeckCard;
-					PrevDeckCard->Next = DeckCard;
+					DeckCard->Next = OldHead;
+					DeckCard->Previous = NULL;
+					OldHead->Previous = DeckCard;
+					Deck->OutOfDeck = DeckCard;
 					Deck->OutOfDeckLength++;
 				}
-				DeckCard->Next = Deck->OutOfDeck;
 			}
 
 			// SECTION START: Shuffle deck
@@ -553,22 +486,6 @@ void GameUpdateAndRender(
 					);
 					OutDeckToInDeck(Deck, CardToShuffle);
 				}
-
-				deck_card* DeckCard = &Deck->Cards[0];
-				for(
-					int CardIndex = 1;
-					CardIndex < MAX_CARDS_IN_DECK;
-					CardIndex++
-				)
-				{
-					deck_card* PrevDeckCard = &Deck->Cards[CardIndex - 1];
-					DeckCard = &Deck->Cards[CardIndex];
-					DeckCard->Next = NULL;
-					DeckCard->Previous = PrevDeckCard;
-					PrevDeckCard->Next = DeckCard;
-					Deck->OutOfDeckLength++;
-				}
-				DeckCard->Next = Deck->OutOfDeck;
 			}
 			// SECTION STOP: Shuffle deck
 		}

@@ -61,6 +61,7 @@ struct deck_card
 {
 	player_resources PlayDelta[Player_Count];
 	player_resources TapDelta[Player_Count];
+	int32_t TapsAvailable;
 	deck_card* Next;
 	deck_card* Previous;
 };
@@ -112,19 +113,11 @@ void InOutSwap(
 
 	if(First != NULL)
 	{
-		deck_card* OldLast = First->Previous;
-		if(OldLast != NULL)
-		{
-			OldLast->Next = DeckCard;
-		}
-		DeckCard->Previous = OldLast;
-	}
-	else
-	{
-		DeckCard->Previous = NULL;
+		First->Previous = DeckCard;
 	}
 
 	DeckCard->Next = First;
+	DeckCard->Previous = NULL;
 	(*ToIncrement)++;
 }
 
@@ -141,6 +134,7 @@ void InDeckToOutDeck(deck* Deck, deck_card* DeckCard)
 		&Deck->OutOfDeckLength,
 		&Deck->InDeckLength
 	);
+	Deck->OutOfDeck = DeckCard;
 }
 
 void OutDeckToInDeck(deck* Deck, deck_card* DeckCard)
@@ -156,6 +150,7 @@ void OutDeckToInDeck(deck* Deck, deck_card* DeckCard)
 		&Deck->InDeckLength,
 		&Deck->OutOfDeckLength
 	);
+	Deck->InDeck = DeckCard;
 }
 
 struct card
@@ -169,6 +164,8 @@ struct card
 	bool Active;
 	bool HoveredOver;
 	player_id Owner;
+	int32_t TapsAvailable;
+	int32_t TimesTapped;
 };
 
 struct card_set

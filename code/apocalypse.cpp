@@ -305,6 +305,25 @@ void InitDeckCard(deck_card* DeckCard)
 	DeckCard->TapsAvailable = 1;
 }
 
+bool CheckAndActivate(
+	player_resources* PlayerResources, player_resources* Deltas, card* Card
+)
+{
+	// NOTE: only activate card if you have the resources for it
+	player_resources* ChangeTarget = &PlayerResources[Card->Owner];
+	player_resources* Delta = &Deltas[Card->Owner];
+	bool Result = CanChangeResources(ChangeTarget, Delta);
+	if(Result)
+	{
+		ChangeResources(ChangeTarget, Delta);
+		player_id Opp = GetOpponent(Card->Owner);
+		ChangeTarget = &PlayerResources[Opp];
+		Delta = &Deltas[Opp];
+		ChangeResources(ChangeTarget, Delta);
+	}
+	return Result;
+}
+
 void GameUpdateAndRender(
 	game_memory* Memory,
 	game_offscreen_buffer* BackBuffer,
@@ -653,50 +672,47 @@ void GameUpdateAndRender(
 						PointInRectangle(MouseEventWorldPos, Card->Rectangle)
 					)
 					{
-						if(Card->SetType == CardSet_Hand)
+						// NOTE: player clicked a card on their turn 
+						if(Card->Owner == GameState->CurrentTurn)
 						{
-							RemoveCardAndAlign(
-								&GameState->Hands[Card->Owner], Card
-							);
-							AddCardAndAlign(
-								&GameState->Tableaus[Card->Owner], Card
-							);
-
-							for(
-								int PlayerIndex = 0; 
-								PlayerIndex < Player_Count;
-								PlayerIndex++
-							)
+							if(Card->SetType == CardSet_Hand)
 							{
-								ChangeResources(
-									&GameState->PlayerResources[PlayerIndex],
-									&Card->PlayDelta[PlayerIndex]
+								bool WasActivated = CheckAndActivate(
+									GameState->PlayerResources,
+									Card->PlayDelta,
+									Card
 								);
-							}
-						}
-						else if(Card->SetType == CardSet_Tableau)
-						{
-							if(Card->TimesTapped < Card->TapsAvailable)
-							{
-								for(
-									int PlayerIndex = 0; 
-									PlayerIndex < Player_Count;
-									PlayerIndex++
-								)
+								if(WasActivated)
 								{
-									ChangeResources(
-										&GameState->PlayerResources[PlayerIndex],
-										&Card->TapDelta[PlayerIndex]
+									RemoveCardAndAlign(
+										&GameState->Hands[Card->Owner], Card
+									);
+									AddCardAndAlign(
+										&GameState->Tableaus[Card->Owner], Card
 									);
 								}
-								Card->TimesTapped++;
 							}
+							else if(Card->SetType == CardSet_Tableau)
+							{
+								if(Card->TimesTapped < Card->TapsAvailable)
+								{
+									bool WasActivated = CheckAndActivate(
+										GameState->PlayerResources,
+										Card->TapDelta,
+										Card
+									);
+									if(WasActivated)
+									{
+										Card->TimesTapped++;
+									}
+								}
+							}
+							else
+							{
+								ASSERT(false);
+							}
+							break;
 						}
-						else
-						{
-							ASSERT(false);
-						}
-						break;
 					}
 					Card++;
 				}

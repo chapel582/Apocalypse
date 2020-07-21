@@ -41,11 +41,29 @@ struct player_resources
 	int32_t Resources[PlayerResource_Count];
 };
 
+inline bool CanChangeResources(
+	player_resources* Target, player_resources* Delta
+)
+{
+	for(int Index = 0; Index < PlayerResource_Count; Index++)
+	{
+		if(Target->Resources[Index] + Delta->Resources[Index] < 0)
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
 inline void ChangeResources(player_resources* Target, player_resources* Delta)
 {
 	for(int Index = 0; Index < PlayerResource_Count; Index++)
 	{
 		Target->Resources[Index] += Delta->Resources[Index];
+		if(Target->Resources[Index] <= 0)
+		{
+			Target->Resources[Index] = 0;
+		}
 	}
 }
 

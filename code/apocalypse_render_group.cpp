@@ -426,7 +426,7 @@ inline void PushText(
 )
 {
 	/* NOTE: 
-	This fucntion pushes text with a baseline at LeftBaselinePoint.Y startin at
+	This function pushes text with a baseline at LeftBaselinePoint.Y startin at
 	LeftBaselinePoint.X
 	*/
 
@@ -509,6 +509,99 @@ inline void PushTextTopLeft(
 		Group->WorldToCamera, AscentWorldHeight
 	);
 	vector2 Baseline = TopLeft - AscentCameraHeight;
+
+	PushText(
+		Group,
+		Assets,
+		FontHandle,
+		CodePoints,
+		MaxCodePointCount,
+		FontHeight,
+		Baseline,
+		Color,
+		FrameArena
+	);
+}
+
+inline void PushTextCentered(
+	render_group* Group,
+	assets* Assets,
+	font_handle FontHandle,
+	char* CodePoints,
+	uint32_t MaxCodePointCount,
+	float FontHeight, // NOTE: font height in world units
+	vector2 Center,
+	vector4 Color,
+	memory_arena* FrameArena // NOTE: this function will leak if you don't
+	// CONT: regularly clear the arena. Hence, FrameArena
+)
+{
+	/* NOTE: 
+		this function is for pushing text that aligns with a top 
+		left corner. e.g. the highest ascending glyph won't go exceed TopLeft.Y,
+		and  the farthest back glyph won't go beyond the TopLeft.X
+	*/
+	loaded_font* LoadedFont = GetFont(Assets, FontHandle);
+	if(LoadedFont == NULL)
+	{
+		return;
+	}
+
+	stbtt_fontinfo* Font = &LoadedFont->StbFont;
+	vector2 CameraHeight = TransformVectorFromBasis(
+		Group->WorldToCamera, Vector2(0.0f, FontHeight)
+	);
+	vector2 PixelHeightV2 = TransformVectorFromBasis(
+		Group->CameraToScreen, CameraHeight
+	);
+	float PixelHeight = PixelHeightV2.Y;
+
+	// TODO: is there a way to get LPad programatically using stbtt?
+	float LPad = 2.0f; 
+	float Scale = stbtt_ScaleForPixelHeight(Font, PixelHeight);
+	
+	char* CodePointPtr = CodePoints;
+	float PixelWidth = LPad;
+	float MaxWidth = 0.0f;
+	for(uint32_t Index = 0; Index < MaxCodePointCount; Index++)
+	{
+		uint32_t CodePoint = (uint32_t) *CodePointPtr;
+		if(CodePoint == 0)
+		{
+			if(PixelWidth > MaxWidth)
+			{
+				MaxWidth = PixelWidth;
+			}
+			break;
+		}
+		else if(CodePoint == '\n')
+		{
+			if(PixelWidth > MaxWidth)
+			{
+				MaxWidth = PixelWidth;
+			}
+			PixelWidth = LPad;
+		}
+		else
+		{
+			int Advance, Lsb;
+			stbtt_GetCodepointHMetrics(Font, CodePoint, &Advance, &Lsb);
+			int Kern = stbtt_GetCodepointKernAdvance(
+				Font, CodePoint, (uint32_t) *(CodePointPtr + 1)
+			);
+			PixelWidth += Scale * (Advance + Kern);
+		}
+		
+		CodePointPtr++;
+	}
+
+	vector2 WidthOverTwoCamera = TransformVectorToBasis(
+		Group->CameraToScreen, Vector2(MaxWidth / 2.0f, 0.0f)
+	);
+	vector2 WidthOverTwoWorld = TransformVectorToBasis(
+		Group->WorldToCamera, WidthOverTwoCamera
+	);
+	vector2 Baseline = Center - WidthOverTwoWorld;
 
 	PushText(
 		Group,

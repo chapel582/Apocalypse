@@ -237,6 +237,8 @@ struct game_state
 	vector2 InfoCardCenter;
 	vector2 InfoCardXBound;
 	vector2 InfoCardYBound;
+	float DisplayMessageUntil;
+	char MessageBuffer[256];
 	// SECTION STOP: Card GameCode
 };
 

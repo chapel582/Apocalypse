@@ -324,6 +324,16 @@ bool CheckAndActivate(
 	return Result;
 }
 
+void CannotDisplayCardMessage(game_state* GameState)
+{
+	GameState->DisplayMessageUntil = GameState->Time + 3.0f;
+	strcpy_s(
+		GameState->MessageBuffer,
+		ARRAY_COUNT(GameState->MessageBuffer),
+		"Cannot activate card. Too few resources"
+	); 
+}
+
 void GameUpdateAndRender(
 	game_memory* Memory,
 	game_offscreen_buffer* BackBuffer,
@@ -691,6 +701,10 @@ void GameUpdateAndRender(
 										&GameState->Tableaus[Card->Owner], Card
 									);
 								}
+								else
+								{
+									CannotDisplayCardMessage(GameState);
+								}
 							}
 							else if(Card->SetType == CardSet_Tableau)
 							{
@@ -704,6 +718,10 @@ void GameUpdateAndRender(
 									if(WasActivated)
 									{
 										Card->TimesTapped++;
+									}
+									else
+									{
+										CannotDisplayCardMessage(GameState);
 									}
 								}
 							}
@@ -1024,7 +1042,26 @@ void GameUpdateAndRender(
 		);
 	}
 	// SECTION STOP: Push resources
-	// SECTION STOP: Player render entries
+
+	// SECTION START: Display message
+	if(GameState->Time < GameState->DisplayMessageUntil)
+	{
+		PushTextCentered(
+			&GameState->RenderGroup,
+			&GameState->Assets,
+			FontHandle_TestFont,
+			GameState->MessageBuffer,
+			ARRAY_COUNT(GameState->MessageBuffer),
+			50.0f,
+			Vector2(
+				BackBuffer->Width / 2.0f, 
+				(BackBuffer->Height / 2.0f)
+			),
+			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+			&GameState->FrameArena
+		);
+	}
+	// SECTION STOP: Display message
 
 #if 0 // NOTE: tests for bitmaps
 	PushSizedBitmap(

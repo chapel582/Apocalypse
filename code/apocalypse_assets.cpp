@@ -238,7 +238,7 @@ loaded_font* GetFont(assets* Assets, font_handle FontHandle)
 					sizeof(Job->FileName),
 					"../data/arial.ttf"
 				);
-				Job->PixelHeight = 256.0f;
+				Job->PixelHeight = 2048.0f;
 				break;
 			}
 			case(FontHandle_DebugFont):

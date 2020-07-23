@@ -634,6 +634,7 @@ void GameUpdateAndRender(
 	}
 
 	GameState->Time += DtForFrame;
+	bool EndTurn = false;
 
 	// SECTION START: User input
 	// TODO: move to game memory
@@ -776,26 +777,31 @@ void GameUpdateAndRender(
 				break;
 			}
 
-			if(KeyboardEvent->Code >= 0x41 && KeyboardEvent->Code <= 0x5A)
+			if(KeyboardEvent->IsDown != KeyboardEvent->WasDown)
 			{
-				if(KeyboardEvent->IsDown != KeyboardEvent->WasDown)
+				switch(KeyboardEvent->Code)
 				{
-					switch(KeyboardEvent->Code)
+					case(0x44): // NOTE: D V-code
 					{
-						case(0x44): // NOTE: D V-code
+						// TODO: consider pulling this predicate out to an 
+						// CONT: inline function called "KeyUp" or something
+						if(!KeyboardEvent->IsDown && KeyboardEvent->WasDown)
 						{
-							// TODO: consider pulling this predicate out to an 
-							// CONT: inline function called "KeyUp" or something
-							if(!KeyboardEvent->IsDown && KeyboardEvent->WasDown)
-							{
-								// TODO: use console commands or something for 
-								// CONT: debug mode
-								GameState->OverlayDebugInfo = (
-									!GameState->OverlayDebugInfo
-								);
-							}
-							break;
+							// TODO: use console commands or something for 
+							// CONT: debug mode
+							GameState->OverlayDebugInfo = (
+								!GameState->OverlayDebugInfo
+							);
 						}
+						break;
+					}
+					case(0x0D): // NOTE: Return/Enter V-code
+					{
+						if(!KeyboardEvent->IsDown && KeyboardEvent->WasDown)
+						{
+							EndTurn = true;
+						}
+						break;
 					}
 				}
 			}
@@ -816,22 +822,27 @@ void GameUpdateAndRender(
 	// 	ScaleValue * Vector2(0.0f, 1.0f)
 	// );
 	// SECTION START: Turn timer update
+	if(!EndTurn)
 	{
 		GameState->TurnTimer -= DtForFrame;
 		// NOTE: switch turns
 		if(GameState->TurnTimer <= 0)
 		{
-			GameState->TurnTimer = 20.0f;
-			GameState->CurrentTurn = (
-				(GameState->CurrentTurn	== Player_Two) ? Player_One : Player_Two
-			);
-			for(int CardIndex = 0; CardIndex < GameState->MaxCards; CardIndex++)
+			EndTurn = true;
+		}
+	}
+	if(EndTurn)
+	{
+		GameState->TurnTimer = 20.0f;
+		GameState->CurrentTurn = (
+			(GameState->CurrentTurn	== Player_Two) ? Player_One : Player_Two
+		);
+		for(int CardIndex = 0; CardIndex < GameState->MaxCards; CardIndex++)
+		{
+			card* Card = &GameState->Cards[CardIndex];
+			if(Card->Active)
 			{
-				card* Card = &GameState->Cards[CardIndex];
-				if(Card->Active)
-				{
-					Card->TimesTapped = 0;
-				}
+				Card->TimesTapped = 0;
 			}
 		}
 	}

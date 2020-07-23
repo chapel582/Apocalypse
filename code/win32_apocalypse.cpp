@@ -678,7 +678,7 @@ int CALLBACK WinMain(
 	int ShowCode
 )
 {
-	uint32_t ThreadCount = 4;
+	uint32_t ThreadCount = MAX_THREAD_COUNT - 1;
 	HANDLE* ThreadHandles = (HANDLE*) VirtualAlloc(
 		0, ThreadCount * sizeof(HANDLE), MEM_COMMIT, PAGE_READWRITE
 	);
@@ -689,17 +689,17 @@ int CALLBACK WinMain(
 	InitJobQueue(&JobQueue, ThreadCount);
 	for(uint32_t ThreadIndex = 0; ThreadIndex < ThreadCount; ThreadIndex++)
 	{
-		DWORD ThreadId;
 		win32_thread_info* Info = &ThreadInfo[ThreadIndex];
 		Info->JobQueue = &JobQueue;
 		Info->LogicalThreadIndex = ThreadIndex;
+		DWORD ThreadId;
 		ThreadHandles[ThreadIndex] = CreateThread( 
-			NULL, // default security attributes
-			0, // use default stack size  
-			WorkerThread, // thread function name
-			Info, // argument to thread function 
-			0, // use default creation flags 
-			&ThreadId // returns the thread identifier
+			NULL,
+			0,
+			WorkerThread,
+			Info,
+			0,
+			&ThreadId
 		);
 	}
 

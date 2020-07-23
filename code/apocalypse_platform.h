@@ -6,6 +6,25 @@
 
 #include <stdint.h>
 
+// NOTE: compiler flags
+#if !defined(COMPILER_MSVC)
+#define COMPILER_MSVC 0
+#endif
+    
+#if !defined(COMPILER_LLVM)
+#define COMPILER_LLVM 0
+#endif
+
+#if !COMPILER_MSVC && !COMPILER_LLVM
+#if _MSC_VER
+#undef COMPILER_MSVC
+#define COMPILER_MSVC 1
+#else
+#undef COMPILER_LLVM
+#define COMPILER_LLVM 1
+#endif
+#endif
+
 #if APOCALYPSE_SLOW
 // TODO: Complete assertion macro
 #define ASSERT(Expression) if(!(Expression)) {*(int*) 0 = 0;}
@@ -14,6 +33,8 @@
 #endif
 
 #define ARRAY_COUNT(Array) (sizeof(Array) / sizeof(Array[0]))
+
+#define MAX_THREAD_COUNT 64
 
 #define KILOBYTES(Value) (1024LL * Value)
 #define MEGABYTES(Value) (1024LL * KILOBYTES(Value))
@@ -95,6 +116,7 @@ struct platform_job_queue
 	platform_mutex_handle* UsingEmpty; // NOTE: for making mods to EmptyQueue
 	platform_job_queue_entry* FilledHead; // NOTE: Jobs to do
 	platform_job_queue_entry* EmptyHead; // NOTE: entries available for jobs
+	uint32_t ThreadIds[MAX_THREAD_COUNT];
 };
 
 void PlatformAddJob(

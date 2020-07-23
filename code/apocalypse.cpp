@@ -348,6 +348,15 @@ void GameUpdateAndRender(
 	game_state* GameState = (game_state*) Memory->PermanentStorage;
 	if(!Memory->IsInitialized)
 	{
+#if APOCALYPSE_INTERNAL
+		// NOTE: initialize debug code
+		// TODO: get your own virtual memory hunk for this!
+		for(int ThreadIndex = 0; ThreadIndex < MAX_THREAD_COUNT; ThreadIndex++)
+		{
+			GlobalDebugRecords[ThreadIndex] = {};
+		}
+#endif
+
 #if APOCALYPSE_RELEASE
 		// TODO: replace with bespoke random tool
 		// NOTE: only init rand tools if we're in a release build
@@ -1176,7 +1185,7 @@ void HandleGameDebug(game_memory* Memory, game_offscreen_buffer* BackBuffer)
 		DrawBuffer.Pitch = BackBuffer->Pitch;
 		DrawBuffer.Memory = BackBuffer->Memory;
 
-		uint32_t MaxDebugInfoStringSize = 1024; 
+		uint32_t MaxDebugInfoStringSize = 2048; 
 		char* DebugInfoString = PushArray(
 			&GameState->FrameArena, MaxDebugInfoStringSize, char
 		);
@@ -1184,25 +1193,45 @@ void HandleGameDebug(game_memory* Memory, game_offscreen_buffer* BackBuffer)
 			DebugInfoString, MaxDebugInfoStringSize
 		);
 		for(
-			uint32_t DebugRecordIndex = 0; 
-			DebugRecordIndex < MAX_DEBUG_RECORDS;
-			DebugRecordIndex++
+			uint32_t ThreadIndex = 0;
+			ThreadIndex < MAX_THREAD_COUNT;
+			ThreadIndex++
 		)
 		{
-			debug_record* DebugRecord = &GlobalDebugRecords[DebugRecordIndex];
-			if(DebugRecord->HitCount)
+			bool ThreadInUse = false;
+			thread_debug_records* ThreadDebugRecords = (
+				&GlobalDebugRecords[ThreadIndex]
+			);
+			for(
+				uint32_t DebugRecordIndex = 0; 
+				DebugRecordIndex < MAX_DEBUG_RECORDS_PER_THREAD;
+				DebugRecordIndex++
+			)
 			{
-				AppendToString(
-					&StringAppender,
-					"%s:%d %I64ucy %uh %I64ucy/h\n",
-					DebugRecord->FunctionName,
-					DebugRecord->LineNumber,
-					DebugRecord->CycleCount,
-					DebugRecord->HitCount,
-					DebugRecord->CycleCount / DebugRecord->HitCount
+				debug_record* DebugRecord = (
+					&ThreadDebugRecords->Records[DebugRecordIndex]
 				);
-				DebugRecord->CycleCount = 0;
-				DebugRecord->HitCount = 0;
+				if(DebugRecord->HitCount)
+				{
+					if(!ThreadInUse)
+					{
+						AppendToString(
+							&StringAppender, "Thread %d\n", ThreadIndex
+						);
+						ThreadInUse = true;	
+					}
+					AppendToString(
+						&StringAppender,
+						"%s:%d %I64ucy %uh %I64ucy/h\n",
+						DebugRecord->FunctionName,
+						DebugRecord->LineNumber,
+						DebugRecord->CycleCount,
+						DebugRecord->HitCount,
+						DebugRecord->CycleCount / DebugRecord->HitCount
+					);
+					DebugRecord->CycleCount = 0;
+					DebugRecord->HitCount = 0;
+				}
 			}
 		}
 		TerminateString(&StringAppender);

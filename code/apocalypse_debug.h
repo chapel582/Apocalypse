@@ -18,8 +18,17 @@ struct debug_record
 	uint32_t HitCount;
 };
 
-#define MAX_DEBUG_RECORDS 256
-debug_record GlobalDebugRecords[MAX_DEBUG_RECORDS];
+#define MAX_DEBUG_RECORDS_PER_THREAD 256
+
+struct thread_debug_records
+{
+	uint32_t ThreadId;
+	bool Initialized;
+	debug_record Records[MAX_DEBUG_RECORDS_PER_THREAD];
+};
+
+// TODO: remove globals
+thread_debug_records GlobalDebugRecords[MAX_THREAD_COUNT];
 
 struct timed_block
 {
@@ -34,8 +43,31 @@ struct timed_block
 		int HitCount = 1
 	)
 	{
-		ASSERT(Id < MAX_DEBUG_RECORDS);
-		Record = &GlobalDebugRecords[Id]; 
+		ASSERT(Id < MAX_DEBUG_RECORDS_PER_THREAD);
+		uint32_t ThreadId = GetThreadId();
+		thread_debug_records* ThreadDebugRecords;
+		int ThreadRecordIndex;
+		for(
+			ThreadRecordIndex = 0;
+			ThreadRecordIndex < MAX_THREAD_COUNT;
+			ThreadRecordIndex++
+		)
+		{
+			ThreadDebugRecords = &GlobalDebugRecords[ThreadRecordIndex];
+			if(ThreadId == ThreadDebugRecords->ThreadId)
+			{
+				break;
+			}
+			else if(!ThreadDebugRecords->Initialized)
+			{
+				ThreadDebugRecords->ThreadId = ThreadId;
+				ThreadDebugRecords->Initialized = true;
+				break;
+			}
+		}
+		ASSERT(ThreadRecordIndex < MAX_THREAD_COUNT);
+
+		Record = &ThreadDebugRecords->Records[Id]; 
 		Record->FileName = FileName;
 		Record->FunctionName = FunctionName;
 		Record->LineNumber = LineNumber;

@@ -212,20 +212,10 @@ void DrawFullHand(
 		Card->TimeLeft = 10.0f;
 		Card->Active = true;
 		vector4* Color = &Card->Color;
-		if(Player == Player_One)
-		{
-			Color->A = 1.0f;
-			Color->R = 1.0f;
-			Color->G = 0.0f;
-			Color->B = 0.0f;
-		}
-		else
-		{
-			Color->A = 1.0f;
-			Color->R = 0.0f;
-			Color->G = 0.0f;
-			Color->B = 1.0f;
-		}
+		Color->A = 1.0f;
+		Color->R = 1.0f;
+		Color->G = 1.0f;
+		Color->B = 1.0f;
 		
 		deck_card* CardToDraw = Deck->InDeck;
 		ASSERT(CardToDraw != NULL);	
@@ -324,7 +314,7 @@ bool CheckAndActivate(
 	return Result;
 }
 
-void CannotDisplayCardMessage(game_state* GameState)
+void CannotActivateCardMessage(game_state* GameState)
 {
 	GameState->DisplayMessageUntil = GameState->Time + 3.0f;
 	strcpy_s(
@@ -332,6 +322,23 @@ void CannotDisplayCardMessage(game_state* GameState)
 		ARRAY_COUNT(GameState->MessageBuffer),
 		"Cannot activate card. Too few resources"
 	); 
+}
+
+void SelectCard(game_state* GameState, card* Card)
+{
+	Card->Color = Vector4(1.0f, 0.0f, 0.0f, 1.0f);
+	GameState->SelectedCard = Card;
+}
+
+void DeselectCard(game_state* GameState)
+{
+	if(GameState->SelectedCard == NULL)
+	{
+		return;
+	}
+	card* Card = GameState->SelectedCard;
+	Card->Color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	GameState->SelectedCard = NULL;
 }
 
 void GameUpdateAndRender(
@@ -713,25 +720,46 @@ void GameUpdateAndRender(
 								}
 								else
 								{
-									CannotDisplayCardMessage(GameState);
+									CannotActivateCardMessage(GameState);
 								}
 							}
 							else if(Card->SetType == CardSet_Tableau)
 							{
-								if(Card->TimesTapped < Card->TapsAvailable)
+								if(GameState->SelectedCard == NULL)
 								{
-									bool WasActivated = CheckAndActivate(
-										GameState->PlayerResources,
-										Card->TapDelta,
-										Card
-									);
-									if(WasActivated)
+									if(Card->TimesTapped < Card->TapsAvailable)
 									{
-										Card->TimesTapped++;
+										player_resources* ChangeTarget = (
+											&GameState->PlayerResources[Card->Owner]
+										);
+										player_resources* Delta = (
+											&Card->TapDelta[Card->Owner]
+										);
+										bool CanActivate = CanChangeResources(
+											ChangeTarget, Delta
+										);										
+										if(CanActivate)
+										{
+											SelectCard(GameState, Card);
+										}
+										else
+										{
+											CannotActivateCardMessage(
+												GameState
+											);
+										}
+									}
+								}
+								else
+								{
+									if(GameState->SelectedCard == Card)
+									{
+										DeselectCard(GameState);
 									}
 									else
 									{
-										CannotDisplayCardMessage(GameState);
+										DeselectCard(GameState);
+										SelectCard(GameState, Card);
 									}
 								}
 							}
@@ -740,6 +768,24 @@ void GameUpdateAndRender(
 								ASSERT(false);
 							}
 							break;
+						}
+						else
+						{
+							if(
+								GameState->SelectedCard && 
+								Card->SetType == CardSet_Tableau
+							)
+							{
+								card* SelectedCard = GameState->SelectedCard;
+								player_id Owner = SelectedCard->Owner;
+								CheckAndActivate(
+									&GameState->PlayerResources[Owner], 
+									&Card->TapDelta[Owner],
+									GameState->SelectedCard
+								);
+								SelectedCard->TimesTapped++;
+								DeselectCard(GameState);
+							}
 						}
 					}
 					Card++;
@@ -1010,7 +1056,7 @@ void GameUpdateAndRender(
 						MaxCharacters,
 						20.0f,
 						TopLeft,
-						Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+						Vector4(0.0f, 0.0f, 0.0f, 1.0f),
 						&GameState->FrameArena
 					);
 				}

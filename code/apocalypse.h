@@ -230,6 +230,7 @@ struct game_state
 	float TurnTimer;
 	player_resources* PlayerResources;
 	card* Cards;
+	card* SelectedCard;
 	int MaxCards;
 	deck* Decks;
 	card_set* Hands;

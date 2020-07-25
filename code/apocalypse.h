@@ -80,6 +80,8 @@ struct deck_card
 	player_resources PlayDelta[Player_Count];
 	player_resources TapDelta[Player_Count];
 	int32_t TapsAvailable;
+	int16_t Attack;
+	int16_t Health;
 	deck_card* Next;
 	deck_card* Previous;
 };
@@ -184,6 +186,8 @@ struct card
 	player_id Owner;
 	int32_t TapsAvailable;
 	int32_t TimesTapped;
+	int16_t Attack;
+	int16_t Health;
 };
 
 struct card_set

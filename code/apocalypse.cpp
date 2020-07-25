@@ -228,6 +228,8 @@ void DrawFullHand(
 			Card->PlayDelta[PlayerIndex] = CardToDraw->PlayDelta[PlayerIndex];
 			Card->TapDelta[PlayerIndex] = CardToDraw->TapDelta[PlayerIndex];
 			Card->TapsAvailable = CardToDraw->TapsAvailable;
+			Card->Attack = CardToDraw->Attack;
+			Card->Health = CardToDraw->Health;
 		}
 		Card->Owner = Player;
 		AddCardToSet(&GameState->Hands[Player], Card);
@@ -293,6 +295,8 @@ void InitDeckCard(deck_card* DeckCard)
 	}
 
 	DeckCard->TapsAvailable = 1;
+	DeckCard->Attack = 1;
+	DeckCard->Health = 1;
 }
 
 bool CheckAndActivate(
@@ -339,6 +343,28 @@ void DeselectCard(game_state* GameState)
 	card* Card = GameState->SelectedCard;
 	Card->Color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 	GameState->SelectedCard = NULL;
+}
+
+void AttackCard(game_state* GameState, card* AttackingCard, card* AttackedCard)
+{
+	// NOTE: this currently assumes cards must attack from the tableau
+	AttackingCard->Health -= AttackedCard->Attack;
+	AttackedCard->Health -= AttackingCard->Attack;
+
+	if(AttackingCard->Health <= 0)
+	{
+		RemoveCardAndAlign(
+			&GameState->Tableaus[AttackingCard->Owner], AttackingCard
+		);
+		AttackingCard->Active = false;
+	}
+	if(AttackedCard->Health <= 0)
+	{
+		RemoveCardAndAlign(
+			&GameState->Tableaus[AttackedCard->Owner], AttackedCard
+		);
+		AttackedCard->Active = false;
+	}
 }
 
 void GameUpdateAndRender(
@@ -699,7 +725,7 @@ void GameUpdateAndRender(
 						PointInRectangle(MouseEventWorldPos, Card->Rectangle)
 					)
 					{
-						// NOTE: player clicked a card on their turn 
+						// NOTE: player clicked their own card on their turn 
 						if(Card->Owner == GameState->CurrentTurn)
 						{
 							if(Card->SetType == CardSet_Hand)
@@ -769,6 +795,7 @@ void GameUpdateAndRender(
 							}
 							break;
 						}
+						// NOTE: player clicked on opponent's card on their turn
 						else
 						{
 							if(
@@ -780,11 +807,13 @@ void GameUpdateAndRender(
 								player_id Owner = SelectedCard->Owner;
 								CheckAndActivate(
 									&GameState->PlayerResources[Owner], 
-									&Card->TapDelta[Owner],
+									&SelectedCard->TapDelta[Owner],
 									GameState->SelectedCard
 								);
 								SelectedCard->TimesTapped++;
 								DeselectCard(GameState);
+
+								AttackCard(GameState, SelectedCard, Card);
 							}
 						}
 					}
@@ -994,7 +1023,11 @@ void GameUpdateAndRender(
 						Card->Color
 					);
 
-					uint32_t MaxCharacters = 4 * MAX_RESOURCE_STRING_SIZE;
+					#define ATTACK_HEALTH_MAX_LENGTH 8
+					uint32_t MaxCharacters = (
+						2 * ATTACK_HEALTH_MAX_LENGTH + 
+						4 * MAX_RESOURCE_STRING_SIZE
+					);
 					char* ResourceString = PushArray(
 						&GameState->FrameArena,
 						MaxCharacters,
@@ -1003,6 +1036,14 @@ void GameUpdateAndRender(
 					string_appender StringAppender = MakeStringAppender(
 						ResourceString, MaxCharacters 
 					);
+
+					AppendToString(
+						&StringAppender, "Attack: %d\n", Card->Attack
+					);
+					AppendToString(
+						&StringAppender, "Health: %d\n", Card->Health
+					);
+
 					AppendResourceStringToInfoCard(
 						Card,
 						&Card->PlayDelta[Card->Owner],

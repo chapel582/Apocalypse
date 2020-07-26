@@ -22,6 +22,9 @@
 #include "apocalypse_particles.h"
 #include "apocalypse_particles.cpp"
 
+#include "apocalypse_card_definitions.h"
+#include "apocalypse_card_definitions.cpp"
+
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
 
@@ -225,11 +228,14 @@ void DrawFullHand(
 			PlayerIndex++
 		)
 		{
-			Card->PlayDelta[PlayerIndex] = CardToDraw->PlayDelta[PlayerIndex];
-			Card->TapDelta[PlayerIndex] = CardToDraw->TapDelta[PlayerIndex];
-			Card->TapsAvailable = CardToDraw->TapsAvailable;
-			Card->Attack = CardToDraw->Attack;
-			Card->Health = CardToDraw->Health;
+			card_definition* Definition = CardToDraw->Definition;
+			Card->Definition = Definition;
+		
+			Card->PlayDelta[PlayerIndex] = Definition->PlayDelta[PlayerIndex];
+			Card->TapDelta[PlayerIndex] = Definition->TapDelta[PlayerIndex];
+			Card->TapsAvailable = Definition->TapsAvailable;
+			Card->Attack = Definition->Attack;
+			Card->Health = Definition->Health;
 		}
 		Card->Owner = Player;
 		AddCardToSet(&GameState->Hands[Player], Card);
@@ -275,28 +281,11 @@ void AppendResourceStringToInfoCard(
 	}
 }
 
-void InitDeckCard(deck_card* DeckCard)
+void InitDeckCard(
+	deck_card* DeckCard, card_definition* Definitions, uint32_t CardId
+)
 {
-	for(int DeltaIndex = 0; DeltaIndex < Player_Count; DeltaIndex++)
-	{
-		player_resources* ResourceDelta = &DeckCard->PlayDelta[DeltaIndex];
-		SetResource(ResourceDelta, PlayerResource_Red, -1);
-		SetResource(ResourceDelta, PlayerResource_Green, 1);
-		SetResource(ResourceDelta, PlayerResource_Blue, 0);
-		SetResource(ResourceDelta, PlayerResource_White, 0);
-		SetResource(ResourceDelta, PlayerResource_Black, 0);
-
-		ResourceDelta = &DeckCard->TapDelta[DeltaIndex];
-		SetResource(ResourceDelta, PlayerResource_Red, 1);
-		SetResource(ResourceDelta, PlayerResource_Green, -1);
-		SetResource(ResourceDelta, PlayerResource_Blue, 0);
-		SetResource(ResourceDelta, PlayerResource_White, 0);
-		SetResource(ResourceDelta, PlayerResource_Black, 0);
-	}
-
-	DeckCard->TapsAvailable = 1;
-	DeckCard->Attack = 1;
-	DeckCard->Health = 1;
+	DeckCard->Definition = Definitions + CardId;
 }
 
 bool CheckAndActivate(
@@ -506,6 +495,7 @@ void GameUpdateAndRender(
 			&GameState->Arena, GameState->MaxCards, card
 		);
 		{
+			GameState->Definitions = DefineCards(&GameState->TransientArena);
 			GameState->Decks = PushArray(&GameState->Arena, Player_Count, deck);
 			for(
 				int PlayerIndex = Player_One;
@@ -518,7 +508,7 @@ void GameUpdateAndRender(
 
 				deck_card* DeckCard = &Deck->Cards[0];
 				*DeckCard = {};
-				InitDeckCard(DeckCard);
+				InitDeckCard(DeckCard, GameState->Definitions, 0);
 				DeckCard->Next = NULL;
 				DeckCard->Previous = NULL;
 				Deck->OutOfDeck = DeckCard;
@@ -532,7 +522,7 @@ void GameUpdateAndRender(
 					deck_card* OldHead = Deck->OutOfDeck;
 					DeckCard = &Deck->Cards[CardIndex];
 					*DeckCard = {};
-					InitDeckCard(DeckCard);
+					InitDeckCard(DeckCard, GameState->Definitions, 0);
 
 					DeckCard->Next = OldHead;
 					DeckCard->Previous = NULL;

@@ -9,15 +9,10 @@
 #include "apocalypse_assets.h"
 #include "apocalypse_audio.h"
 #include "apocalypse_particles.h"
+#include "apocalypse_card_definitions.h"
+#include "apocalypse_player_id.h"
 
 #define MAX_CARDS_PER_SET 7
-
-typedef enum
-{
-	Player_One,
-	Player_Two,
-	Player_Count
-} player_id;
 
 typedef enum
 {
@@ -26,62 +21,10 @@ typedef enum
 	CardSet_Count
 } card_set_type;
 
-typedef enum 
-{
-	PlayerResource_Red,
-	PlayerResource_Green,
-	PlayerResource_Blue,
-	PlayerResource_White,
-	PlayerResource_Black,
-	PlayerResource_Count	
-} player_resource_type;
-
-struct player_resources
-{
-	int32_t Resources[PlayerResource_Count];
-};
-
-inline bool CanChangeResources(
-	player_resources* Target, player_resources* Delta
-)
-{
-	for(int Index = 0; Index < PlayerResource_Count; Index++)
-	{
-		if(Target->Resources[Index] + Delta->Resources[Index] < 0)
-		{
-			return false;
-		}
-	}
-	return true;
-}
-
-inline void ChangeResources(player_resources* Target, player_resources* Delta)
-{
-	for(int Index = 0; Index < PlayerResource_Count; Index++)
-	{
-		Target->Resources[Index] += Delta->Resources[Index];
-		if(Target->Resources[Index] <= 0)
-		{
-			Target->Resources[Index] = 0;
-		}
-	}
-}
-
-inline void SetResource(
-	player_resources* Resources, player_resource_type Type, int32_t SetTo
-)
-{
-	Resources->Resources[Type] = SetTo;
-}
-
 struct deck_card;
 struct deck_card
 {
-	player_resources PlayDelta[Player_Count];
-	player_resources TapDelta[Player_Count];
-	int32_t TapsAvailable;
-	int16_t Attack;
-	int16_t Health;
+	card_definition* Definition;
 	deck_card* Next;
 	deck_card* Previous;
 };
@@ -175,12 +118,13 @@ void OutDeckToInDeck(deck* Deck, deck_card* DeckCard)
 
 struct card
 {
+	card_definition* Definition;
+	player_resources PlayDelta[Player_Count];
+	player_resources TapDelta[Player_Count];
 	rectangle Rectangle;
 	card_set_type SetType;
 	float TimeLeft;
 	vector4 Color;
-	player_resources PlayDelta[Player_Count];
-	player_resources TapDelta[Player_Count];
 	bool Active;
 	bool HoveredOver;
 	player_id Owner;
@@ -244,6 +188,7 @@ struct game_state
 	vector2 InfoCardYBound;
 	float DisplayMessageUntil;
 	char MessageBuffer[256];
+	card_definition* Definitions;
 	// SECTION STOP: Card GameCode
 };
 

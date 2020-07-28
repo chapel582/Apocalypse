@@ -13,9 +13,9 @@ card_definition* DefineCards(memory_arena* MemoryArena)
 	card_definition* Definition = &Definitions[CardId];
 	InitCard(Definition, CardId++, 1, 1, 2);
 	InitPlayerResource(&Definition->PlayDelta[Player_One], 1, -1, 0, 0, 0);
-	InitPlayerResource(&Definition->TapDelta[Player_One], -1, 1, 0, 0, 0);
-	InitPlayerResource(&Definition->PlayDelta[Player_Two], 1, -1, 0, 0, 0);
-	InitPlayerResource(&Definition->TapDelta[Player_Two], -1, 1, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_One], 1, 1, 0, 0, 0);
+	InitPlayerResource(&Definition->PlayDelta[Player_Two], 1, 1, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_Two], 1, 1, 0, 0, 0);
 
 	ASSERT(CardId < MaxCardsInGame);
 	return Definitions;

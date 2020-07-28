@@ -189,6 +189,8 @@ struct game_state
 	float DisplayMessageUntil;
 	char MessageBuffer[256];
 	card_definition* Definitions;
+	float CardWidth;
+	float CardHeight;
 	// SECTION STOP: Card GameCode
 };
 

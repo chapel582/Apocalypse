@@ -107,6 +107,23 @@ inline player_id GetOpponent(player_id Player)
 	}
 }
 
+void DisplayMessageFor(game_state* GameState, char* Message, float Time)
+{
+	GameState->DisplayMessageUntil = GameState->Time + Time;
+	strcpy_s(
+		GameState->MessageBuffer,
+		ARRAY_COUNT(GameState->MessageBuffer),
+		Message
+	);	
+}
+
+void CannotActivateCardMessage(game_state* GameState)
+{
+	DisplayMessageFor(
+		GameState, "Cannot activate card. Too few resources", 1.0f
+	);
+}
+
 bool AddCardToSet(card_set* CardSet, card* Card)
 {
 	bool Result = false;
@@ -183,9 +200,76 @@ void RemoveCardAndAlign(card_set* CardSet, card* Card)
 	}
 }
 
-void DrawFullHand(
-	game_state* GameState, player_id Player, float CardWidth, float CardHeight
-)
+card* GetInactiveCard(game_state* GameState)
+{
+	card* Card = NULL;
+	for(
+		int SearchIndex = 0;
+		SearchIndex < GameState->MaxCards;
+		SearchIndex++
+	)
+	{
+		Card = &GameState->Cards[SearchIndex];
+		if(!Card->Active)
+		{
+			break;
+		}
+	}
+	ASSERT(Card != NULL);
+	ASSERT(!Card->Active);
+
+	Card->Rectangle.Dim.X = GameState->CardWidth;
+	Card->Rectangle.Dim.Y = GameState->CardHeight;
+	Card->TimeLeft = 10.0f;
+	Card->Active = true;
+	vector4* Color = &Card->Color;
+	Color->A = 1.0f;
+	Color->R = 1.0f;
+	Color->G = 1.0f;
+	Color->B = 1.0f;
+	return Card;
+}
+
+void InitCardWithDeckCard(deck* Deck, card* Card, player_id Owner)
+{
+	deck_card* CardToDraw = Deck->InDeck;
+	ASSERT(CardToDraw != NULL);	
+	for(
+		int PlayerIndex = 0;
+		PlayerIndex < Player_Count;
+		PlayerIndex++
+	)
+	{
+		card_definition* Definition = CardToDraw->Definition;
+		Card->Definition = Definition;
+	
+		Card->PlayDelta[PlayerIndex] = Definition->PlayDelta[PlayerIndex];
+		Card->TapDelta[PlayerIndex] = Definition->TapDelta[PlayerIndex];
+		Card->TapsAvailable = Definition->TapsAvailable;
+		Card->Attack = Definition->Attack;
+		Card->Health = Definition->Health;
+	}
+	Card->Owner = Owner;
+	InDeckToOutDeck(Deck, CardToDraw);
+}
+
+void DrawCard(game_state* GameState, player_id Owner)
+{
+	// NOTE: can't exceed maximum hand size
+	card_set* CardSet = &GameState->Hands[GameState->CurrentTurn];
+	if(CardSet->CardCount >= MAX_CARDS_PER_SET)
+	{
+		DisplayMessageFor(GameState, "Can't draw card. Hand full", 1.0f);
+		return;
+	}
+	deck* Deck = &GameState->Decks[GameState->CurrentTurn];
+	
+	card* Card = GetInactiveCard(GameState);
+	InitCardWithDeckCard(Deck, Card, Owner);
+	AddCardAndAlign(CardSet, Card);
+}
+
+void DrawFullHand(game_state* GameState, player_id Player)
 {
 	deck* Deck = &GameState->Decks[Player];
 	for(
@@ -194,53 +278,9 @@ void DrawFullHand(
 		CardIndex++
 	)
 	{
-		card* Card = NULL;
-		for(
-			int SearchIndex = CardIndex;
-			SearchIndex < GameState->MaxCards;
-			SearchIndex++
-		)
-		{
-			Card = &GameState->Cards[SearchIndex];
-			if(!Card->Active)
-			{
-				break;
-			}
-		}
-		ASSERT(Card != NULL);
-		ASSERT(!Card->Active);
-
-		Card->Rectangle.Dim.X = CardWidth;
-		Card->Rectangle.Dim.Y = CardHeight;
-		Card->TimeLeft = 10.0f;
-		Card->Active = true;
-		vector4* Color = &Card->Color;
-		Color->A = 1.0f;
-		Color->R = 1.0f;
-		Color->G = 1.0f;
-		Color->B = 1.0f;
-		
-		deck_card* CardToDraw = Deck->InDeck;
-		ASSERT(CardToDraw != NULL);	
-		for(
-			int PlayerIndex = 0;
-			PlayerIndex < Player_Count;
-			PlayerIndex++
-		)
-		{
-			card_definition* Definition = CardToDraw->Definition;
-			Card->Definition = Definition;
-		
-			Card->PlayDelta[PlayerIndex] = Definition->PlayDelta[PlayerIndex];
-			Card->TapDelta[PlayerIndex] = Definition->TapDelta[PlayerIndex];
-			Card->TapsAvailable = Definition->TapsAvailable;
-			Card->Attack = Definition->Attack;
-			Card->Health = Definition->Health;
-		}
-		Card->Owner = Player;
+		card* Card = GetInactiveCard(GameState);
+		InitCardWithDeckCard(Deck, Card, Player);
 		AddCardToSet(&GameState->Hands[Player], Card);
-
-		InDeckToOutDeck(Deck, CardToDraw);
 		Card++;
 	}
 	AlignCardSet(&GameState->Hands[Player]);
@@ -305,16 +345,6 @@ bool CheckAndActivate(
 		ChangeResources(ChangeTarget, Delta);
 	}
 	return Result;
-}
-
-void CannotActivateCardMessage(game_state* GameState)
-{
-	GameState->DisplayMessageUntil = GameState->Time + 3.0f;
-	strcpy_s(
-		GameState->MessageBuffer,
-		ARRAY_COUNT(GameState->MessageBuffer),
-		"Cannot activate card. Too few resources"
-	); 
 }
 
 void SelectCard(game_state* GameState, card* Card)
@@ -565,6 +595,9 @@ void GameUpdateAndRender(
 
 		float CardWidth = 60.0f;
 		float CardHeight = 90.0f;
+		GameState->CardWidth = CardWidth;
+		GameState->CardHeight = CardHeight;
+
 		float HandTableauMargin = 5.0f;
 		// NOTE: transform assumes screen and camera are 1:1
 		vector2 ScreenDimInWorld = TransformVectorToBasis(
@@ -611,8 +644,8 @@ void GameUpdateAndRender(
 		GameState->InfoCardXBound = Vector2(ScaledInfoCardDim.X, 0.0f);
 		GameState->InfoCardYBound = Vector2(0.0f, ScaledInfoCardDim.Y);
 
-		DrawFullHand(GameState, Player_One, CardWidth, CardHeight);
-		DrawFullHand(GameState, Player_Two, CardWidth, CardHeight);
+		DrawFullHand(GameState, Player_One);
+		DrawFullHand(GameState, Player_Two);
 
 		GameState->TurnTimer = 20.0f;
 
@@ -622,11 +655,11 @@ void GameUpdateAndRender(
 				&GameState->PlayerResources[PlayerIndex]
 			);
 			// TODO: initialize to 0?
-			SetResource(PlayerResources, PlayerResource_Red, rand() % 10);
-			SetResource(PlayerResources, PlayerResource_Green, rand() % 10);
-			SetResource(PlayerResources, PlayerResource_Blue, rand() % 10);
-			SetResource(PlayerResources, PlayerResource_White, rand() % 10);
-			SetResource(PlayerResources, PlayerResource_Black, rand() % 10);
+			SetResource(PlayerResources, PlayerResource_Red, rand() % 10 + 1);
+			SetResource(PlayerResources, PlayerResource_Green, rand() % 10 + 1);
+			SetResource(PlayerResources, PlayerResource_Blue, rand() % 10 + 1);
+			SetResource(PlayerResources, PlayerResource_White, rand() % 10 + 1);
+			SetResource(PlayerResources, PlayerResource_Black, rand() % 10 + 1);
 		}
 
 		Memory->IsInitialized = true;
@@ -919,6 +952,7 @@ void GameUpdateAndRender(
 				Card->TimesTapped = 0;
 			}
 		}
+		DrawCard(GameState, GameState->CurrentTurn);
 	}
 	// SECTION STOP: Turn timer update
 	// SECTION START: Card update

@@ -11,6 +11,7 @@
 #include "apocalypse_particles.h"
 #include "apocalypse_card_definitions.h"
 #include "apocalypse_player_id.h"
+#include "apocalypse_load_deck.h"
 
 #define MAX_CARDS_PER_SET 7
 
@@ -29,7 +30,6 @@ struct deck_card
 	deck_card* Previous;
 };
 
-#define MAX_CARDS_IN_DECK 60
 struct deck
 {
 	deck_card Cards[MAX_CARDS_IN_DECK];

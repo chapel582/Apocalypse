@@ -25,6 +25,9 @@
 #include "apocalypse_card_definitions.h"
 #include "apocalypse_card_definitions.cpp"
 
+#include "apocalypse_load_deck.h"
+#include "apocalypse_load_deck.cpp"
+
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
 
@@ -520,6 +523,26 @@ void GameUpdateAndRender(
 			}
 		}
 
+		loaded_deck P1Deck;
+		loaded_deck P2Deck;
+		for(
+			int DeckCardIndex = 0;
+			DeckCardIndex < MAX_CARDS_IN_DECK;
+			DeckCardIndex++
+		)
+		{
+			P1Deck.Ids[DeckCardIndex] = 0;
+			P2Deck.Ids[DeckCardIndex] = 0;
+		}
+		P1Deck.Header.CardCount = MAX_CARDS_IN_DECK;
+		P2Deck.Header.CardCount = MAX_CARDS_IN_DECK;
+		// TODO: Remove Save decks. should only happen in deck editor
+		SaveDeck("../decks/P1Deck.deck", &P1Deck);
+		SaveDeck("../decks/P2Deck.deck", &P2Deck);
+		// TODO: load decks based on interaction at start of new card game
+		P1Deck = LoadDeck("../decks/P1Deck.deck");
+		P2Deck = LoadDeck("../decks/P2Deck.deck");
+
 		GameState->MaxCards = Player_Count * CardSet_Count * MAX_CARDS_PER_SET;
 		GameState->Cards = PushArray(
 			&GameState->Arena, GameState->MaxCards, card
@@ -533,26 +556,41 @@ void GameUpdateAndRender(
 				PlayerIndex++
 			)
 			{
+				loaded_deck* LoadedDeck;
+				if(PlayerIndex == Player_One)
+				{
+					LoadedDeck = &P1Deck;
+				}
+				else
+				{
+					LoadedDeck = &P2Deck;
+				}
 				deck* Deck = &GameState->Decks[PlayerIndex];
 				*Deck = {};
 
 				deck_card* DeckCard = &Deck->Cards[0];
 				*DeckCard = {};
-				InitDeckCard(DeckCard, GameState->Definitions, 0);
+				InitDeckCard(
+					DeckCard, GameState->Definitions, LoadedDeck->Ids[0]
+				);
 				DeckCard->Next = NULL;
 				DeckCard->Previous = NULL;
 				Deck->OutOfDeck = DeckCard;
 				Deck->OutOfDeckLength++;
 				for(
 					int CardIndex = 1;
-					CardIndex < MAX_CARDS_IN_DECK;
+					CardIndex < LoadedDeck->Header.CardCount;
 					CardIndex++
 				)
 				{
 					deck_card* OldHead = Deck->OutOfDeck;
 					DeckCard = &Deck->Cards[CardIndex];
 					*DeckCard = {};
-					InitDeckCard(DeckCard, GameState->Definitions, 0);
+					InitDeckCard(
+						DeckCard,
+						GameState->Definitions,
+						LoadedDeck->Ids[CardIndex]
+					);
 
 					DeckCard->Next = OldHead;
 					DeckCard->Previous = NULL;

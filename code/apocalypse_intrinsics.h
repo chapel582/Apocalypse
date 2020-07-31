@@ -10,7 +10,7 @@ struct bit_scan_result
 inline bit_scan_result FindLeastSignificantSetBit(uint32_t Value)
 {
 	bit_scan_result Result = {};
-	Result.Found = _BitScanForward((unsigned long*) &Result.Index, Value);
+	Result.Found = _BitScanForward((unsigned long*) &Result.Index, Value) != 0;
 	return Result;
 }
 

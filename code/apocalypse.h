@@ -144,6 +144,12 @@ struct card_set
 	card_set_type Type;
 };
 
+typedef enum
+{
+	SceneType_CardGame,
+	SceneType_MainMenu,
+} scene_type;
+
 struct game_state
 {
 	// NOTE: Arena is just for permanent things that can/should be determined
@@ -168,11 +174,14 @@ struct game_state
 
 	float Time;
 
+	scene_type Scene;
+
 	bool OverlayDebugInfo;
 
 	// TODO: remove test particle system
 	particle_system TestParticleSystem;
 
+	// TODO: Move card game data to card game specific structure
 	// SECTION START: Card Game Code
 	player_id CurrentTurn;
 	float TurnTimer;

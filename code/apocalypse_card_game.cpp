@@ -1,6 +1,7 @@
 #include "apocalypse.h"
 #include "apocalypse_assets.h"
 #include "apocalypse_render_group.h"
+#include "apocalypse_main_menu.h"
 
 #include "apocalypse_card_definitions.h"
 #include "apocalypse_card_definitions.cpp"
@@ -766,6 +767,19 @@ void UpdateAndRenderCardGame(
 			{
 				switch(KeyboardEvent->Code)
 				{
+					case(0x0D): // NOTE: Return/Enter V-code
+					{
+						if(!KeyboardEvent->IsDown && KeyboardEvent->WasDown)
+						{
+							EndTurn = true;
+						}
+						break;
+					}
+					case(0x1B): // NOTE: Escape V-code
+					{
+						StartMainMenu(GameState);
+						break;
+					}
 					case(0x44): // NOTE: D V-code
 					{
 						// TODO: consider pulling this predicate out to an 
@@ -779,14 +793,10 @@ void UpdateAndRenderCardGame(
 							);
 						}
 						break;
-					}
-					case(0x0D): // NOTE: Return/Enter V-code
+					}					
+					case(0x00):
 					{
-						if(!KeyboardEvent->IsDown && KeyboardEvent->WasDown)
-						{
-							EndTurn = true;
-						}
-						break;
+
 					}
 				}
 			}
@@ -1135,14 +1145,4 @@ void UpdateAndRenderCardGame(
 #endif
 
 	// SECTION STOP: Updating game state
-
-	// SECTION START: Render
-	loaded_bitmap DrawBuffer = {};
-	DrawBuffer.Width = BackBuffer->Width;
-	DrawBuffer.Height = BackBuffer->Height;
-	DrawBuffer.Pitch = BackBuffer->Pitch;
-	DrawBuffer.Memory = BackBuffer->Memory;
-
-	RenderGroupToOutput(&GameState->RenderGroup, &DrawBuffer);
-	// SECTION STOP: Render
 }

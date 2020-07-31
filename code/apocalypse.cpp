@@ -201,6 +201,17 @@ void GameUpdateAndRender(
 			ASSERT(false);
 		}
 	}
+	
+	// SECTION START: Render from RenderGroup
+	loaded_bitmap DrawBuffer = {};
+	DrawBuffer.Width = BackBuffer->Width;
+	DrawBuffer.Height = BackBuffer->Height;
+	DrawBuffer.Pitch = BackBuffer->Pitch;
+	DrawBuffer.Memory = BackBuffer->Memory;
+
+	RenderGroupToOutput(&GameState->RenderGroup, &DrawBuffer);
+	// SECTION STOP: Render from RenderGroup
+
 	ResetMemArena(&GameState->FrameArena);
 }
 

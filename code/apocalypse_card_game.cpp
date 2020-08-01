@@ -356,6 +356,8 @@ void AttackCard(game_state* GameState, card* AttackingCard, card* AttackedCard)
 
 void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 {
+	ResetAssets(&GameState->Assets);
+	
 	loaded_deck P1Deck;
 	loaded_deck P2Deck;
 	for(

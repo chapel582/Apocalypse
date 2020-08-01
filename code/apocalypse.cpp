@@ -132,48 +132,6 @@ void GameUpdateAndRender(
 		Assets->JobQueue = Memory->DefaultJobQueue;
 		Assets->ArenaLock = PlatformCreateMutex();
 		Assets->AvailableListLock = PlatformCreateMutex();
-		Assets->AvailableHead = NULL;
-		for(
-			int InfoIndex = 0;
-			InfoIndex < ARRAY_COUNT(Assets->BitmapInfo);
-			InfoIndex++
-		)
-		{
-			asset_info* AssetInfo = &Assets->BitmapInfo[InfoIndex];
-			AssetInfo->State = AssetState_Unloaded;
-		}
-		for(
-			int InfoIndex = 0;
-			InfoIndex < ARRAY_COUNT(Assets->WavInfo);
-			InfoIndex++
-		)
-		{
-			asset_info* AssetInfo = &Assets->WavInfo[InfoIndex];
-			AssetInfo->State = AssetState_Unloaded;
-		}
-		for(
-			int InfoIndex = 0;
-			InfoIndex < ARRAY_COUNT(Assets->FontInfo);
-			InfoIndex++
-		)
-		{
-			asset_info* AssetInfo = &Assets->FontInfo[InfoIndex];
-			AssetInfo->State = AssetState_Unloaded;
-		}
-		for(int FontHandle = 0; FontHandle < FontHandle_Count; FontHandle++)
-		{
-			for(
-				int InfoIndex = 0;
-				InfoIndex < ARRAY_COUNT(Assets->GlyphInfo);
-				InfoIndex++
-			)
-			{
-				asset_info* AssetInfo = (
-					&Assets->GlyphInfo[FontHandle][InfoIndex]
-				);
-				AssetInfo->State = AssetState_Unloaded;
-			}
-		}
 
 		Memory->IsInitialized = true;
 

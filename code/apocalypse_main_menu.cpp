@@ -4,6 +4,8 @@
 
 void StartMainMenu(game_state* GameState)
 {
+	ResetAssets(&GameState->Assets);
+	
 	GameState->Scene = SceneType_MainMenu;
 }
 

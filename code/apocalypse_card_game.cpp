@@ -1,3 +1,4 @@
+#include "apocalypse_card_game.h"
 #include "apocalypse.h"
 #include "apocalypse_assets.h"
 #include "apocalypse_render_group.h"
@@ -75,20 +76,27 @@ inline player_id GetOpponent(player_id Player)
 	}
 }
 
-void DisplayMessageFor(game_state* GameState, char* Message, float Time)
+void DisplayMessageFor(
+	game_state* GameState,
+	card_game_state* SceneState,
+	char* Message,
+	float Time
+)
 {
-	GameState->DisplayMessageUntil = GameState->Time + Time;
+	SceneState->DisplayMessageUntil = GameState->Time + Time;
 	strcpy_s(
-		GameState->MessageBuffer,
-		ARRAY_COUNT(GameState->MessageBuffer),
+		SceneState->MessageBuffer,
+		ARRAY_COUNT(SceneState->MessageBuffer),
 		Message
 	);	
 }
 
-void CannotActivateCardMessage(game_state* GameState)
+void CannotActivateCardMessage(
+	game_state* GameState, card_game_state* SceneState
+)
 {
 	DisplayMessageFor(
-		GameState, "Cannot activate card. Too few resources", 1.0f
+		GameState, SceneState, "Cannot activate card. Too few resources", 1.0f
 	);
 }
 
@@ -168,16 +176,16 @@ void RemoveCardAndAlign(card_set* CardSet, card* Card)
 	}
 }
 
-card* GetInactiveCard(game_state* GameState)
+card* GetInactiveCard(card_game_state* SceneState)
 {
 	card* Card = NULL;
 	for(
 		int SearchIndex = 0;
-		SearchIndex < GameState->MaxCards;
+		SearchIndex < SceneState->MaxCards;
 		SearchIndex++
 	)
 	{
-		Card = &GameState->Cards[SearchIndex];
+		Card = &SceneState->Cards[SearchIndex];
 		if(!Card->Active)
 		{
 			break;
@@ -186,8 +194,8 @@ card* GetInactiveCard(game_state* GameState)
 	ASSERT(Card != NULL);
 	ASSERT(!Card->Active);
 
-	Card->Rectangle.Dim.X = GameState->CardWidth;
-	Card->Rectangle.Dim.Y = GameState->CardHeight;
+	Card->Rectangle.Dim.X = SceneState->CardWidth;
+	Card->Rectangle.Dim.Y = SceneState->CardHeight;
 	Card->TimeLeft = 10.0f;
 	Card->Active = true;
 	vector4* Color = &Card->Color;
@@ -221,37 +229,41 @@ void InitCardWithDeckCard(deck* Deck, card* Card, player_id Owner)
 	InDeckToOutDeck(Deck, CardToDraw);
 }
 
-void DrawCard(game_state* GameState, player_id Owner)
+void DrawCard(
+	game_state* GameState, card_game_state* SceneState, player_id Owner
+)
 {
 	// NOTE: can't exceed maximum hand size
-	card_set* CardSet = &GameState->Hands[GameState->CurrentTurn];
+	card_set* CardSet = &SceneState->Hands[SceneState->CurrentTurn];
 	if(CardSet->CardCount >= MAX_CARDS_PER_SET)
 	{
-		DisplayMessageFor(GameState, "Can't draw card. Hand full", 1.0f);
+		DisplayMessageFor(
+			GameState, SceneState, "Can't draw card. Hand full", 1.0f
+		);
 		return;
 	}
-	deck* Deck = &GameState->Decks[GameState->CurrentTurn];
+	deck* Deck = &SceneState->Decks[SceneState->CurrentTurn];
 	
-	card* Card = GetInactiveCard(GameState);
+	card* Card = GetInactiveCard(SceneState);
 	InitCardWithDeckCard(Deck, Card, Owner);
 	AddCardAndAlign(CardSet, Card);
 }
 
-void DrawFullHand(game_state* GameState, player_id Player)
+void DrawFullHand(card_game_state* SceneState, player_id Player)
 {
-	deck* Deck = &GameState->Decks[Player];
+	deck* Deck = &SceneState->Decks[Player];
 	for(
 		int CardIndex = 0;
 		CardIndex < MAX_CARDS_PER_SET;
 		CardIndex++
 	)
 	{
-		card* Card = GetInactiveCard(GameState);
+		card* Card = GetInactiveCard(SceneState);
 		InitCardWithDeckCard(Deck, Card, Player);
-		AddCardToSet(&GameState->Hands[Player], Card);
+		AddCardToSet(&SceneState->Hands[Player], Card);
 		Card++;
 	}
-	AlignCardSet(&GameState->Hands[Player]);
+	AlignCardSet(&SceneState->Hands[Player]);
 }
 
 void AppendResourceStringToInfoCard(
@@ -315,24 +327,26 @@ bool CheckAndActivate(
 	return Result;
 }
 
-void SelectCard(game_state* GameState, card* Card)
+void SelectCard(card_game_state* SceneState, card* Card)
 {
 	Card->Color = Vector4(1.0f, 0.0f, 0.0f, 1.0f);
-	GameState->SelectedCard = Card;
+	SceneState->SelectedCard = Card;
 }
 
-void DeselectCard(game_state* GameState)
+void DeselectCard(card_game_state* SceneState)
 {
-	if(GameState->SelectedCard == NULL)
+	if(SceneState->SelectedCard == NULL)
 	{
 		return;
 	}
-	card* Card = GameState->SelectedCard;
+	card* Card = SceneState->SelectedCard;
 	Card->Color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-	GameState->SelectedCard = NULL;
+	SceneState->SelectedCard = NULL;
 }
 
-void AttackCard(game_state* GameState, card* AttackingCard, card* AttackedCard)
+void AttackCard(
+	card_game_state* SceneState, card* AttackingCard, card* AttackedCard
+)
 {
 	// NOTE: this currently assumes cards must attack from the tableau
 	AttackingCard->Health -= AttackedCard->Attack;
@@ -341,14 +355,14 @@ void AttackCard(game_state* GameState, card* AttackingCard, card* AttackedCard)
 	if(AttackingCard->Health <= 0)
 	{
 		RemoveCardAndAlign(
-			&GameState->Tableaus[AttackingCard->Owner], AttackingCard
+			&SceneState->Tableaus[AttackingCard->Owner], AttackingCard
 		);
 		AttackingCard->Active = false;
 	}
 	if(AttackedCard->Health <= 0)
 	{
 		RemoveCardAndAlign(
-			&GameState->Tableaus[AttackedCard->Owner], AttackedCard
+			&SceneState->Tableaus[AttackedCard->Owner], AttackedCard
 		);
 		AttackedCard->Active = false;
 	}
@@ -356,8 +370,14 @@ void AttackCard(game_state* GameState, card* AttackingCard, card* AttackedCard)
 
 void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 {
+	ResetMemArena(&GameState->TransientArena);
+	GameState->SceneState = PushStruct(
+		&GameState->TransientArena, card_game_state
+	);
 	ResetAssets(&GameState->Assets);
-	
+
+	card_game_state* SceneState = (card_game_state*) GameState->SceneState;
+
 	loaded_deck P1Deck;
 	loaded_deck P2Deck;
 	for(
@@ -378,13 +398,15 @@ void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	P1Deck = LoadDeck("../decks/P1Deck.deck");
 	P2Deck = LoadDeck("../decks/P2Deck.deck");
 
-	GameState->MaxCards = Player_Count * CardSet_Count * MAX_CARDS_PER_SET;
-	GameState->Cards = PushArray(
-		&GameState->Arena, GameState->MaxCards, card
+	SceneState->MaxCards = Player_Count * CardSet_Count * MAX_CARDS_PER_SET;
+	// TODO: maybe this should be in the transient arena? 
+	SceneState->Cards = PushArray(
+		&GameState->Arena, SceneState->MaxCards, card
 	);
 	{
-		GameState->Definitions = DefineCards(&GameState->TransientArena);
-		GameState->Decks = PushArray(&GameState->Arena, Player_Count, deck);
+		SceneState->Definitions = DefineCards(&GameState->TransientArena);
+		// TODO: decks should be in transient arena? 
+		SceneState->Decks = PushArray(&GameState->Arena, Player_Count, deck);
 		for(
 			int PlayerIndex = Player_One;
 			PlayerIndex < Player_Count;
@@ -400,13 +422,13 @@ void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 			{
 				LoadedDeck = &P2Deck;
 			}
-			deck* Deck = &GameState->Decks[PlayerIndex];
+			deck* Deck = &SceneState->Decks[PlayerIndex];
 			*Deck = {};
 
 			deck_card* DeckCard = &Deck->Cards[0];
 			*DeckCard = {};
 			InitDeckCard(
-				DeckCard, GameState->Definitions, LoadedDeck->Ids[0]
+				DeckCard, SceneState->Definitions, LoadedDeck->Ids[0]
 			);
 			DeckCard->Next = NULL;
 			DeckCard->Previous = NULL;
@@ -423,7 +445,7 @@ void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 				*DeckCard = {};
 				InitDeckCard(
 					DeckCard,
-					GameState->Definitions,
+					SceneState->Definitions,
 					LoadedDeck->Ids[CardIndex]
 				);
 
@@ -442,7 +464,7 @@ void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 			PlayerIndex++
 		)
 		{
-			deck* Deck = &GameState->Decks[PlayerIndex];
+			deck* Deck = &SceneState->Decks[PlayerIndex];
 
 			while(Deck->OutOfDeckLength > 0)
 			{
@@ -456,20 +478,20 @@ void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		// SECTION STOP: Shuffle deck
 	}
 
-	GameState->PlayerResources = PushArray(
+	SceneState->PlayerResources = PushArray(
 		&GameState->TransientArena, Player_Count, player_resources
 	);
-	GameState->Hands = PushArray(
+	SceneState->Hands = PushArray(
 		&GameState->TransientArena, Player_Count, card_set
 	);
-	GameState->Tableaus = PushArray(
+	SceneState->Tableaus = PushArray(
 		&GameState->TransientArena, Player_Count, card_set
 	);
 
 	float CardWidth = 60.0f;
 	float CardHeight = 90.0f;
-	GameState->CardWidth = CardWidth;
-	GameState->CardHeight = CardHeight;
+	SceneState->CardWidth = CardWidth;
+	SceneState->CardHeight = CardHeight;
 
 	float HandTableauMargin = 5.0f;
 	// NOTE: transform assumes screen and camera are 1:1
@@ -479,28 +501,28 @@ void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	);
 	float ScreenWidthInWorld = ScreenDimInWorld.X;
 	
-	card_set* CardSet = &GameState->Hands[Player_One];
+	card_set* CardSet = &SceneState->Hands[Player_One];
 	CardSet->Type = CardSet_Hand;
 	CardSet->CardCount = 0;
 	CardSet->ScreenWidth = ScreenWidthInWorld;
 	CardSet->YPos = 0.0f;
 	CardSet->CardWidth = CardWidth;
 
-	CardSet = &GameState->Hands[Player_Two];
+	CardSet = &SceneState->Hands[Player_Two];
 	CardSet->Type = CardSet_Hand;
 	CardSet->CardCount = 0;
 	CardSet->ScreenWidth = ScreenWidthInWorld;
 	CardSet->YPos = ScreenDimInWorld.Y - CardHeight;
 	CardSet->CardWidth = CardWidth;
 
-	CardSet = &GameState->Tableaus[Player_One];
+	CardSet = &SceneState->Tableaus[Player_One];
 	CardSet->Type = CardSet_Tableau;
 	CardSet->CardCount = 0;
 	CardSet->ScreenWidth = ScreenWidthInWorld;
 	CardSet->YPos = CardHeight + HandTableauMargin;
 	CardSet->CardWidth = CardWidth;
 
-	CardSet = &GameState->Tableaus[Player_Two];
+	CardSet = &SceneState->Tableaus[Player_Two];
 	CardSet->Type = CardSet_Tableau;
 	CardSet->CardCount = 0;
 	CardSet->ScreenWidth = ScreenWidthInWorld;
@@ -509,23 +531,23 @@ void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	);
 	CardSet->CardWidth = CardWidth;
 	
-	GameState->InfoCardCenter = Vector2(
+	SceneState->InfoCardCenter = Vector2(
 		BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f
 	);
 
 	vector2 ScaledInfoCardDim = 0.33f * Vector2(600.0f, 900.0f);
-	GameState->InfoCardXBound = Vector2(ScaledInfoCardDim.X, 0.0f);
-	GameState->InfoCardYBound = Vector2(0.0f, ScaledInfoCardDim.Y);
+	SceneState->InfoCardXBound = Vector2(ScaledInfoCardDim.X, 0.0f);
+	SceneState->InfoCardYBound = Vector2(0.0f, ScaledInfoCardDim.Y);
 
-	DrawFullHand(GameState, Player_One);
-	DrawFullHand(GameState, Player_Two);
+	DrawFullHand(SceneState, Player_One);
+	DrawFullHand(SceneState, Player_Two);
 
-	GameState->TurnTimer = 20.0f;
+	SceneState->TurnTimer = 20.0f;
 
 	for(int PlayerIndex = 0; PlayerIndex < Player_Count; PlayerIndex++)
 	{
 		player_resources* PlayerResources = (
-			&GameState->PlayerResources[PlayerIndex]
+			&SceneState->PlayerResources[PlayerIndex]
 		);
 		// TODO: initialize to 0?
 		SetResource(PlayerResources, PlayerResource_Red, rand() % 10 + 1);
@@ -542,37 +564,12 @@ void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	// 	&GameState->TransientArena
 	// );
 
-	// TODO: remove me!
-	{
-		vector2 ScreenCenter = Vector2(
-			BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f
-		);
-		GameState->TestParticleSystem = MakeParticleSystem(
-			&GameState->TransientArena,
-			BitmapHandle_TestBitmap,
-			1.0f,
-			Vector2(35.0f, 35.0f),
-			Vector2(45.0f, 45.0f),
-			ScreenCenter - Vector2(5.0f, 5.0f),
-			ScreenCenter + Vector2(5.0f, 5.0f),
-			PI32,
-			2 * PI32,
-			1.0f,
-			5.0f,
-			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-			Vector4(0.0f, 0.0f, 0.0f, -0.01f),
-			Vector4(0.0f, 0.0f, 0.0f, -0.05f),
-			0.25f,
-			256
-		);
-	}
-
 	GameState->Scene = SceneType_CardGame;
 }
 
 void UpdateAndRenderCardGame(
 	game_state* GameState,
+	card_game_state* SceneState,
 	game_offscreen_buffer* BackBuffer,
 	game_mouse_events* MouseEvents,
 	game_keyboard_events* KeyboardEvents,
@@ -617,10 +614,10 @@ void UpdateAndRenderCardGame(
 					WavHandle_Bloop00,
 					&GameState->TransientArena
 				);
-				card* Card = &GameState->Cards[0];
+				card* Card = &SceneState->Cards[0];
 				for(
 					int CardIndex = 0;
-					CardIndex < GameState->MaxCards;
+					CardIndex < SceneState->MaxCards;
 					CardIndex++
 				)
 				{
@@ -630,37 +627,39 @@ void UpdateAndRenderCardGame(
 					)
 					{
 						// NOTE: player clicked their own card on their turn 
-						if(Card->Owner == GameState->CurrentTurn)
+						if(Card->Owner == SceneState->CurrentTurn)
 						{
 							if(Card->SetType == CardSet_Hand)
 							{
 								bool WasActivated = CheckAndActivate(
-									GameState->PlayerResources,
+									SceneState->PlayerResources,
 									Card->PlayDelta,
 									Card
 								);
 								if(WasActivated)
 								{
 									RemoveCardAndAlign(
-										&GameState->Hands[Card->Owner], Card
+										&SceneState->Hands[Card->Owner], Card
 									);
 									AddCardAndAlign(
-										&GameState->Tableaus[Card->Owner], Card
+										&SceneState->Tableaus[Card->Owner], Card
 									);
 								}
 								else
 								{
-									CannotActivateCardMessage(GameState);
+									CannotActivateCardMessage(
+										GameState, SceneState
+									);
 								}
 							}
 							else if(Card->SetType == CardSet_Tableau)
 							{
-								if(GameState->SelectedCard == NULL)
+								if(SceneState->SelectedCard == NULL)
 								{
 									if(Card->TimesTapped < Card->TapsAvailable)
 									{
 										player_resources* ChangeTarget = (
-											&GameState->PlayerResources[Card->Owner]
+											&SceneState->PlayerResources[Card->Owner]
 										);
 										player_resources* Delta = (
 											&Card->TapDelta[Card->Owner]
@@ -670,26 +669,26 @@ void UpdateAndRenderCardGame(
 										);										
 										if(CanActivate)
 										{
-											SelectCard(GameState, Card);
+											SelectCard(SceneState, Card);
 										}
 										else
 										{
 											CannotActivateCardMessage(
-												GameState
+												GameState, SceneState
 											);
 										}
 									}
 								}
 								else
 								{
-									if(GameState->SelectedCard == Card)
+									if(SceneState->SelectedCard == Card)
 									{
-										DeselectCard(GameState);
+										DeselectCard(SceneState);
 									}
 									else
 									{
-										DeselectCard(GameState);
-										SelectCard(GameState, Card);
+										DeselectCard(SceneState);
+										SelectCard(SceneState, Card);
 									}
 								}
 							}
@@ -703,21 +702,21 @@ void UpdateAndRenderCardGame(
 						else
 						{
 							if(
-								GameState->SelectedCard && 
+								SceneState->SelectedCard && 
 								Card->SetType == CardSet_Tableau
 							)
 							{
-								card* SelectedCard = GameState->SelectedCard;
+								card* SelectedCard = SceneState->SelectedCard;
 								player_id Owner = SelectedCard->Owner;
 								CheckAndActivate(
-									&GameState->PlayerResources[Owner], 
+									&SceneState->PlayerResources[Owner], 
 									&SelectedCard->TapDelta[Owner],
-									GameState->SelectedCard
+									SceneState->SelectedCard
 								);
 								SelectedCard->TimesTapped++;
-								DeselectCard(GameState);
+								DeselectCard(SceneState);
 
-								AttackCard(GameState, SelectedCard, Card);
+								AttackCard(SceneState, SelectedCard, Card);
 							}
 						}
 					}
@@ -726,10 +725,10 @@ void UpdateAndRenderCardGame(
 			}
 			else if(MouseEvent->Type == MouseMove)
 			{
-				card* Card = &GameState->Cards[0];
+				card* Card = &SceneState->Cards[0];
 				for(
 					int CardIndex = 0;
-					CardIndex < GameState->MaxCards;
+					CardIndex < SceneState->MaxCards;
 					CardIndex++
 				)
 				{
@@ -821,36 +820,36 @@ void UpdateAndRenderCardGame(
 	// SECTION START: Turn timer update
 	if(!EndTurn)
 	{
-		GameState->TurnTimer -= DtForFrame;
+		SceneState->TurnTimer -= DtForFrame;
 		// NOTE: switch turns
-		if(GameState->TurnTimer <= 0)
+		if(SceneState->TurnTimer <= 0)
 		{
 			EndTurn = true;
 		}
 	}
 	if(EndTurn)
 	{
-		GameState->TurnTimer = 20.0f;
-		GameState->CurrentTurn = (
-			(GameState->CurrentTurn	== Player_Two) ? Player_One : Player_Two
+		SceneState->TurnTimer = 20.0f;
+		SceneState->CurrentTurn = (
+			(SceneState->CurrentTurn == Player_Two) ? Player_One : Player_Two
 		);
-		for(int CardIndex = 0; CardIndex < GameState->MaxCards; CardIndex++)
+		for(int CardIndex = 0; CardIndex < SceneState->MaxCards; CardIndex++)
 		{
-			card* Card = &GameState->Cards[CardIndex];
+			card* Card = &SceneState->Cards[CardIndex];
 			if(Card->Active)
 			{
 				Card->TimesTapped = 0;
 			}
 		}
-		DrawCard(GameState, GameState->CurrentTurn);
+		DrawCard(GameState, SceneState, SceneState->CurrentTurn);
 	}
 	// SECTION STOP: Turn timer update
 	// SECTION START: Card update
 	{
-		card* Card = &GameState->Cards[0];
+		card* Card = &SceneState->Cards[0];
 		for(
 			int CardIndex = 0;
-			CardIndex < GameState->MaxCards;
+			CardIndex < SceneState->MaxCards;
 			CardIndex++
 		)
 		{
@@ -867,17 +866,17 @@ void UpdateAndRenderCardGame(
 	PushClear(&GameState->RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
 	// SECTION START: Push turn timer
 	{
-		int32_t TurnTimerCeil = Int32Ceil(GameState->TurnTimer);
+		int32_t TurnTimerCeil = Int32Ceil(SceneState->TurnTimer);
 		uint32_t MaxTurnTimerCharacters = 10;
 		char* TurnTimerString = PushArray(
 			&GameState->FrameArena, MaxTurnTimerCharacters, char
 		);
 		char* PlayerIndicator = NULL;
-		if(GameState->CurrentTurn == Player_One)
+		if(SceneState->CurrentTurn == Player_One)
 		{
 			PlayerIndicator = "P1";
 		}
-		else if(GameState->CurrentTurn == Player_Two)
+		else if(SceneState->CurrentTurn == Player_Two)
 		{
 			PlayerIndicator = "P2";
 		}
@@ -907,10 +906,10 @@ void UpdateAndRenderCardGame(
 	// SECTION STOP: Push turn timer
 	// SECTION START: Push cards
 	{
-		card* Card = &GameState->Cards[0];
+		card* Card = &SceneState->Cards[0];
 		for(
 			int CardIndex = 0;
-			CardIndex < GameState->MaxCards;
+			CardIndex < SceneState->MaxCards;
 			CardIndex++
 		)
 		{
@@ -931,9 +930,9 @@ void UpdateAndRenderCardGame(
 						&GameState->RenderGroup,
 						&GameState->Assets,
 						BitmapHandle_TestCard2,
-						GameState->InfoCardCenter,
-						GameState->InfoCardXBound,
-						GameState->InfoCardYBound,
+						SceneState->InfoCardCenter,
+						SceneState->InfoCardXBound,
+						SceneState->InfoCardYBound,
 						Card->Color
 					);
 
@@ -999,9 +998,9 @@ void UpdateAndRenderCardGame(
 					}
 
 					vector2 TopLeft = (
-						GameState->InfoCardCenter - 
-						0.5f * GameState->InfoCardXBound + 
-						0.5f * GameState->InfoCardYBound
+						SceneState->InfoCardCenter - 
+						0.5f * SceneState->InfoCardXBound + 
+						0.5f * SceneState->InfoCardYBound
 					);
 					PushTextTopLeft(
 						&GameState->RenderGroup,
@@ -1026,7 +1025,7 @@ void UpdateAndRenderCardGame(
 			&GameState->FrameArena, MAX_RESOURCE_STRING_SIZE, char
 		);
 		FormatResourceString(
-			ResourceString, &GameState->PlayerResources[Player_One]
+			ResourceString, &SceneState->PlayerResources[Player_One]
 		);
 		float Padding = 15.0f;
 		PushText(
@@ -1045,7 +1044,7 @@ void UpdateAndRenderCardGame(
 		);
 
 		FormatResourceString(
-			ResourceString, &GameState->PlayerResources[Player_Two]
+			ResourceString, &SceneState->PlayerResources[Player_Two]
 		);
 		PushText(
 			&GameState->RenderGroup,
@@ -1065,14 +1064,14 @@ void UpdateAndRenderCardGame(
 	// SECTION STOP: Push resources
 
 	// SECTION START: Display message
-	if(GameState->Time < GameState->DisplayMessageUntil)
+	if(GameState->Time < SceneState->DisplayMessageUntil)
 	{
 		PushTextCentered(
 			&GameState->RenderGroup,
 			&GameState->Assets,
 			FontHandle_TestFont,
-			GameState->MessageBuffer,
-			ARRAY_COUNT(GameState->MessageBuffer),
+			SceneState->MessageBuffer,
+			ARRAY_COUNT(SceneState->MessageBuffer),
 			50.0f,
 			Vector2(
 				BackBuffer->Width / 2.0f, 

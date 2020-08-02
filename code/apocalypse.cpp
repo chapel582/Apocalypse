@@ -143,7 +143,12 @@ void GameUpdateAndRender(
 		case(SceneType_CardGame):
 		{
 			UpdateAndRenderCardGame(
-				GameState, BackBuffer, MouseEvents, KeyboardEvents, DtForFrame
+				GameState,
+				(card_game_state*) GameState->SceneState,
+				BackBuffer,
+				MouseEvents,
+				KeyboardEvents,
+				DtForFrame
 			);
 			break;
 		}

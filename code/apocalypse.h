@@ -175,32 +175,9 @@ struct game_state
 	float Time;
 
 	scene_type Scene;
+	void* SceneState;
 
 	bool OverlayDebugInfo;
-
-	// TODO: remove test particle system
-	particle_system TestParticleSystem;
-
-	// TODO: Move card game data to card game specific structure
-	// SECTION START: Card Game Code
-	player_id CurrentTurn;
-	float TurnTimer;
-	player_resources* PlayerResources;
-	card* Cards;
-	card* SelectedCard;
-	int MaxCards;
-	deck* Decks;
-	card_set* Hands;
-	card_set* Tableaus;
-	vector2 InfoCardCenter;
-	vector2 InfoCardXBound;
-	vector2 InfoCardYBound;
-	float DisplayMessageUntil;
-	char MessageBuffer[256];
-	card_definition* Definitions;
-	float CardWidth;
-	float CardHeight;
-	// SECTION STOP: Card GameCode
 };
 
 #define APOCALYPSE_H

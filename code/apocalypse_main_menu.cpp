@@ -4,6 +4,7 @@
 
 void StartMainMenu(game_state* GameState)
 {
+	ResetMemArena(&GameState->TransientArena);
 	ResetAssets(&GameState->Assets);
 	
 	GameState->Scene = SceneType_MainMenu;

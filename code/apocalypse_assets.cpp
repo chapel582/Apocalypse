@@ -44,7 +44,7 @@ void ResetAssets(assets* Assets)
 	{
 		for(
 			int InfoIndex = 0;
-			InfoIndex < ARRAY_COUNT(Assets->GlyphInfo);
+			InfoIndex < ARRAY_COUNT(Assets->GlyphInfo[FontHandle]);
 			InfoIndex++
 		)
 		{

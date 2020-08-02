@@ -399,14 +399,14 @@ void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	P2Deck = LoadDeck("../decks/P2Deck.deck");
 
 	SceneState->MaxCards = Player_Count * CardSet_Count * MAX_CARDS_PER_SET;
-	// TODO: maybe this should be in the transient arena? 
 	SceneState->Cards = PushArray(
-		&GameState->Arena, SceneState->MaxCards, card
+		&GameState->TransientArena, SceneState->MaxCards, card
 	);
 	{
 		SceneState->Definitions = DefineCards(&GameState->TransientArena);
-		// TODO: decks should be in transient arena? 
-		SceneState->Decks = PushArray(&GameState->Arena, Player_Count, deck);
+		SceneState->Decks = PushArray(
+			&GameState->TransientArena, Player_Count, deck
+		);
 		for(
 			int PlayerIndex = Player_One;
 			PlayerIndex < Player_Count;

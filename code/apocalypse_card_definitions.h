@@ -15,6 +15,12 @@ struct card_definition
 	int16_t Health;
 };
 
+struct card_definitions
+{
+	uint32_t NumCards;
+	card_definition* Array;
+};
+
 inline void InitCard(
 	card_definition* Card,
 	uint32_t Id,

@@ -160,7 +160,7 @@ struct card_game_state
 	vector2 InfoCardYBound;
 	float DisplayMessageUntil;
 	char MessageBuffer[256];
-	card_definition* Definitions;
+	card_definitions* Definitions;
 	float CardWidth;
 	float CardHeight;	
 };

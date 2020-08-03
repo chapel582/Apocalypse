@@ -303,10 +303,12 @@ void AppendResourceStringToInfoCard(
 }
 
 void InitDeckCard(
-	deck_card* DeckCard, card_definition* Definitions, uint32_t CardId
+	deck_card* DeckCard, card_definitions* Definitions, uint32_t CardId
 )
 {
-	DeckCard->Definition = Definitions + CardId;
+	// TODO: Might want a way to protect against card id out of range
+	ASSERT(CardId < Definitions->NumCards);
+	DeckCard->Definition = Definitions->Array + CardId;
 }
 
 bool CheckAndActivate(

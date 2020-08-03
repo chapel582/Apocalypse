@@ -378,6 +378,7 @@ void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	ResetAssets(&GameState->Assets);
 
 	card_game_state* SceneState = (card_game_state*) GameState->SceneState;
+	*SceneState = {};
 
 	loaded_deck P1Deck;
 	loaded_deck P2Deck;
@@ -403,6 +404,8 @@ void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	SceneState->Cards = PushArray(
 		&GameState->TransientArena, SceneState->MaxCards, card
 	);
+	memset(SceneState->Cards, 0, SceneState->MaxCards * sizeof(card));
+
 	{
 		SceneState->Definitions = DefineCards(&GameState->TransientArena);
 		SceneState->Decks = PushArray(
@@ -485,6 +488,7 @@ void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	SceneState->Hands = PushArray(
 		&GameState->TransientArena, Player_Count, card_set
 	);
+	memset(SceneState->Hands, 0, Player_Count * sizeof(card_set));
 	SceneState->Tableaus = PushArray(
 		&GameState->TransientArena, Player_Count, card_set
 	);
@@ -564,14 +568,12 @@ void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	// 	WavHandle_TestMusic,
 	// 	&GameState->TransientArena
 	// );
-
-	GameState->Scene = SceneType_CardGame;
 }
 
 void StartCardGameCallback(void* Data)
 {
-	start_game_args* Args = (start_game_args*) Data;
-	StartCardGame(Args->GameState, Args->BackBuffer);
+	game_state* GameState = (game_state*) Data;
+	GameState->Scene = SceneType_CardGame;
 }
 
 void UpdateAndRenderCardGame(
@@ -785,8 +787,7 @@ void UpdateAndRenderCardGame(
 					}
 					case(0x1B): // NOTE: Escape V-code
 					{
-						StartMainMenu(GameState, BackBuffer);
-						goto end;
+						GameState->Scene = SceneType_MainMenu; 
 						break;
 					}
 					case(0x44): // NOTE: D V-code
@@ -1154,6 +1155,4 @@ void UpdateAndRenderCardGame(
 #endif
 
 	// SECTION STOP: Updating game state
-end: 
-	return;
 }

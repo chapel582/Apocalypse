@@ -41,6 +41,7 @@ struct game_state
 	float Time;
 
 	scene_type Scene;
+	scene_type LastFrameScene;
 	void* SceneState;
 
 	bool OverlayDebugInfo;

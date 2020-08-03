@@ -137,12 +137,18 @@ void GameUpdateAndRender(
 		Memory->IsInitialized = true;
 
 		StartCardGame(GameState, BackBuffer);
+		GameState->Scene = SceneType_CardGame;
+		GameState->LastFrameScene = GameState->Scene;
 	}
 
 	switch(GameState->Scene)
 	{
 		case(SceneType_CardGame):
 		{
+			if(GameState->LastFrameScene != GameState->Scene)
+			{
+				StartCardGame(GameState, BackBuffer);
+			}
 			UpdateAndRenderCardGame(
 				GameState,
 				(card_game_state*) GameState->SceneState,
@@ -151,10 +157,15 @@ void GameUpdateAndRender(
 				KeyboardEvents,
 				DtForFrame
 			);
+			GameState->LastFrameScene = SceneType_CardGame;
 			break;
 		}
 		case(SceneType_MainMenu):
 		{
+			if(GameState->LastFrameScene != GameState->Scene)
+			{
+				StartMainMenu(GameState, BackBuffer);
+			}
 			UpdateAndRenderMainMenu(
 				GameState,
 				(main_menu_state*) GameState->SceneState,
@@ -163,6 +174,7 @@ void GameUpdateAndRender(
 				KeyboardEvents,
 				DtForFrame
 			);
+			GameState->LastFrameScene = SceneType_MainMenu;
 			break;
 		}
 		default:

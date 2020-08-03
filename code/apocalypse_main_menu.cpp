@@ -15,9 +15,6 @@ void StartMainMenu(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	
 	InitButtons(SceneState->Buttons, ARRAY_COUNT(SceneState->Buttons));
 
-	start_game_args* StartGameArgs = PushStruct(
-		&GameState->TransientArena, start_game_args
-	);
 	vector2 Center = Vector2(
 		BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f
 	);
@@ -31,10 +28,8 @@ void StartMainMenu(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		"Start Card Game",
 		Vector4(0.0f, 0.0f, 0.0f, 1.0f),
 		StartCardGameCallback,
-		StartGameArgs
+		GameState
 	);
-	
-	GameState->Scene = SceneType_MainMenu;
 }
 
 void UpdateAndRenderMainMenu(

@@ -3,6 +3,7 @@
 #include "apocalypse_assets.h"
 #include "apocalypse_render_group.h"
 #include "apocalypse_main_menu.h"
+#include "apocalypse_button.h"
 
 #include "apocalypse_card_definitions.h"
 #include "apocalypse_card_definitions.cpp"
@@ -567,6 +568,12 @@ void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	GameState->Scene = SceneType_CardGame;
 }
 
+void StartCardGameCallback(void* Data)
+{
+	start_game_args* Args = (start_game_args*) Data;
+	StartCardGame(Args->GameState, Args->BackBuffer);
+}
+
 void UpdateAndRenderCardGame(
 	game_state* GameState,
 	card_game_state* SceneState,
@@ -778,7 +785,7 @@ void UpdateAndRenderCardGame(
 					}
 					case(0x1B): // NOTE: Escape V-code
 					{
-						StartMainMenu(GameState);
+						StartMainMenu(GameState, BackBuffer);
 						break;
 					}
 					case(0x44): // NOTE: D V-code

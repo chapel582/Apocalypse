@@ -165,5 +165,12 @@ struct card_game_state
 	float CardHeight;	
 };
 
+struct start_game_args
+{
+	game_state* GameState;
+	game_offscreen_buffer* BackBuffer;
+};
+void StartCardGameCallback(void* Data);
+
 #define APOCALYPSE_CARD_GAME_H
 #endif

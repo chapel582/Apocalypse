@@ -24,6 +24,7 @@
 
 #include "apocalypse_card_game.cpp"
 #include "apocalypse_main_menu.cpp"
+#include "apocalypse_button.cpp"
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
@@ -155,7 +156,12 @@ void GameUpdateAndRender(
 		case(SceneType_MainMenu):
 		{
 			UpdateAndRenderMainMenu(
-				GameState, BackBuffer, MouseEvents, KeyboardEvents, DtForFrame
+				GameState,
+				(main_menu_state*) GameState->SceneState,
+				BackBuffer,
+				MouseEvents,
+				KeyboardEvents,
+				DtForFrame
 			);
 			break;
 		}

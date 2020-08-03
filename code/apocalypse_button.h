@@ -1,6 +1,7 @@
 #ifndef APOCALYPSE_BUTTON_H
 
 #include "apocalypse_assets.h"
+#include "apocalypse_vector.h"
 
 typedef void button_callback(void* Data);
 
@@ -11,6 +12,7 @@ struct ui_button
 	rectangle Rectangle;
 	font_handle Font;
 	char Text[256];
+	vector4 TextColor;
 	button_callback* Callback;
 	void* Data;
 };
@@ -29,6 +31,7 @@ void AddButton(
 	bitmap_handle Background,
 	font_handle Font,
 	char* Text,
+	vector4 TextColor,
 	button_callback* Callback,
 	void* Data
 );

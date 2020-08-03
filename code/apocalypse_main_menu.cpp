@@ -21,14 +21,15 @@ void StartMainMenu(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	vector2 Center = Vector2(
 		BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f
 	);
-	vector2 Dim = Vector2(BackBuffer->Width / 4.0f, BackBuffer->Height / 10.0f); 
+	vector2 Dim = Vector2(BackBuffer->Width / 5.5f, BackBuffer->Height / 20.0f); 
 	AddButton(
 		SceneState->Buttons,
 		ARRAY_COUNT(SceneState->Buttons),
 		MakeRectangle(Center - 0.5f * Dim, Dim),
-		BitmapHandle_TestCard,
+		BitmapHandle_TestCard2,
 		FontHandle_TestFont,
 		"Start Card Game",
+		Vector4(0.0f, 0.0f, 0.0f, 1.0f),
 		StartCardGameCallback,
 		StartGameArgs
 	);
@@ -102,20 +103,6 @@ void UpdateAndRenderMainMenu(
 	}
 
 	PushClear(&GameState->RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
-	PushTextCentered(
-		&GameState->RenderGroup,
-		&GameState->Assets,
-		FontHandle_TestFont,
-		"You have switched scenes!",
-		50,
-		50.0f,
-		Vector2(
-			BackBuffer->Width / 2.0f, 
-			(BackBuffer->Height / 2.0f)
-		),
-		Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-		&GameState->FrameArena
-	);
 
 	PushButtonsToRenderGroup(
 		SceneState->Buttons,

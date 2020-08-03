@@ -52,6 +52,7 @@ void AddButton(
 	bitmap_handle Background,
 	font_handle Font,
 	char* Text,
+	vector4 TextColor,
 	button_callback* Callback,
 	void* Data
 )
@@ -66,16 +67,19 @@ void AddButton(
 		ui_button* Button = &Buttons[ButtonIndex];
 		if(!Button->Active)
 		{
-			Button->Active = true;
 			ButtonToUse = Button;
 			break;
 		}	
 	}
 	ASSERT(ButtonToUse != NULL);
-	strcpy_s(ButtonToUse->Text, ARRAY_COUNT(ButtonToUse->Text), Text);
+	ButtonToUse->Active = true;
 	ButtonToUse->Rectangle = Rectangle;
 	ButtonToUse->Callback = Callback;
 	ButtonToUse->Data = Data;
+	ButtonToUse->Background = Background;
+	ButtonToUse->Font = Font;
+	ButtonToUse->TextColor = TextColor;
+	strcpy_s(ButtonToUse->Text, ARRAY_COUNT(ButtonToUse->Text), Text);
 }
 
 void PushButtonsToRenderGroup(
@@ -97,7 +101,7 @@ void PushButtonsToRenderGroup(
 		if(Button->Active)
 		{
 			vector2 ButtonCenter = GetCenter(Button->Rectangle);
-			PushCenteredBitmap(
+			PushSizedBitmap(
 				Group,
 				Assets,
 				Button->Background,
@@ -114,7 +118,7 @@ void PushButtonsToRenderGroup(
 				ARRAY_COUNT(Button->Text),
 				0.9f * Button->Rectangle.Dim.Y, 
 				ButtonCenter,
-				White,
+				Button->TextColor,
 				FrameArena 
 			);
 		}	

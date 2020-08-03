@@ -786,6 +786,7 @@ void UpdateAndRenderCardGame(
 					case(0x1B): // NOTE: Escape V-code
 					{
 						StartMainMenu(GameState, BackBuffer);
+						goto end;
 						break;
 					}
 					case(0x44): // NOTE: D V-code
@@ -1153,4 +1154,6 @@ void UpdateAndRenderCardGame(
 #endif
 
 	// SECTION STOP: Updating game state
+end: 
+	return;
 }

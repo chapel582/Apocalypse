@@ -529,18 +529,18 @@ inline void PushTextCentered(
 	font_handle FontHandle,
 	char* CodePoints,
 	uint32_t MaxCodePointCount,
-	float FontHeight, // NOTE: font height in world units
+	float FontHeight, 
 	vector2 Center,
 	vector4 Color,
-	memory_arena* FrameArena // NOTE: this function will leak if you don't
-	// CONT: regularly clear the arena. Hence, FrameArena
+	memory_arena* FrameArena 
 )
 {
-	/* NOTE: 
-		this function is for pushing text that aligns with a top 
-		left corner. e.g. the highest ascending glyph won't go exceed TopLeft.Y,
-		and  the farthest back glyph won't go beyond the TopLeft.X
-	*/
+	// NOTE: FontHeight is in world units
+	// NOTE: Center.X will be the middle of the rendered text. 
+	// NOTE: Center.Y - FontHeight / 2.0f will be the baseline
+	// NOTE: this function will leak if you don't regularly clear the arena.
+	// CONT: Hence, use FrameArena
+
 	loaded_font* LoadedFont = GetFont(Assets, FontHandle);
 	if(LoadedFont == NULL)
 	{
@@ -595,13 +595,13 @@ inline void PushTextCentered(
 		CodePointPtr++;
 	}
 
-	vector2 WidthOverTwoCamera = TransformVectorToBasis(
-		Group->CameraToScreen, Vector2(MaxWidth / 2.0f, 0.0f)
+	vector2 BaselineOffsetFromCenter = TransformVectorToBasis(
+		Group->CameraToScreen, Vector2(MaxWidth / 2.0f, FontHeight / 2.0f)
 	);
-	vector2 WidthOverTwoWorld = TransformVectorToBasis(
-		Group->WorldToCamera, WidthOverTwoCamera
+	vector2 BaselineOffsetFromCenterWorld = TransformVectorToBasis(
+		Group->WorldToCamera, BaselineOffsetFromCenter
 	);
-	vector2 Baseline = Center - WidthOverTwoWorld;
+	vector2 Baseline = Center - BaselineOffsetFromCenterWorld;
 
 	PushText(
 		Group,

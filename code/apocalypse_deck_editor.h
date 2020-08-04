@@ -1,8 +1,20 @@
 #ifndef APOCALYPSE_DECK_EDITOR_H
 
+#include "apocalypse_card_definitions.h"
+#include "apocalypse_rectangle.h"
+
+struct collection_card
+{
+	rectangle Rectangle;
+	bool Active;
+	card_definition* Definition;
+};
+
 struct deck_editor_state
 {
 	card_definitions* Definitions;
+	collection_card CollectionCards[8];
+	uint32_t CurrentFirstCollectionCard;
 };
 
 void StartDeckEditor(game_state* GameState);

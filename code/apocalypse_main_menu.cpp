@@ -2,6 +2,7 @@
 #include "apocalypse_assets.h"
 #include "apocalypse_render_group.h"
 #include "apocalypse_card_game.h"
+#include "apocalypse_deck_editor.h"
 #include "apocalypse_button.h"
 
 void StartMainMenu(game_state* GameState, game_offscreen_buffer* BackBuffer)
@@ -19,15 +20,29 @@ void StartMainMenu(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f
 	);
 	vector2 Dim = Vector2(BackBuffer->Width / 5.5f, BackBuffer->Height / 20.0f); 
+	vector2 ButtonMin = Center - 0.5f * Dim;
 	AddButton(
 		SceneState->Buttons,
 		ARRAY_COUNT(SceneState->Buttons),
-		MakeRectangle(Center - 0.5f * Dim, Dim),
+		MakeRectangle(ButtonMin, Dim),
 		BitmapHandle_TestCard2,
 		FontHandle_TestFont,
-		"Start Card Game",
+		"Card Game",
 		Vector4(0.0f, 0.0f, 0.0f, 1.0f),
 		StartCardGameCallback,
+		GameState
+	);
+
+	ButtonMin.Y -= 1.5f * Dim.Y;
+	AddButton(
+		SceneState->Buttons,
+		ARRAY_COUNT(SceneState->Buttons),
+		MakeRectangle(ButtonMin, Dim),
+		BitmapHandle_TestCard2,
+		FontHandle_TestFont,
+		"Deck Editor",
+		Vector4(0.0f, 0.0f, 0.0f, 1.0f),
+		StartDeckEditorCallback,
 		GameState
 	);
 }

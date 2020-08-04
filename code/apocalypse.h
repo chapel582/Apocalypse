@@ -14,6 +14,7 @@ typedef enum
 {
 	SceneType_CardGame,
 	SceneType_MainMenu,
+	SceneType_DeckEditor
 } scene_type;
 
 struct game_state

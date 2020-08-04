@@ -25,6 +25,7 @@
 #include "apocalypse_card_game.cpp"
 #include "apocalypse_main_menu.cpp"
 #include "apocalypse_button.cpp"
+#include "apocalypse_deck_editor.cpp"
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
@@ -175,6 +176,23 @@ void GameUpdateAndRender(
 				DtForFrame
 			);
 			GameState->LastFrameScene = SceneType_MainMenu;
+			break;
+		}
+		case(SceneType_DeckEditor):
+		{
+			if(GameState->LastFrameScene != GameState->Scene)
+			{
+				StartDeckEditor(GameState);
+			}
+			UpdateAndRenderDeckEditor(
+				GameState,
+				(deck_editor_state*) GameState->SceneState,
+				BackBuffer,
+				MouseEvents,
+				KeyboardEvents,
+				DtForFrame
+			);
+			GameState->LastFrameScene = SceneType_DeckEditor;
 			break;
 		}
 		default:

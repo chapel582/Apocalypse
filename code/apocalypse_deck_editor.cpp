@@ -2,7 +2,7 @@
 #include "apocalypse_platform.h"
 #include "apocalypse.h"
 
-void StartDeckEditor(game_state* GameState)
+void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 {
 	ResetMemArena(&GameState->TransientArena);
 	GameState->SceneState = PushStruct(
@@ -44,6 +44,22 @@ void StartDeckEditor(game_state* GameState)
 			}
 		}
 	}
+
+	{
+		text_input* TextInput = &SceneState->DeckNameInput;
+		*TextInput = {};
+		ClearAllFlags(TextInput);
+		SetFlag(TextInput, TextInput_Active);
+		SetFlag(TextInput, TextInput_Selected);
+		TextInput->CursorPos = 0;
+		TextInput->BufferSize = 256;
+		TextInput->FontHeight = 20.0f;
+		TextInput->Rectangle = MakeRectangleCentered(
+			Vector2(BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f),
+			Vector2(BackBuffer->Width / 5.0f, TextInput->FontHeight)
+		);
+		TextInput->Buffer = PushArray(&GameState->TransientArena, 32, char);
+	}
 }
 
 void StartDeckEditorCallback(void* Data)
@@ -61,6 +77,200 @@ void UpdateAndRenderDeckEditor(
 	float DtForFrame
 )
 {
+	user_event_index UserEventIndex = 0;
+	int MouseEventIndex = 0;
+	int KeyboardEventIndex = 0;
+	while(
+		(MouseEventIndex < MouseEvents->Length) ||
+		(KeyboardEventIndex < KeyboardEvents->Length)
+	)
+	{
+		for(; MouseEventIndex < MouseEvents->Length; MouseEventIndex++)
+		{
+			game_mouse_event* MouseEvent = (
+				&MouseEvents->Events[MouseEventIndex]
+			);
+
+			if(MouseEvent->UserEventIndex != UserEventIndex)
+			{
+				break;
+			}
+
+			vector2 MouseEventWorldPos = TransformPosFromBasis(
+				&GameState->WorldToCamera,
+				TransformPosFromBasis(
+					&GameState->CameraToScreen, 
+					Vector2(MouseEvent->XPos, MouseEvent->YPos)
+				)
+			);
+
+			UserEventIndex++;
+		}
+
+		for(; KeyboardEventIndex < KeyboardEvents->Length; KeyboardEventIndex++)
+		{
+			game_keyboard_event* KeyboardEvent = (
+				&KeyboardEvents->Events[KeyboardEventIndex]
+			);
+			if(KeyboardEvent->UserEventIndex != UserEventIndex)
+			{
+				break;
+			}
+
+			if(KeyboardEvent->IsDown != KeyboardEvent->WasDown)
+			{
+				if(
+					CheckFlag(&SceneState->DeckNameInput, TextInput_Active) &&
+					CheckFlag(&SceneState->DeckNameInput, TextInput_Selected)
+				)
+				{
+					text_input* TextInput = &SceneState->DeckNameInput;
+					switch(KeyboardEvent->Code)
+					{
+						// TODO: Handle backspace and delete
+						case(0x08):
+						{
+							// NOTE: backspace
+							// TODO: implement
+							break;
+						}
+						case(0x09):
+						{
+							// NOTE: Tab
+							// TODO: implement
+							break;
+						}
+						case(0x10):
+						{
+							// NOTE: Shift
+							// TODO: implement
+							// TODO: handle someone pressing shift already when
+							// CONT: selecting the text box
+							if(KeyboardEvent->IsDown)
+							{
+								SetFlag(TextInput, TextInput_ShiftIsDown);
+							}
+							else
+							{
+								ClearFlag(TextInput, TextInput_ShiftIsDown);
+							}
+							break;
+						}
+						case(0x0D):
+						{
+							// NOTE: Return
+							// TODO: implement
+							break;
+						}
+						case(0x20):
+						{
+							// NOTE: Space
+							// TODO: implement
+							break;
+						}
+						case(0x25):
+						{
+							// NOTE: Left
+							// TODO: implement							
+							break;
+						}
+						case(0x26):
+						{
+							// NOTE: Up
+							// TODO: implement							
+							break;
+						}
+						case(0x27):
+						{
+							// NOTE: Right
+							// TODO: implement							
+							break;
+						}
+						case(0x28):
+						{
+							// NOTE: Down
+							// TODO: implement
+							break;
+						}
+						case(0x30):
+						case(0x31):
+						case(0x32):
+						case(0x33):
+						case(0x34):
+						case(0x35):
+						case(0x36):
+						case(0x37):
+						case(0x38):
+						case(0x39):
+						{
+							// NOTE: Numbers
+							break;
+						}
+						case(0x41):
+						case(0x42):
+						case(0x43):
+						case(0x44):
+						case(0x45):
+						case(0x46):
+						case(0x47):
+						case(0x48):
+						case(0x49):
+						case(0x4A):
+						case(0x4B):
+						case(0x4C):
+						case(0x4D):
+						case(0x4E):
+						case(0x4F):
+						case(0x50):
+						case(0x51):
+						case(0x52):
+						case(0x53):
+						case(0x54):
+						case(0x55):
+						case(0x56):
+						case(0x57):
+						case(0x58):
+						case(0x59):
+						case(0x5A):
+						case(0x5B):
+						{
+							// NOTE: Letters
+							if(!KeyboardEvent->IsDown)
+							{
+								char Letter;
+								if(!CheckFlag(TextInput, TextInput_ShiftIsDown))
+								{
+									Letter = KeyboardEvent->Code + 0x20; 
+								}
+								else
+								{
+									Letter = KeyboardEvent->Code;
+								}
+								TextInput->Buffer[TextInput->CursorPos] = Letter;
+								TextInput->CursorPos++;
+								if(
+									TextInput->CursorPos >= 
+									TextInput->BufferSize
+								)
+								{
+									TextInput->CursorPos = (
+										TextInput->BufferSize - 1
+									);
+								}
+								TextInput->Buffer[TextInput->CursorPos] = 0;
+							}
+							// TODO: set a flag for press and hold
+							// TODO: define a rate for press and hold
+							break;
+						}
+					}
+				}
+			}
+
+			UserEventIndex++;
+		}
+	}
+
 	PushClear(&GameState->RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
 	for(
 		uint32_t Index = 0;
@@ -82,18 +292,23 @@ void UpdateAndRenderDeckEditor(
 			);
 		}
 	}
-	// PushTextCentered(
-	// 	&GameState->RenderGroup,
-	// 	&GameState->Assets,
-	// 	FontHandle_TestFont,
-	// 	"Switched to deck editor!",
-	// 	50,
-	// 	50.0f,
-	// 	Vector2(
-	// 		BackBuffer->Width / 2.0f, 
-	// 		BackBuffer->Height / 2.0f
-	// 	),
-	// 	Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-	// 	&GameState->FrameArena
-	// );
+	if(CheckFlag(&SceneState->DeckNameInput, TextInput_Active))
+	{
+		text_input* TextInput = &SceneState->DeckNameInput;
+		vector2 TopLeft = GetTopLeft(TextInput->Rectangle);
+		if(TextInput->Buffer[0] != 0)
+		{
+			PushTextTopLeft(
+				&GameState->RenderGroup,
+				&GameState->Assets,
+				FontHandle_TestFont,
+				TextInput->Buffer,
+				TextInput->BufferSize,
+				TextInput->FontHeight,
+				TopLeft,
+				Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+				&GameState->FrameArena
+			);
+		}
+	}
 }

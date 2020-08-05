@@ -14,6 +14,14 @@ inline rectangle MakeRectangle(vector2 Min, vector2 Dim)
 	return Result;
 }
 
+inline rectangle MakeRectangleCentered(vector2 Center, vector2 Dim)
+{
+	rectangle Result;
+	Result.Min = Center - 0.5f * Dim;
+	Result.Dim = Dim;
+	return Result;
+}
+
 inline vector2 GetTopLeft(rectangle Rectangle)
 {
 	vector2 Result;

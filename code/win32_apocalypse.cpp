@@ -1,7 +1,7 @@
 /*
 TODO: This is not a final platform layer
 	- Fullscreen support
-	- Threading
+	- Non-job threading
 	- sleep
 	- control cursor visibility
 	- Hardware acceleration

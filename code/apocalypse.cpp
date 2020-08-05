@@ -182,7 +182,7 @@ void GameUpdateAndRender(
 		{
 			if(GameState->LastFrameScene != GameState->Scene)
 			{
-				StartDeckEditor(GameState);
+				StartDeckEditor(GameState, BackBuffer);
 			}
 			UpdateAndRenderDeckEditor(
 				GameState,

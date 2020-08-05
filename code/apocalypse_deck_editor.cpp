@@ -38,6 +38,10 @@ void StartDeckEditor(game_state* GameState)
 				CollectionCard->Active = true;
 				CollectionCard->Definition = &Definitions->Array[Index];
 			}
+			else
+			{
+				CollectionCard->Active = false;
+			}
 		}
 	}
 }

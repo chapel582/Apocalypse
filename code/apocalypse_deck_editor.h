@@ -3,6 +3,8 @@
 #include "apocalypse_card_definitions.h"
 #include "apocalypse_rectangle.h"
 
+#include <string.h> // TODO: for text_input. move when that file is made
+
 typedef enum 
 {
 	TextInput_Active = 1 << 0,
@@ -10,6 +12,8 @@ typedef enum
 	TextInput_ShiftIsDown = 1 << 2,
 	TextInput_NewlinesEnabled = 1 << 3,
 } text_input_flag;
+
+typedef void text_input_callback(void* Data);
 
 struct text_input
 {
@@ -19,6 +23,7 @@ struct text_input
 	rectangle Rectangle;
 	float FontHeight;
 	char* Buffer;
+	text_input_callback* SubmitCallback;
 };
 
 inline bool CheckFlag(text_input* TextInput, text_input_flag Flag)
@@ -41,6 +46,21 @@ inline void ClearAllFlags(text_input* TextInput)
 	TextInput->Flags = 0;
 }
 
+struct standard_submit_args
+{
+	uint32_t DataLength;
+	text_input* TextInput;
+	char* Buffer;
+	char* Dest;
+};
+
+void StandardSubmit(void* Data)
+{
+	standard_submit_args* Args = (standard_submit_args*) Data;
+	memcpy(Args->Dest, Args->Buffer, Args->DataLength);
+	ClearFlag(Args->TextInput, TextInput_Active);
+}
+
 struct collection_card
 {
 	rectangle Rectangle;
@@ -54,6 +74,9 @@ struct deck_editor_state
 	collection_card CollectionCards[8];
 	uint32_t CurrentFirstCollectionCard;
 	text_input DeckNameInput;
+	char* DeckName;
+	uint32_t DeckNameBufferSize;
+	bool DeckNameSet;
 };
 
 void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer);

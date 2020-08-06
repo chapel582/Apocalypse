@@ -45,6 +45,12 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		}
 	}
 
+	SceneState->DeckNameBufferSize = 32;
+	SceneState->DeckName = PushArray(
+		&GameState->TransientArena, SceneState->DeckNameBufferSize, char
+	);
+	SceneState->DeckNameSet = false;
+
 	{
 		text_input* TextInput = &SceneState->DeckNameInput;
 		*TextInput = {};
@@ -52,13 +58,18 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		SetFlag(TextInput, TextInput_Active);
 		SetFlag(TextInput, TextInput_Selected);
 		TextInput->CursorPos = 0;
-		TextInput->BufferSize = 256;
 		TextInput->FontHeight = 20.0f;
 		TextInput->Rectangle = MakeRectangleCentered(
 			Vector2(BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f),
 			Vector2(BackBuffer->Width / 5.0f, TextInput->FontHeight)
 		);
-		TextInput->Buffer = PushArray(&GameState->TransientArena, 32, char);
+		TextInput->BufferSize = SceneState->DeckNameBufferSize;
+		TextInput->Buffer = PushArray(
+			&GameState->TransientArena, TextInput->BufferSize, char
+		);
+		TextInput->SubmitCallback = StandardSubmit;
+		// TODO: maybe need to track submit callback data when initializing so 	
+		// CONT: the updater can be abstracted
 	}
 }
 
@@ -159,7 +170,13 @@ void UpdateAndRenderDeckEditor(
 						case(0x0D):
 						{
 							// NOTE: Return
-							// TODO: implement
+							standard_submit_args SubmitArgs = {};
+							SubmitArgs.TextInput = TextInput;
+							SubmitArgs.DataLength = TextInput->CursorPos;
+							SubmitArgs.Buffer = TextInput->Buffer;
+							SubmitArgs.Dest = SceneState->DeckName;
+							TextInput->SubmitCallback(&SubmitArgs);
+							SceneState->DeckNameSet = true;
 							break;
 						}
 						case(0x20):
@@ -310,5 +327,19 @@ void UpdateAndRenderDeckEditor(
 				&GameState->FrameArena
 			);
 		}
+	}
+	if(SceneState->DeckNameSet)
+	{
+		PushTextTopLeft(
+			&GameState->RenderGroup,
+			&GameState->Assets,
+			FontHandle_TestFont,
+			SceneState->DeckName,
+			SceneState->DeckNameBufferSize,
+			20.0f,
+			Vector2(BackBuffer->Width - 50.0f, 50.0f),
+			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+			&GameState->FrameArena
+		);
 	}
 }

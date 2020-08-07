@@ -2,6 +2,64 @@
 #include "apocalypse_platform.h"
 #include "apocalypse.h"
 
+void AddCardToDeck(
+	deck_editor_state* SceneState,
+	deck_editor_cards* DeckCards,
+	card_definition* Definition
+)
+{
+	deck_editor_card* DeckCard;
+	vector2 Dim = DeckCards->Dim;
+	for(int Index = 0; Index < MAX_CARDS_IN_DECK; Index++)
+	{
+		DeckCard = DeckCards->Cards + Index;
+		if(!IsActive(DeckCard))
+		{
+			DeckCard->Definition = Definition;
+			rectangle Rectangle = MakeRectangle(
+				Vector2(
+					DeckCards->XPos,
+					DeckCards->YStart - (Dim.Y + DeckCards->YMargin) * (DeckCards->ActiveCardCount + 1)
+				),
+				Dim
+			);
+			// TODO: add remove card from deck callback
+			char Buffer[256];
+			snprintf(Buffer, ARRAY_COUNT(Buffer), "%d", Definition->Id);
+			DeckCard->ButtonHandle = AddButton(
+				SceneState->DeckButtons,
+				ARRAY_COUNT(SceneState->DeckButtons),
+				Rectangle,
+				BitmapHandle_TestCard2,
+				FontHandle_TestFont,
+				Buffer,
+				Vector4(0.0f, 0.0f, 0.0f, 1.0f),
+				NULL,
+				NULL
+			);
+			break;
+		}
+	}
+
+	DeckCards->ActiveCardCount++;
+	// TODO: handle someone trying to add a card when at the limit
+}
+
+struct add_card_to_deck_args
+{
+	deck_editor_state* SceneState;
+	deck_editor_cards* DeckCards;
+	card_definition* Definition;
+};
+
+void AddCardToDeckCallback(void* Data)
+{
+	add_card_to_deck_args* Args = (add_card_to_deck_args*) Data;
+	AddCardToDeck(Args->SceneState, Args->DeckCards, Args->Definition);
+}
+
+// TODO: remove card from deck
+
 void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 {
 	ResetMemArena(&GameState->TransientArena);
@@ -10,6 +68,26 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	);
 	ResetAssets(&GameState->Assets);
 	deck_editor_state* SceneState = (deck_editor_state*) GameState->SceneState;
+	InitButtons(
+		SceneState->CollectionButtons, 
+		ARRAY_COUNT(SceneState->CollectionButtons)
+	);
+	InitButtons(
+		SceneState->DeckButtons, 
+		ARRAY_COUNT(SceneState->DeckButtons)
+	);
+	
+	SceneState->DeckCards.Dim = Vector2(90.0f, 30.0f);
+	SceneState->DeckCards.XPos = (
+		BackBuffer->Width - SceneState->DeckCards.Dim.X
+	);
+	SceneState->DeckCards.YStart = (float) BackBuffer->Height;
+	SceneState->DeckCards.YMargin = 0.1f * SceneState->DeckCards.Dim.Y;
+	memset(
+		SceneState->DeckCards.Cards,
+		0,
+		ARRAY_COUNT(SceneState->DeckCards.Cards) * sizeof(deck_editor_card)
+	);
 
 	SceneState->Definitions = DefineCards(&GameState->TransientArena);
 	card_definitions* Definitions = SceneState->Definitions;
@@ -26,21 +104,37 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 			collection_card* CollectionCard = (
 				SceneState->CollectionCards + Index
 			);
-			CollectionCard->Rectangle = MakeRectangle(
-				Vector2(
-					(Dim.X + XMargin)* Col,
-					(Dim.Y + YMargin) * (NumRows - Row - 1)
-				),
-				Dim
-			);
 			if(Index < Definitions->NumCards)
 			{
-				CollectionCard->Active = true;
+				rectangle Rectangle = MakeRectangle(
+					Vector2(
+						(Dim.X + XMargin)* Col,
+						(Dim.Y + YMargin) * (NumRows - Row - 1)
+					),
+					Dim
+				);
 				CollectionCard->Definition = &Definitions->Array[Index];
+				add_card_to_deck_args* Data = PushStruct(
+					&GameState->TransientArena, add_card_to_deck_args
+				);
+				Data->SceneState = SceneState;
+				Data->DeckCards = &SceneState->DeckCards;
+				Data->Definition = Definitions->Array + Index;
+				CollectionCard->ButtonHandle = AddButton(
+					SceneState->CollectionButtons,
+					ARRAY_COUNT(SceneState->CollectionButtons),
+					Rectangle,
+					BitmapHandle_TestCard2,
+					FontHandle_TestFont,
+					"",
+					Vector4(0.0f, 0.0f, 0.0f, 1.0f),
+					AddCardToDeckCallback,
+					Data
+				);
 			}
 			else
 			{
-				CollectionCard->Active = false;
+				CollectionCard->Definition = NULL;
 			}
 		}
 	}
@@ -113,6 +207,19 @@ void UpdateAndRenderDeckEditor(
 					&GameState->CameraToScreen, 
 					Vector2(MouseEvent->XPos, MouseEvent->YPos)
 				)
+			);
+
+			ButtonsHandleMouseEvent(
+				SceneState->CollectionButtons,
+				ARRAY_COUNT(SceneState->CollectionButtons),
+				MouseEvent,
+				MouseEventWorldPos
+			);
+			ButtonsHandleMouseEvent(
+				SceneState->DeckButtons,
+				ARRAY_COUNT(SceneState->DeckButtons),
+				MouseEvent,
+				MouseEventWorldPos
 			);
 
 			UserEventIndex++;
@@ -289,26 +396,40 @@ void UpdateAndRenderDeckEditor(
 	}
 
 	PushClear(&GameState->RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
-	for(
-		uint32_t Index = 0;
-		Index < ARRAY_COUNT(SceneState->CollectionCards);
-		Index++
-	)
-	{
-		collection_card* Card = SceneState->CollectionCards + Index;
-		if(Card->Active)
-		{
-			PushSizedBitmap(
-				&GameState->RenderGroup,
-				&GameState->Assets,
-				BitmapHandle_TestCard2,
-				GetCenter(Card->Rectangle),
-				Vector2(Card->Rectangle.Dim.X, 0.0f),
-				Vector2(0.0f, Card->Rectangle.Dim.Y),
-				Vector4(1.0f, 1.0f, 1.0f, 1.0f)
-			);
-		}
-	}
+	// for(
+	// 	uint32_t Index = 0;
+	// 	Index < ARRAY_COUNT(SceneState->CollectionCards);
+	// 	Index++
+	// )
+	// {
+	// 	collection_card* Card = SceneState->CollectionCards + Index;
+	// 	if(IsActive(Card))
+	// 	{
+	// 		PushSizedBitmap(
+	// 			&GameState->RenderGroup,
+	// 			&GameState->Assets,
+	// 			BitmapHandle_TestCard2,
+	// 			GetCenter(Card->Rectangle),
+	// 			Vector2(Card->Rectangle.Dim.X, 0.0f),
+	// 			Vector2(0.0f, Card->Rectangle.Dim.Y),
+	// 			Vector4(1.0f, 1.0f, 1.0f, 1.0f)
+	// 		);
+	// 	}
+	// }
+	PushButtonsToRenderGroup(
+		SceneState->DeckButtons,
+		ARRAY_COUNT(SceneState->DeckButtons),
+		&GameState->RenderGroup,
+		&GameState->Assets, 
+		&GameState->FrameArena
+	);
+	PushButtonsToRenderGroup(
+		SceneState->CollectionButtons,
+		ARRAY_COUNT(SceneState->CollectionButtons),
+		&GameState->RenderGroup,
+		&GameState->Assets, 
+		&GameState->FrameArena
+	);
 	if(CheckFlag(&SceneState->DeckNameInput, TextInput_Active))
 	{
 		text_input* TextInput = &SceneState->DeckNameInput;

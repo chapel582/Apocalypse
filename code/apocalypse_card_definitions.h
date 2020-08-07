@@ -35,5 +35,7 @@ inline void InitCard(
 	Card->Health = Health;
 }
 
+card_definitions* DefineCards(memory_arena* MemoryArena);
+
 #define APOCALYPSE_CARD_DEFINITIONS_H
 #endif

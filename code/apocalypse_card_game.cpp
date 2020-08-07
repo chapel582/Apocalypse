@@ -4,12 +4,8 @@
 #include "apocalypse_render_group.h"
 #include "apocalypse_main_menu.h"
 #include "apocalypse_button.h"
-
+#include "apocalypse_deck_storage.h"
 #include "apocalypse_card_definitions.h"
-#include "apocalypse_card_definitions.cpp"
-
-#include "apocalypse_load_deck.h"
-#include "apocalypse_load_deck.cpp"
 
 #define MAX_RESOURCE_STRING_SIZE 40
 void FormatResourceString(

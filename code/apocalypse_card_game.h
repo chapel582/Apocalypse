@@ -13,7 +13,7 @@
 #include "apocalypse_particles.h"
 #include "apocalypse_card_definitions.h"
 #include "apocalypse_player_id.h"
-#include "apocalypse_load_deck.h"
+#include "apocalypse_deck_storage.h"
 
 typedef enum
 {

@@ -2,6 +2,8 @@
 
 #include "apocalypse_card_definitions.h"
 #include "apocalypse_rectangle.h"
+#include "apocalypse_button.h"
+#include "apocalypse_deck_storage.h"
 
 #include <string.h> // TODO: for text_input. move when that file is made
 
@@ -63,15 +65,44 @@ void StandardSubmit(void* Data)
 
 struct collection_card
 {
-	rectangle Rectangle;
-	bool Active;
+	uint32_t ButtonHandle;
 	card_definition* Definition;
 };
 
+inline bool IsActive(collection_card* CollectionCard)
+{
+	return CollectionCard->Definition != NULL;
+}
+
+struct deck_editor_card
+{
+	uint32_t ButtonHandle;
+	card_definition* Definition; 
+};
+
+inline bool IsActive(deck_editor_card* DeckCard)
+{
+	return DeckCard->Definition != NULL;
+}
+
+struct deck_editor_cards
+{
+	deck_editor_card Cards[MAX_CARDS_IN_DECK];
+	uint32_t ActiveCardCount;
+	float XPos;
+	float YStart;
+	float YMargin;
+	vector2 Dim;
+};
+
+#define COLLECTION_CARDS_DISPLAYED 8
 struct deck_editor_state
 {
+	ui_button CollectionButtons[COLLECTION_CARDS_DISPLAYED];
+	ui_button DeckButtons[MAX_CARDS_IN_DECK];
 	card_definitions* Definitions;
-	collection_card CollectionCards[8];
+	collection_card CollectionCards[COLLECTION_CARDS_DISPLAYED];
+	deck_editor_cards DeckCards;
 	uint32_t CurrentFirstCollectionCard;
 	text_input DeckNameInput;
 	char* DeckName;

@@ -45,7 +45,7 @@ void ButtonsHandleMouseEvent(
 	}
 }
 
-void AddButton(
+uint32_t AddButton(
 	ui_button* Buttons,
 	uint32_t ButtonArrayCount,
 	rectangle Rectangle,
@@ -58,8 +58,9 @@ void AddButton(
 )
 {
 	ui_button* ButtonToUse = NULL;
+	uint32_t ButtonIndex;
 	for(
-		uint32_t ButtonIndex = 0;
+		ButtonIndex = 0;
 		ButtonIndex < ButtonArrayCount;
 		ButtonIndex++
 	)
@@ -80,6 +81,7 @@ void AddButton(
 	ButtonToUse->Font = Font;
 	ButtonToUse->TextColor = TextColor;
 	strcpy_s(ButtonToUse->Text, ARRAY_COUNT(ButtonToUse->Text), Text);
+	return ButtonIndex;
 }
 
 void PushButtonsToRenderGroup(
@@ -110,17 +112,20 @@ void PushButtonsToRenderGroup(
 				Vector2(0.0f, Button->Rectangle.Dim.Y),
 				White
 			);
-			PushTextCentered(
-				Group,
-				Assets,
-				Button->Font,
-				Button->Text,
-				ARRAY_COUNT(Button->Text),
-				0.9f * Button->Rectangle.Dim.Y, 
-				ButtonCenter,
-				Button->TextColor,
-				FrameArena 
-			);
+			if(*Button->Text != 0)
+			{
+				PushTextCentered(
+					Group,
+					Assets,
+					Button->Font,
+					Button->Text,
+					ARRAY_COUNT(Button->Text),
+					0.9f * Button->Rectangle.Dim.Y, 
+					ButtonCenter,
+					Button->TextColor,
+					FrameArena 
+				);
+			}
 		}	
 	}
 }

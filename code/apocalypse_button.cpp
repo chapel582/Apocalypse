@@ -15,7 +15,7 @@ void InitButtons(ui_button* Buttons, uint32_t ButtonArrayCount)
 	)
 	{
 		ui_button* Button = &Buttons[ButtonIndex];
-		Button->Active = false;
+		ClearAllFlags(Button);
 	}
 }
 
@@ -33,14 +33,25 @@ void ButtonsHandleMouseEvent(
 	)
 	{
 		ui_button* Button = &Buttons[ButtonIndex];
-		if(
-			Button->Active && 
-			MouseEvent->Type == PrimaryUp && 
-			PointInRectangle(MouseEventWorldPos, Button->Rectangle)
-		)
+		if(CheckFlag(Button, UiButton_Active))
 		{
-			Button->Callback(Button->Data);
-			break;
+			if(PointInRectangle(MouseEventWorldPos, Button->Rectangle))
+			{
+				if(MouseEvent->Type == PrimaryUp)
+				{
+					Button->Callback(Button->Data);
+					break;
+				}
+				else if(MouseEvent->Type == MouseMove)
+				{
+					SetFlag(Button, UiButton_HoveredOver);
+					break;
+				}
+			}
+			else
+			{
+				ClearFlag(Button, UiButton_HoveredOver);
+			}
 		}		
 	}
 }
@@ -66,14 +77,14 @@ uint32_t AddButton(
 	)
 	{
 		ui_button* Button = &Buttons[ButtonIndex];
-		if(!Button->Active)
+		if(!CheckFlag(Button, UiButton_Active))
 		{
 			ButtonToUse = Button;
 			break;
-		}	
+		}
 	}
 	ASSERT(ButtonToUse != NULL);
-	ButtonToUse->Active = true;
+	SetFlag(ButtonToUse, UiButton_Active);
 	ButtonToUse->Rectangle = Rectangle;
 	ButtonToUse->Callback = Callback;
 	ButtonToUse->Data = Data;
@@ -82,6 +93,43 @@ uint32_t AddButton(
 	ButtonToUse->TextColor = TextColor;
 	strcpy_s(ButtonToUse->Text, ARRAY_COUNT(ButtonToUse->Text), Text);
 	return ButtonIndex;
+}
+
+void PushButtonToRenderGroup(
+	ui_button* Button,
+	render_group* Group,
+	assets* Assets,
+	memory_arena* FrameArena, 
+	vector4 Color
+)
+{
+	if(CheckFlag(Button, UiButton_Active))
+	{
+		vector2 ButtonCenter = GetCenter(Button->Rectangle);
+		PushSizedBitmap(
+			Group,
+			Assets,
+			Button->Background,
+			ButtonCenter,
+			Vector2(Button->Rectangle.Dim.X, 0.0f),
+			Vector2(0.0f, Button->Rectangle.Dim.Y),
+			Color
+		);
+		if(*Button->Text != 0)
+		{
+			PushTextCentered(
+				Group,
+				Assets,
+				Button->Font,
+				Button->Text,
+				ARRAY_COUNT(Button->Text),
+				0.9f * Button->Rectangle.Dim.Y, 
+				ButtonCenter,
+				Button->TextColor,
+				FrameArena 
+			);
+		}
+	}
 }
 
 void PushButtonsToRenderGroup(
@@ -100,32 +148,6 @@ void PushButtonsToRenderGroup(
 	)
 	{
 		ui_button* Button = &Buttons[ButtonIndex];
-		if(Button->Active)
-		{
-			vector2 ButtonCenter = GetCenter(Button->Rectangle);
-			PushSizedBitmap(
-				Group,
-				Assets,
-				Button->Background,
-				ButtonCenter,
-				Vector2(Button->Rectangle.Dim.X, 0.0f),
-				Vector2(0.0f, Button->Rectangle.Dim.Y),
-				White
-			);
-			if(*Button->Text != 0)
-			{
-				PushTextCentered(
-					Group,
-					Assets,
-					Button->Font,
-					Button->Text,
-					ARRAY_COUNT(Button->Text),
-					0.9f * Button->Rectangle.Dim.Y, 
-					ButtonCenter,
-					Button->TextColor,
-					FrameArena 
-				);
-			}
-		}	
+		PushButtonToRenderGroup(Button, Group, Assets, FrameArena, White);
 	}
 }

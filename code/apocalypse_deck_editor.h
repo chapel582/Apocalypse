@@ -108,6 +108,9 @@ struct deck_editor_state
 	char* DeckName;
 	uint32_t DeckNameBufferSize;
 	bool DeckNameSet;
+	vector2 InfoCardCenter;
+	vector2 InfoCardXBound;
+	vector2 InfoCardYBound;
 };
 
 void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer);

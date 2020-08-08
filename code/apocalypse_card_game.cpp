@@ -6,6 +6,7 @@
 #include "apocalypse_button.h"
 #include "apocalypse_deck_storage.h"
 #include "apocalypse_card_definitions.h"
+#include "apocalypse_info_card.h"
 
 #define MAX_RESOURCE_STRING_SIZE 40
 void FormatResourceString(
@@ -261,41 +262,6 @@ void DrawFullHand(card_game_state* SceneState, player_id Player)
 		Card++;
 	}
 	AlignCardSet(&SceneState->Hands[Player]);
-}
-
-void AppendResourceStringToInfoCard(
-	card* Card,
-	player_resources* Deltas,
-	string_appender* StringAppender,
-	char* SelfOrOpp,
-	char* DeltaType
-)
-{
-	bool NonZeroDelta = false;
-	for(
-		int DeltaIndex = 0;
-		DeltaIndex < PlayerResource_Count;
-		DeltaIndex++
-	)
-	{
-		uint32_t Delta = Deltas->Resources[DeltaIndex];
-		if(Delta != 0)
-		{
-			if(!NonZeroDelta)
-			{
-				AppendToString(
-					StringAppender, "%s: %s\n", SelfOrOpp, DeltaType
-				);
-				NonZeroDelta = true;
-			}
-			AppendToString(
-				StringAppender,
-				"%s: %d\n",
-				GetResourceInitial((player_resource_type) DeltaIndex),
-				Delta
-			);
-		}
-	}
 }
 
 void InitDeckCard(
@@ -933,92 +899,106 @@ void UpdateAndRenderCardGame(
 				);
 				if(Card->HoveredOver)
 				{
-					PushSizedBitmap(
+					// PushSizedBitmap(
+					// 	&GameState->RenderGroup,
+					// 	&GameState->Assets,
+					// 	BitmapHandle_TestCard2,
+					// 	SceneState->InfoCardCenter,
+					// 	SceneState->InfoCardXBound,
+					// 	SceneState->InfoCardYBound,
+					// 	Card->Color
+					// );
+
+					// #define ATTACK_HEALTH_MAX_LENGTH 8
+					// uint32_t MaxCharacters = (
+					// 	2 * ATTACK_HEALTH_MAX_LENGTH + 
+					// 	4 * MAX_RESOURCE_STRING_SIZE
+					// );
+					// char* ResourceString = PushArray(
+					// 	&GameState->FrameArena,
+					// 	MaxCharacters,
+					// 	char
+					// );
+					// string_appender StringAppender = MakeStringAppender(
+					// 	ResourceString, MaxCharacters 
+					// );
+
+					// AppendToString(
+					// 	&StringAppender, "Attack: %d\n", Card->Attack
+					// );
+					// AppendToString(
+					// 	&StringAppender, "Health: %d\n", Card->Health
+					// );
+
+					// AppendResourceStringToInfoCard(
+					// 	Card,
+					// 	&Card->PlayDelta[Card->Owner],
+					// 	&StringAppender,
+					// 	"Self",
+					// 	"Play"
+					// );
+					// AppendResourceStringToInfoCard(
+					// 	Card,
+					// 	&Card->TapDelta[Card->Owner],
+					// 	&StringAppender,
+					// 	"Self",
+					// 	"Tap"
+					// );
+
+					// player_id Opp = GetOpponent(Card->Owner);
+					// AppendResourceStringToInfoCard(
+					// 	Card,
+					// 	&Card->PlayDelta[Opp],
+					// 	&StringAppender,
+					// 	"Opp",
+					// 	"Play"
+					// );
+					// AppendResourceStringToInfoCard(
+					// 	Card,
+					// 	&Card->TapDelta[Opp],
+					// 	&StringAppender,
+					// 	"Opp",
+					// 	"Tap"
+					// );
+
+					// if(Card->SetType == CardSet_Tableau)
+					// {
+					// 	AppendToString(
+					// 		&StringAppender,
+					// 		"TapsLeft: %d\n",
+					// 		Card->TapsAvailable - Card->TimesTapped
+					// 	);
+					// }
+
+					// vector2 TopLeft = (
+					// 	SceneState->InfoCardCenter - 
+					// 	0.5f * SceneState->InfoCardXBound + 
+					// 	0.5f * SceneState->InfoCardYBound
+					// );
+					// PushTextTopLeft(
+					// 	&GameState->RenderGroup,
+					// 	&GameState->Assets,
+					// 	FontHandle_TestFont,
+					// 	ResourceString,
+					// 	MaxCharacters,
+					// 	20.0f,
+					// 	TopLeft,
+					// 	Vector4(0.0f, 0.0f, 0.0f, 1.0f),
+					// 	&GameState->FrameArena
+					// );
+					PushInfoCard(
 						&GameState->RenderGroup,
 						&GameState->Assets,
-						BitmapHandle_TestCard2,
 						SceneState->InfoCardCenter,
 						SceneState->InfoCardXBound,
 						SceneState->InfoCardYBound,
-						Card->Color
-					);
-
-					#define ATTACK_HEALTH_MAX_LENGTH 8
-					uint32_t MaxCharacters = (
-						2 * ATTACK_HEALTH_MAX_LENGTH + 
-						4 * MAX_RESOURCE_STRING_SIZE
-					);
-					char* ResourceString = PushArray(
+						Card->Color,
 						&GameState->FrameArena,
-						MaxCharacters,
-						char
-					);
-					string_appender StringAppender = MakeStringAppender(
-						ResourceString, MaxCharacters 
-					);
-
-					AppendToString(
-						&StringAppender, "Attack: %d\n", Card->Attack
-					);
-					AppendToString(
-						&StringAppender, "Health: %d\n", Card->Health
-					);
-
-					AppendResourceStringToInfoCard(
-						Card,
-						&Card->PlayDelta[Card->Owner],
-						&StringAppender,
-						"Self",
-						"Play"
-					);
-					AppendResourceStringToInfoCard(
-						Card,
-						&Card->TapDelta[Card->Owner],
-						&StringAppender,
-						"Self",
-						"Tap"
-					);
-
-					player_id Opp = GetOpponent(Card->Owner);
-					AppendResourceStringToInfoCard(
-						Card,
-						&Card->PlayDelta[Opp],
-						&StringAppender,
-						"Opp",
-						"Play"
-					);
-					AppendResourceStringToInfoCard(
-						Card,
-						&Card->TapDelta[Opp],
-						&StringAppender,
-						"Opp",
-						"Tap"
-					);
-
-					if(Card->SetType == CardSet_Tableau)
-					{
-						AppendToString(
-							&StringAppender,
-							"TapsLeft: %d\n",
-							Card->TapsAvailable - Card->TimesTapped
-						);
-					}
-
-					vector2 TopLeft = (
-						SceneState->InfoCardCenter - 
-						0.5f * SceneState->InfoCardXBound + 
-						0.5f * SceneState->InfoCardYBound
-					);
-					PushTextTopLeft(
-						&GameState->RenderGroup,
-						&GameState->Assets,
-						FontHandle_TestFont,
-						ResourceString,
-						MaxCharacters,
-						20.0f,
-						TopLeft,
-						Vector4(0.0f, 0.0f, 0.0f, 1.0f),
-						&GameState->FrameArena
+						Card->Attack,
+						Card->Health,
+						Card->PlayDelta,
+						Card->TapDelta,
+						Card->TapsAvailable - Card->TimesTapped
 					);
 				}
 			}

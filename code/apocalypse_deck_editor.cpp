@@ -1,6 +1,8 @@
 #include "apocalypse_deck_editor.h"
 #include "apocalypse_platform.h"
 #include "apocalypse.h"
+#include "apocalypse_info_card.h"
+#include "apocalypse_card_definitions.h"
 
 void AddCardToDeck(
 	deck_editor_state* SceneState,
@@ -165,6 +167,13 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		// TODO: maybe need to track submit callback data when initializing so 	
 		// CONT: the updater can be abstracted
 	}
+
+	SceneState->InfoCardCenter = Vector2(
+		BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f
+	);
+	vector2 ScaledInfoCardDim = 0.33f * Vector2(600.0f, 900.0f);
+	SceneState->InfoCardXBound = Vector2(ScaledInfoCardDim.X, 0.0f);
+	SceneState->InfoCardYBound = Vector2(0.0f, ScaledInfoCardDim.Y);
 }
 
 void StartDeckEditorCallback(void* Data)
@@ -396,40 +405,91 @@ void UpdateAndRenderDeckEditor(
 	}
 
 	PushClear(&GameState->RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
-	// for(
-	// 	uint32_t Index = 0;
-	// 	Index < ARRAY_COUNT(SceneState->CollectionCards);
-	// 	Index++
-	// )
-	// {
-	// 	collection_card* Card = SceneState->CollectionCards + Index;
-	// 	if(IsActive(Card))
-	// 	{
-	// 		PushSizedBitmap(
-	// 			&GameState->RenderGroup,
-	// 			&GameState->Assets,
-	// 			BitmapHandle_TestCard2,
-	// 			GetCenter(Card->Rectangle),
-	// 			Vector2(Card->Rectangle.Dim.X, 0.0f),
-	// 			Vector2(0.0f, Card->Rectangle.Dim.Y),
-	// 			Vector4(1.0f, 1.0f, 1.0f, 1.0f)
-	// 		);
-	// 	}
-	// }
-	PushButtonsToRenderGroup(
-		SceneState->DeckButtons,
-		ARRAY_COUNT(SceneState->DeckButtons),
-		&GameState->RenderGroup,
-		&GameState->Assets, 
-		&GameState->FrameArena
-	);
-	PushButtonsToRenderGroup(
-		SceneState->CollectionButtons,
-		ARRAY_COUNT(SceneState->CollectionButtons),
-		&GameState->RenderGroup,
-		&GameState->Assets, 
-		&GameState->FrameArena
-	);
+	
+	vector4 White = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	for(
+		uint32_t CollectionCardIndex = 0;
+		CollectionCardIndex < ARRAY_COUNT(SceneState->CollectionCards);
+		CollectionCardIndex++
+	)
+	{
+		collection_card* CollectionCard = (
+			SceneState->CollectionCards + CollectionCardIndex
+		);
+		if(IsActive(CollectionCard))
+		{
+			ui_button* Button = (
+				SceneState->CollectionButtons + CollectionCard->ButtonHandle
+			);
+			PushButtonToRenderGroup(
+				Button,
+				&GameState->RenderGroup,
+				&GameState->Assets,
+				&GameState->FrameArena, 
+				White
+			);
+			if(CheckFlag(Button, UiButton_HoveredOver))
+			{
+				card_definition* Definition = CollectionCard->Definition;
+				PushInfoCard(
+					&GameState->RenderGroup,
+					&GameState->Assets,
+					SceneState->InfoCardCenter,
+					SceneState->InfoCardXBound,
+					SceneState->InfoCardYBound,
+					White,
+					&GameState->FrameArena,
+					Definition->Attack,
+					Definition->Health,
+					Definition->PlayDelta,
+					Definition->TapDelta,
+					-1
+				);
+			}
+		}
+	}
+	for(
+		uint32_t DeckCardIndex = 0;
+		DeckCardIndex < SceneState->DeckCards.ActiveCardCount;
+		DeckCardIndex++
+	)
+	{
+		deck_editor_card* DeckCard = (
+			SceneState->DeckCards.Cards + DeckCardIndex
+		);
+		if(IsActive(DeckCard))
+		{
+			ui_button* Button = (
+				SceneState->DeckButtons + DeckCard->ButtonHandle
+			);
+			PushButtonToRenderGroup(
+				Button,
+				&GameState->RenderGroup,
+				&GameState->Assets,
+				&GameState->FrameArena, 
+				White
+			);
+			if(CheckFlag(Button, UiButton_HoveredOver))
+			{
+				card_definition* Definition = DeckCard->Definition;
+				PushInfoCard(
+					&GameState->RenderGroup,
+					&GameState->Assets,
+					SceneState->InfoCardCenter,
+					SceneState->InfoCardXBound,
+					SceneState->InfoCardYBound,
+					White,
+					&GameState->FrameArena,
+					Definition->Attack,
+					Definition->Health,
+					Definition->PlayDelta,
+					Definition->TapDelta,
+					-1
+				);
+			}
+		}
+	}
+
 	if(CheckFlag(&SceneState->DeckNameInput, TextInput_Active))
 	{
 		text_input* TextInput = &SceneState->DeckNameInput;

@@ -28,6 +28,7 @@
 #include "apocalypse_deck_editor.cpp"
 #include "apocalypse_deck_storage.cpp"
 #include "apocalypse_card_definitions.cpp"
+#include "apocalypse_info_card.cpp"
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"

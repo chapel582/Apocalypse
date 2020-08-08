@@ -4,10 +4,15 @@
 #include "apocalypse_vector.h"
 
 typedef void button_callback(void* Data);
+typedef enum 
+{
+	UiButton_Active = 1 << 0,
+	UiButton_HoveredOver = 1 << 1
+} ui_button_flag;
 
 struct ui_button
 {
-	bool Active;
+	uint32_t Flags;
 	bitmap_handle Background;
 	rectangle Rectangle;
 	font_handle Font;
@@ -16,6 +21,26 @@ struct ui_button
 	button_callback* Callback;
 	void* Data;
 };
+
+inline void SetFlag(ui_button* Button, ui_button_flag Flag)
+{
+	Button->Flags |= Flag; 
+}
+
+inline void ClearFlag(ui_button* Button, ui_button_flag Flag)
+{
+	Button->Flags &= ~Flag;
+}
+
+inline void ClearAllFlags(ui_button* Button)
+{
+	Button->Flags = 0;
+}
+
+inline bool CheckFlag(ui_button* Button, ui_button_flag Flag)
+{
+	return (Button->Flags & Flag) > 0;
+}
 
 void InitButtons(ui_button* Buttons, uint32_t ButtonArrayCount);
 void ButtonsHandleMouseEvent(

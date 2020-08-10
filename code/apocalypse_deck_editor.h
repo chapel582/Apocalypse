@@ -13,6 +13,8 @@ typedef enum
 	TextInput_Selected = 1 << 1,
 	TextInput_ShiftIsDown = 1 << 2,
 	TextInput_NewlinesEnabled = 1 << 3,
+	TextInput_CharDownDelay = 1 << 4, // NOTE: mutually exclusize from CharDown
+	TextInput_CharDown = 1 << 5 // NOTE: mutually exclusize from CharDownDelay
 } text_input_flag;
 
 typedef void text_input_callback(void* Data);
@@ -24,6 +26,10 @@ struct text_input
 	uint32_t BufferSize;
 	rectangle Rectangle;
 	float FontHeight;
+	char CharDown;
+	float RepeatTimer;
+	float RepeatDelay;
+	float RepeatPeriod;
 	char* Buffer;
 	text_input_callback* SubmitCallback;
 };

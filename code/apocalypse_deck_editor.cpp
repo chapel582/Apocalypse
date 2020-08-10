@@ -4,6 +4,17 @@
 #include "apocalypse_info_card.h"
 #include "apocalypse_card_definitions.h"
 
+void AddLetterToTextInput(text_input* TextInput, char Letter)
+{
+	TextInput->Buffer[TextInput->CursorPos] = Letter;
+	TextInput->CursorPos++;
+	if(TextInput->CursorPos >= TextInput->BufferSize)
+	{
+		TextInput->CursorPos = TextInput->BufferSize - 1;
+	}
+	TextInput->Buffer[TextInput->CursorPos] = 0;
+}
+
 void AddCardToDeck(
 	deck_editor_state* SceneState,
 	deck_editor_cards* DeckCards,
@@ -165,7 +176,9 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		);
 		TextInput->SubmitCallback = StandardSubmit;
 		// TODO: maybe need to track submit callback data when initializing so 	
-		// CONT: the updater can be abstracted
+		// CONT: the submission can be abstracted
+		TextInput->RepeatDelay = 1.0f;
+		TextInput->RepeatPeriod = 0.05f;
 	}
 
 	SceneState->InfoCardCenter = Vector2(
@@ -368,32 +381,27 @@ void UpdateAndRenderDeckEditor(
 						case(0x5B):
 						{
 							// NOTE: Letters
+							char Letter;
+							if(!CheckFlag(TextInput, TextInput_ShiftIsDown))
+							{
+								Letter = KeyboardEvent->Code + 0x20; 
+							}
+							else
+							{
+								Letter = KeyboardEvent->Code;
+							}
 							if(!KeyboardEvent->IsDown)
 							{
-								char Letter;
-								if(!CheckFlag(TextInput, TextInput_ShiftIsDown))
-								{
-									Letter = KeyboardEvent->Code + 0x20; 
-								}
-								else
-								{
-									Letter = KeyboardEvent->Code;
-								}
-								TextInput->Buffer[TextInput->CursorPos] = Letter;
-								TextInput->CursorPos++;
-								if(
-									TextInput->CursorPos >= 
-									TextInput->BufferSize
-								)
-								{
-									TextInput->CursorPos = (
-										TextInput->BufferSize - 1
-									);
-								}
-								TextInput->Buffer[TextInput->CursorPos] = 0;
+								ClearFlag(TextInput, TextInput_CharDownDelay);
+								ClearFlag(TextInput, TextInput_CharDown);
 							}
-							// TODO: set a flag for press and hold
-							// TODO: define a rate for press and hold
+							else
+							{
+								AddLetterToTextInput(TextInput, Letter);
+								SetFlag(TextInput, TextInput_CharDownDelay);
+								TextInput->CharDown = Letter;
+								TextInput->RepeatTimer = 0.0f;
+							}
 							break;
 						}
 					}
@@ -403,6 +411,31 @@ void UpdateAndRenderDeckEditor(
 			UserEventIndex++;
 		}
 	}
+
+	// SECTION START: Update text input
+	{
+		text_input* TextInput = &SceneState->DeckNameInput;
+		if(CheckFlag(TextInput, TextInput_CharDownDelay))
+		{
+			if(TextInput->RepeatTimer >= TextInput->RepeatDelay)
+			{
+				TextInput->RepeatTimer = 0.0f;
+				AddLetterToTextInput(TextInput, TextInput->CharDown);
+				ClearFlag(TextInput, TextInput_CharDownDelay);
+				SetFlag(TextInput, TextInput_CharDown);
+			}
+		}
+		else if(CheckFlag(TextInput, TextInput_CharDown))
+		{
+			if(TextInput->RepeatTimer >= TextInput->RepeatPeriod)
+			{
+				TextInput->RepeatTimer = 0.0f;
+				AddLetterToTextInput(TextInput, TextInput->CharDown);
+			}	
+		}
+		TextInput->RepeatTimer += DtForFrame;
+	}
+	// SECTION STOP: Update text input
 
 	PushClear(&GameState->RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
 	

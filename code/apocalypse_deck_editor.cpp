@@ -104,6 +104,95 @@ void AddCardToDeckCallback(void* Data)
 
 // TODO: remove card from deck
 
+void SetCollectionCardDefinitions(
+	collection_card* CollectionCards,
+	ui_button* CollectionButtons,
+	card_definitions* Definitions,
+	uint32_t CollectionStartIndex,
+	uint32_t NumRows,
+	uint32_t NumCols
+)
+{
+	for(uint32_t Row = 0; Row < NumRows; Row++)
+	{
+		for(uint32_t Col = 0; Col < NumCols; Col++)
+		{
+			uint32_t BrowseIndex = NumCols * Row + Col;
+			collection_card* CollectionCard = CollectionCards + BrowseIndex;
+			uint32_t CollectionIndex = CollectionStartIndex + BrowseIndex;
+			if(CollectionIndex < Definitions->NumCards)
+			{
+				CollectionCard->Definition = (
+					&Definitions->Array[CollectionIndex]
+				);
+				ui_button* Button = (
+					CollectionButtons + CollectionCard->ButtonHandle
+				);
+				add_card_to_deck_args* Data = (
+					(add_card_to_deck_args*) Button->Data
+				);
+				Data->Definition = Definitions->Array + CollectionIndex;
+			}
+			else
+			{
+				CollectionCard->Definition = NULL;
+			}
+		}
+	}
+}
+void CollectionCardsNext(void* Data)
+{
+	deck_editor_state* SceneState = (deck_editor_state*) Data;
+	uint32_t OldStartIndex = SceneState->CollectionStartIndex;
+	uint32_t NumRows = SceneState->NumRows;
+	uint32_t NumCols = SceneState->NumCols;
+	card_definitions* Definitions = SceneState->Definitions;
+
+	SceneState->CollectionStartIndex += NumRows * NumCols;
+	if(SceneState->CollectionStartIndex >= ((int32_t) Definitions->NumCards))
+	{
+		SceneState->CollectionStartIndex = OldStartIndex;
+	}
+	else
+	{
+		SetCollectionCardDefinitions(
+			SceneState->CollectionCards,
+			SceneState->CollectionButtons,
+			Definitions,
+			SceneState->CollectionStartIndex,
+			NumRows,
+			NumCols
+		);
+	}
+}
+
+void CollectionCardsPrev(void* Data)
+{
+	deck_editor_state* SceneState = (deck_editor_state*) Data;
+
+	uint32_t OldStartIndex = SceneState->CollectionStartIndex;
+	uint32_t NumRows = SceneState->NumRows;
+	uint32_t NumCols = SceneState->NumCols;
+	card_definitions* Definitions = SceneState->Definitions;
+
+	SceneState->CollectionStartIndex -= NumRows * NumCols;
+	if(SceneState->CollectionStartIndex < 0)
+	{
+		SceneState->CollectionStartIndex = 0;
+	}
+	else
+	{
+		SetCollectionCardDefinitions(
+			SceneState->CollectionCards,
+			SceneState->CollectionButtons,
+			Definitions,
+			SceneState->CollectionStartIndex,
+			NumRows,
+			NumCols
+		);
+	}
+}
+
 void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 {
 	ResetMemArena(&GameState->TransientArena);
@@ -135,11 +224,17 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 
 	SceneState->Definitions = DefineCards(&GameState->TransientArena);
 	card_definitions* Definitions = SceneState->Definitions;
-	vector2 Dim = Vector2(60.0f, 90.0f);
-	uint32_t NumRows = 2;
-	uint32_t NumCols = 4;
+	SceneState->CollectionCardDim = Vector2(60.0f, 90.0f);
+	vector2 Dim = SceneState->CollectionCardDim;
+	SceneState->NumRows = 2;
+	SceneState->NumCols = 4;
+	uint32_t NumRows = SceneState->NumRows;
+	uint32_t NumCols = SceneState->NumCols;
+	float XOffset = 50.0f;
+	float YOffset = 10.0f;
 	float XMargin = 10.0f;
 	float YMargin = 10.0f;
+	
 	for(uint32_t Row = 0; Row < NumRows; Row++)
 	{
 		for(uint32_t Col = 0; Col < NumCols; Col++)
@@ -152,8 +247,8 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 			{
 				rectangle Rectangle = MakeRectangle(
 					Vector2(
-						(Dim.X + XMargin)* Col,
-						(Dim.Y + YMargin) * (NumRows - Row - 1)
+						(Dim.X + XMargin) * Col + XOffset,
+						(Dim.Y + YMargin) * (NumRows - Row - 1) + YOffset
 					),
 					Dim
 				);
@@ -182,6 +277,42 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 			}
 		}
 	}
+	SceneState->CollectionStartIndex = 0;
+
+	vector2 BrowseCollectionButtonDim = Vector2(
+		XOffset - 2 * XMargin, NumRows * (YMargin + Dim.Y)
+	);
+	rectangle ScrollButtonRectangle = MakeRectangle(
+		Vector2(XMargin, YOffset),
+		BrowseCollectionButtonDim
+	);
+	AddButton(
+		SceneState->StaticButtons,
+		ARRAY_COUNT(SceneState->StaticButtons),
+		ScrollButtonRectangle,
+		BitmapHandle_TestCard2,
+		FontHandle_TestFont,
+		"",
+		Vector4(0.0f, 0.0f, 0.0f, 1.0f),
+		CollectionCardsPrev,
+		SceneState
+	);
+
+	ScrollButtonRectangle = MakeRectangle(
+		Vector2(NumCols * (Dim.X + XMargin) + XOffset, YOffset),
+		BrowseCollectionButtonDim
+	);
+	AddButton(
+		SceneState->StaticButtons,
+		ARRAY_COUNT(SceneState->StaticButtons),
+		ScrollButtonRectangle,
+		BitmapHandle_TestCard2,
+		FontHandle_TestFont,
+		"",
+		Vector4(0.0f, 0.0f, 0.0f, 1.0f),
+		CollectionCardsNext,
+		SceneState
+	);
 
 	SceneState->DeckNameBufferSize = 32;
 	SceneState->DeckName = PushArray(
@@ -271,6 +402,12 @@ void UpdateAndRenderDeckEditor(
 			ButtonsHandleMouseEvent(
 				SceneState->DeckButtons,
 				ARRAY_COUNT(SceneState->DeckButtons),
+				MouseEvent,
+				MouseEventWorldPos
+			);
+			ButtonsHandleMouseEvent(
+				SceneState->StaticButtons,
+				ARRAY_COUNT(SceneState->StaticButtons),
 				MouseEvent,
 				MouseEventWorldPos
 			);
@@ -569,6 +706,13 @@ void UpdateAndRenderDeckEditor(
 			}
 		}
 	}
+	PushButtonsToRenderGroup(
+		SceneState->StaticButtons,
+		ARRAY_COUNT(SceneState->StaticButtons),
+		&GameState->RenderGroup,
+		&GameState->Assets, 
+		&GameState->FrameArena
+	);
 
 	if(CheckFlag(&SceneState->DeckNameInput, TextInput_Active))
 	{

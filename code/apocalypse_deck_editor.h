@@ -109,10 +109,22 @@ struct deck_editor_state
 {
 	ui_button CollectionButtons[COLLECTION_CARDS_DISPLAYED];
 	ui_button DeckButtons[MAX_CARDS_IN_DECK];
+	ui_button StaticButtons[32];
 	card_definitions* Definitions;
+
+	// NOTE: collection card stuff
 	collection_card CollectionCards[COLLECTION_CARDS_DISPLAYED];
+	int32_t CollectionStartIndex;
+	uint32_t NumRows;
+	uint32_t NumCols;
+	vector2 CollectionCardDim;
+	float XOffset;
+	float YOffset;
+	float XMargin;
+	float YMargin;
+
 	deck_editor_cards DeckCards;
-	uint32_t CurrentFirstCollectionCard;
+	
 	text_input DeckNameInput;
 	char* DeckName;
 	uint32_t DeckNameBufferSize;

@@ -4,15 +4,46 @@
 #include "apocalypse_info_card.h"
 #include "apocalypse_card_definitions.h"
 
-void AddLetterToTextInput(text_input* TextInput, char Letter)
+void AddLetterToTextInput(text_input* TextInput)
 {
-	TextInput->Buffer[TextInput->CursorPos] = Letter;
+	TextInput->Buffer[TextInput->CursorPos] = TextInput->CharDown;
 	TextInput->CursorPos++;
 	if(TextInput->CursorPos >= TextInput->BufferSize)
 	{
 		TextInput->CursorPos = TextInput->BufferSize - 1;
 	}
 	TextInput->Buffer[TextInput->CursorPos] = 0;
+}
+
+void Backspace(text_input* TextInput)
+{
+	if(TextInput->CursorPos > 0)
+	{
+		TextInput->CursorPos--;	
+	}
+	TextInput->Buffer[TextInput->CursorPos] = 0;
+}
+
+void PressAndHoldKeyboardEvent(
+	text_input* TextInput,
+	text_input_repeat_callback* RepeatCallback,
+	game_keyboard_event* KeyboardEvent,
+	char Character
+)
+{
+	if(!KeyboardEvent->IsDown)
+	{
+		ClearFlag(TextInput, TextInput_CharDownDelay);
+		ClearFlag(TextInput, TextInput_CharDown);
+	}
+	else
+	{
+		TextInput->CharDown = Character;
+		TextInput->RepeatTimer = 0.0f;
+		TextInput->RepeatCallback = RepeatCallback;
+		RepeatCallback(TextInput);
+		SetFlag(TextInput, TextInput_CharDownDelay);
+	}
 }
 
 void AddCardToDeck(
@@ -271,7 +302,12 @@ void UpdateAndRenderDeckEditor(
 						case(0x08):
 						{
 							// NOTE: backspace
-							// TODO: implement
+							PressAndHoldKeyboardEvent(
+								TextInput,
+								Backspace,
+								KeyboardEvent,
+								KeyboardEvent->Code
+							);
 							break;
 						}
 						case(0x09):
@@ -311,7 +347,12 @@ void UpdateAndRenderDeckEditor(
 						case(0x20):
 						{
 							// NOTE: Space
-							// TODO: implement
+							PressAndHoldKeyboardEvent(
+								TextInput,
+								AddLetterToTextInput,
+								KeyboardEvent,
+								KeyboardEvent->Code
+							);
 							break;
 						}
 						case(0x25):
@@ -390,18 +431,12 @@ void UpdateAndRenderDeckEditor(
 							{
 								Letter = KeyboardEvent->Code;
 							}
-							if(!KeyboardEvent->IsDown)
-							{
-								ClearFlag(TextInput, TextInput_CharDownDelay);
-								ClearFlag(TextInput, TextInput_CharDown);
-							}
-							else
-							{
-								AddLetterToTextInput(TextInput, Letter);
-								SetFlag(TextInput, TextInput_CharDownDelay);
-								TextInput->CharDown = Letter;
-								TextInput->RepeatTimer = 0.0f;
-							}
+							PressAndHoldKeyboardEvent(
+								TextInput,
+								AddLetterToTextInput,
+								KeyboardEvent,
+								Letter
+							);
 							break;
 						}
 					}
@@ -420,7 +455,7 @@ void UpdateAndRenderDeckEditor(
 			if(TextInput->RepeatTimer >= TextInput->RepeatDelay)
 			{
 				TextInput->RepeatTimer = 0.0f;
-				AddLetterToTextInput(TextInput, TextInput->CharDown);
+				TextInput->RepeatCallback(TextInput);
 				ClearFlag(TextInput, TextInput_CharDownDelay);
 				SetFlag(TextInput, TextInput_CharDown);
 			}
@@ -430,7 +465,7 @@ void UpdateAndRenderDeckEditor(
 			if(TextInput->RepeatTimer >= TextInput->RepeatPeriod)
 			{
 				TextInput->RepeatTimer = 0.0f;
-				AddLetterToTextInput(TextInput, TextInput->CharDown);
+				TextInput->RepeatCallback(TextInput);
 			}	
 		}
 		TextInput->RepeatTimer += DtForFrame;

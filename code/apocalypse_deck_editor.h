@@ -18,6 +18,8 @@ typedef enum
 } text_input_flag;
 
 typedef void text_input_callback(void* Data);
+struct text_input;
+typedef void text_input_repeat_callback(text_input* TextInput);
 
 struct text_input
 {
@@ -30,6 +32,7 @@ struct text_input
 	float RepeatTimer;
 	float RepeatDelay;
 	float RepeatPeriod;
+	text_input_repeat_callback* RepeatCallback;
 	char* Buffer;
 	text_input_callback* SubmitCallback;
 };

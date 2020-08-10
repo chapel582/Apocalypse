@@ -391,6 +391,12 @@ void UpdateAndRenderDeckEditor(
 						case(0x39):
 						{
 							// NOTE: Numbers
+							PressAndHoldKeyboardEvent(
+								TextInput,
+								AddLetterToTextInput,
+								KeyboardEvent,
+								KeyboardEvent->Code
+							);
 							break;
 						}
 						case(0x41):
@@ -437,6 +443,12 @@ void UpdateAndRenderDeckEditor(
 								KeyboardEvent,
 								Letter
 							);
+							break;
+						}
+						case(0x7F):
+						{
+							// NOTE: Delete
+							// TODO: implement
 							break;
 						}
 					}

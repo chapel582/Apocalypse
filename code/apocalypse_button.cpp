@@ -56,7 +56,7 @@ void ButtonsHandleMouseEvent(
 	}
 }
 
-uint32_t AddButton(
+ui_button* AddButton(
 	ui_button* Buttons,
 	uint32_t ButtonArrayCount,
 	rectangle Rectangle,
@@ -92,7 +92,7 @@ uint32_t AddButton(
 	ButtonToUse->Font = Font;
 	ButtonToUse->TextColor = TextColor;
 	strcpy_s(ButtonToUse->Text, ARRAY_COUNT(ButtonToUse->Text), Text);
-	return ButtonIndex;
+	return ButtonToUse;
 }
 
 void PushButtonToRenderGroup(

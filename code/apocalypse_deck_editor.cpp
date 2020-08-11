@@ -3,6 +3,7 @@
 #include "apocalypse.h"
 #include "apocalypse_info_card.h"
 #include "apocalypse_card_definitions.h"
+#include "apocalypse_deck_storage.h"
 
 void AddLetterToTextInput(text_input* TextInput)
 {
@@ -46,6 +47,32 @@ void PressAndHoldKeyboardEvent(
 	}
 }
 
+struct save_deck_button_args
+{
+	uint32_t* CardCount;
+	deck_editor_card* DeckCards;
+	char* DeckName;
+};
+
+void SaveDeckButtonCallback(void* Data)
+{
+	save_deck_button_args* Args = (save_deck_button_args*) Data;
+	loaded_deck Deck = {};
+	uint32_t CardCount = *Args->CardCount;
+	deck_editor_card* Cards = Args->DeckCards;
+	for(uint32_t Index = 0; Index < CardCount; Index++)
+	{
+		deck_editor_card* Card = Cards + Index;
+		Deck.Ids[Index] = Card->Definition->Id;
+	}
+	ASSERT(CardCount < 0xFF);
+	Deck.Header.CardCount = (uint8_t) CardCount;
+
+	char PathToDeck[256];
+	GetDeckPath(PathToDeck, sizeof(PathToDeck), Args->DeckName);
+	SaveDeck(PathToDeck, &Deck);
+}
+
 void AddCardToDeck(
 	deck_editor_state* SceneState,
 	deck_editor_cards* DeckCards,
@@ -70,7 +97,7 @@ void AddCardToDeck(
 			// TODO: add remove card from deck callback
 			char Buffer[256];
 			snprintf(Buffer, ARRAY_COUNT(Buffer), "%d", Definition->Id);
-			DeckCard->ButtonHandle = AddButton(
+			DeckCard->Button = AddButton(
 				SceneState->DeckButtons,
 				ARRAY_COUNT(SceneState->DeckButtons),
 				Rectangle,
@@ -123,11 +150,9 @@ void SetCollectionCardDefinitions(
 			if(CollectionIndex < Definitions->NumCards)
 			{
 				CollectionCard->Definition = (
-					&Definitions->Array[CollectionIndex]
+					Definitions->Array + CollectionIndex
 				);
-				ui_button* Button = (
-					CollectionButtons + CollectionCard->ButtonHandle
-				);
+				ui_button* Button = CollectionCard->Button;
 				add_card_to_deck_args* Data = (
 					(add_card_to_deck_args*) Button->Data
 				);
@@ -259,7 +284,7 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 				Data->SceneState = SceneState;
 				Data->DeckCards = &SceneState->DeckCards;
 				Data->Definition = Definitions->Array + Index;
-				CollectionCard->ButtonHandle = AddButton(
+				CollectionCard->Button = AddButton(
 					SceneState->CollectionButtons,
 					ARRAY_COUNT(SceneState->CollectionButtons),
 					Rectangle,
@@ -342,6 +367,36 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		TextInput->RepeatDelay = 1.0f;
 		TextInput->RepeatPeriod = 0.05f;
 	}
+
+	vector2 SaveButtonDim = Vector2(
+		1.5f * SceneState->DeckCards.Dim.X, SceneState->DeckCards.Dim.Y
+	);
+	rectangle SaveButtonRectangle = MakeRectangle(
+		Vector2(SceneState->DeckCards.XPos - SaveButtonDim.X, 0.0f),
+		SaveButtonDim
+	);
+	save_deck_button_args* SaveDeckButtonArgs = (
+		PushStruct(&GameState->TransientArena, save_deck_button_args)
+	);
+	*SaveDeckButtonArgs = {};
+	SaveDeckButtonArgs->DeckName = SceneState->DeckName;
+	SaveDeckButtonArgs->DeckCards = SceneState->DeckCards.Cards;
+	SaveDeckButtonArgs->CardCount = &SceneState->DeckCards.ActiveCardCount;
+	AddButton(
+		SceneState->StaticButtons,
+		ARRAY_COUNT(SceneState->StaticButtons),
+		SaveButtonRectangle,
+		BitmapHandle_TestCard2,
+		FontHandle_TestFont,
+		"Save Deck",
+		Vector4(0.0f, 0.0f, 0.0f, 1.0f),
+		SaveDeckButtonCallback,
+		SaveDeckButtonArgs
+	);
+
+	SceneState->DeckNamePos = (
+		GetTopLeft(SaveButtonRectangle) + Vector2(0.0f, 3.0f)
+	); 
 
 	SceneState->InfoCardCenter = Vector2(
 		BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f
@@ -635,9 +690,7 @@ void UpdateAndRenderDeckEditor(
 		);
 		if(IsActive(CollectionCard))
 		{
-			ui_button* Button = (
-				SceneState->CollectionButtons + CollectionCard->ButtonHandle
-			);
+			ui_button* Button = CollectionCard->Button;
 			PushButtonToRenderGroup(
 				Button,
 				&GameState->RenderGroup,
@@ -676,9 +729,7 @@ void UpdateAndRenderDeckEditor(
 		);
 		if(IsActive(DeckCard))
 		{
-			ui_button* Button = (
-				SceneState->DeckButtons + DeckCard->ButtonHandle
-			);
+			ui_button* Button = DeckCard->Button;
 			PushButtonToRenderGroup(
 				Button,
 				&GameState->RenderGroup,
@@ -735,14 +786,14 @@ void UpdateAndRenderDeckEditor(
 	}
 	if(SceneState->DeckNameSet)
 	{
-		PushTextTopLeft(
+		PushText(
 			&GameState->RenderGroup,
 			&GameState->Assets,
 			FontHandle_TestFont,
 			SceneState->DeckName,
 			SceneState->DeckNameBufferSize,
 			20.0f,
-			Vector2(BackBuffer->Width - 50.0f, 50.0f),
+			SceneState->DeckNamePos,
 			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
 			&GameState->FrameArena
 		);

@@ -17,6 +17,7 @@ struct loaded_deck
 
 void SaveDeck(char* PathToDeck, loaded_deck* Deck);
 loaded_deck LoadDeck(char* PathToDeck);
+void GetDeckPath(char* Buffer, uint32_t MaxBufferSize, char* DeckName);
 
 #define APOCALYPSE_LOAD_DECK_H
 #endif

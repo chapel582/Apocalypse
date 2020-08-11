@@ -26,3 +26,8 @@ void SaveDeck(char* PathToDeck, loaded_deck* Deck)
 {
 	PlatformWriteEntireFile(PathToDeck, Deck, sizeof(*Deck));
 }
+
+void GetDeckPath(char* Buffer, uint32_t MaxBufferSize, char* DeckName)
+{
+	snprintf(Buffer, MaxBufferSize, "../decks/%s.deck", DeckName);
+}

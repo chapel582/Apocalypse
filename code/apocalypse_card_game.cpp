@@ -346,23 +346,15 @@ void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 
 	loaded_deck P1Deck;
 	loaded_deck P2Deck;
-	for(
-		int DeckCardIndex = 0;
-		DeckCardIndex < MAX_CARDS_IN_DECK;
-		DeckCardIndex++
-	)
-	{
-		P1Deck.Ids[DeckCardIndex] = 0;
-		P2Deck.Ids[DeckCardIndex] = 0;
-	}
-	P1Deck.Header.CardCount = MAX_CARDS_IN_DECK;
-	P2Deck.Header.CardCount = MAX_CARDS_IN_DECK;
-	// TODO: Remove Save decks. should only happen in deck editor
-	SaveDeck("../decks/P1Deck.deck", &P1Deck);
-	SaveDeck("../decks/P2Deck.deck", &P2Deck);
+
 	// TODO: load decks based on interaction at start of new card game
-	P1Deck = LoadDeck("../decks/P1Deck.deck");
-	P2Deck = LoadDeck("../decks/P2Deck.deck");
+	{
+		char Buffer[256];
+		GetDeckPath(Buffer, sizeof(Buffer), "P1Deck");
+		P1Deck = LoadDeck(Buffer);
+		GetDeckPath(Buffer, sizeof(Buffer), "P2Deck");
+		P2Deck = LoadDeck(Buffer);
+	}
 
 	SceneState->MaxCards = Player_Count * CardSet_Count * MAX_CARDS_PER_SET;
 	SceneState->Cards = PushArray(

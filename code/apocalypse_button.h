@@ -49,7 +49,7 @@ void ButtonsHandleMouseEvent(
 	game_mouse_event* MouseEvent,
 	vector2 MouseEventWorldPos
 );
-uint32_t AddButton(
+ui_button* AddButton(
 	ui_button* Buttons,
 	uint32_t ButtonArrayCount,
 	rectangle Rectangle,

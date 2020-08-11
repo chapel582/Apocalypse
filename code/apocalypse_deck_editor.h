@@ -74,7 +74,7 @@ void StandardSubmit(void* Data)
 
 struct collection_card
 {
-	uint32_t ButtonHandle;
+	ui_button* Button;
 	card_definition* Definition;
 };
 
@@ -85,7 +85,7 @@ inline bool IsActive(collection_card* CollectionCard)
 
 struct deck_editor_card
 {
-	uint32_t ButtonHandle;
+	ui_button* Button;
 	card_definition* Definition; 
 };
 
@@ -128,10 +128,13 @@ struct deck_editor_state
 	text_input DeckNameInput;
 	char* DeckName;
 	uint32_t DeckNameBufferSize;
+	vector2 DeckNamePos;
 	bool DeckNameSet;
 	vector2 InfoCardCenter;
 	vector2 InfoCardXBound;
 	vector2 InfoCardYBound;
+
+	ui_button* SaveDeckButton;
 };
 
 void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer);

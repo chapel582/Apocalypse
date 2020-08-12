@@ -816,6 +816,7 @@ void UpdateAndRenderCardGame(
 
 	// SECTION START: Push render entries
 	PushClear(&GameState->RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
+
 	// SECTION START: Push turn timer
 	{
 		int32_t TurnTimerCeil = Int32Ceil(SceneState->TurnTimer);

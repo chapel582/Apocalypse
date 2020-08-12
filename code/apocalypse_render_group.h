@@ -107,5 +107,17 @@ struct render_group
 	basis* CameraToScreen;
 };
 
+typedef enum 
+{
+	PushText_Fail,
+	PushText_Success	
+} push_text_result_code;
+
+struct push_text_result
+{
+	push_text_result_code Code;
+	vector2 Offset;
+};
+
 #define APOCALYPSE_RENDER_GROUP_H
 #endif

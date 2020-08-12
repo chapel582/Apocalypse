@@ -238,6 +238,29 @@ inline void PushSizedBitmap(
 	}
 }
 
+inline void PushSizedBitmap(
+	render_group* Group,
+	assets* Assets,
+	bitmap_handle BitmapHandle,
+	vector2 Center,
+	vector2 XYAxes,
+	vector4 Color
+)
+{
+	loaded_bitmap* Bitmap = GetBitmap(Assets, BitmapHandle);
+	if(Bitmap)
+	{
+		PushSizedBitmap(
+			Group,
+			Bitmap,
+			Center,
+			Vector2(XYAxes.X, 0.0f),
+			Vector2(0.0f, XYAxes.Y),
+			Color
+		);
+	}
+}
+
 void PushParticles(
 	render_group* Group, assets* Assets, particle_system* ParticleSystem
 )
@@ -318,7 +341,7 @@ inline void PushOffsetGlyph(
 	);
 }
 
-inline void PushText(
+push_text_result PushText(
 	render_group* Group,
 	assets* Assets,
 	font_handle FontHandle,
@@ -329,10 +352,12 @@ inline void PushText(
 	vector4 Color
 )
 {
+	push_text_result Result = {};
+
 	loaded_font* LoadedFont = GetFont(Assets, FontHandle);
 	if(LoadedFont == NULL)
 	{
-		return;
+		goto end;
 	}
 
 	vector2 CameraHeight = TransformVectorFromBasis(
@@ -345,19 +370,19 @@ inline void PushText(
 
 	// NOTE: everything after this point is in pixel space
 	stbtt_fontinfo* Font = &LoadedFont->StbFont;
-	// TODO: is there a way to get LPad programatically using stbtt?
-	float LPad = 2.0f; 
 	int Ascent = 0;
 	int Descent = 0;
 	int LineGap = 0;
 	float Scale = stbtt_ScaleForPixelHeight(Font, PixelHeight);
 	stbtt_GetFontVMetrics(Font, &Ascent, &Descent, &LineGap);
 	float YAdvance = Scale * (Ascent - Descent + LineGap);
-
+	// TODO: is there a way to get LPad programatically using stbtt?
+	float LPad = 2.0f; 
+	vector2 Offset = Vector2(LPad, 0.0f);
+	
 	uint32_t* CodePointPtr = CodePoints;
 	vector2 YAxis = Vector2(0.0f, PixelHeight / LoadedFont->PixelHeight);
 	vector2 XAxis = -1.0f * Perpendicular(YAxis); // NOTE: want CW perp
-	vector2 Offset = Vector2(LPad, 0.0f);
 	for(uint32_t Index = 0; Index < CodePointCount - 1; Index++)
 	{
 		uint32_t CodePoint = *CodePointPtr;
@@ -410,9 +435,26 @@ inline void PushText(
 		Offset,
 		Color
 	);
+
+	{
+		int Advance, Lsb;
+		stbtt_GetCodepointHMetrics(Font, CodePoint, &Advance, &Lsb);
+		// int Kern = stbtt_GetCodepointKernAdvance(
+		// 	Font, CodePoint, *(CodePointPtr + 1)
+		// );
+		// NOTE: no kerning b/c next character should be white space
+		Offset.X += Scale * Advance;
+	}
+
+	Result.Code = PushText_Success;
+	Result.Offset = Offset;
+	goto end;
+
+end:
+	return Result;
 }
 
-inline void PushText(
+push_text_result PushText(
 	render_group* Group,
 	assets* Assets,
 	font_handle FontHandle,
@@ -450,7 +492,7 @@ inline void PushText(
 	}
 	TempBuffer[Index] = 0;
 
-	PushText(
+	return PushText(
 		Group,
 		Assets,
 		FontHandle,
@@ -462,7 +504,7 @@ inline void PushText(
 	);
 }
 
-inline void PushTextTopLeft(
+push_text_result PushTextTopLeft(
 	render_group* Group,
 	assets* Assets,
 	font_handle FontHandle,
@@ -480,10 +522,12 @@ inline void PushTextTopLeft(
 		left corner. e.g. the highest ascending glyph won't go exceed TopLeft.Y,
 		and  the farthest back glyph won't go beyond the TopLeft.X
 	*/
-	loaded_font* LoadedFont = GetFont(Assets, FontHandle);
+	push_text_result Result = {};
+
+	loaded_font* LoadedFont = GetFont(Assets, FontHandle); 
 	if(LoadedFont == NULL)
 	{
-		return;
+		goto end;
 	}
 
 	vector2 CameraHeight = TransformVectorFromBasis(
@@ -510,7 +554,7 @@ inline void PushTextTopLeft(
 	);
 	vector2 Baseline = TopLeft - AscentCameraHeight;
 
-	PushText(
+	Result = PushText(
 		Group,
 		Assets,
 		FontHandle,
@@ -521,9 +565,13 @@ inline void PushTextTopLeft(
 		Color,
 		FrameArena
 	);
+	goto end;
+
+end:
+	return Result;
 }
 
-inline void PushTextCentered(
+push_text_result PushTextCentered(
 	render_group* Group,
 	assets* Assets,
 	font_handle FontHandle,
@@ -540,11 +588,12 @@ inline void PushTextCentered(
 	// NOTE: Center.Y - FontHeight / 2.0f will be the baseline
 	// NOTE: this function will leak if you don't regularly clear the arena.
 	// CONT: Hence, use FrameArena
+	push_text_result Result = {};
 
 	loaded_font* LoadedFont = GetFont(Assets, FontHandle);
 	if(LoadedFont == NULL)
 	{
-		return;
+		goto end;
 	}
 
 	stbtt_fontinfo* Font = &LoadedFont->StbFont;
@@ -603,7 +652,7 @@ inline void PushTextCentered(
 	);
 	vector2 Baseline = Center - BaselineOffsetFromCenterWorld;
 
-	PushText(
+	Result = PushText(
 		Group,
 		Assets,
 		FontHandle,
@@ -614,14 +663,31 @@ inline void PushTextCentered(
 		Color,
 		FrameArena
 	);
+
+	goto end;
+
+end:
+	return Result;
 }
 
 // TODO: make a push rect that doesn't require pushing a basis and will make it based on the rect you push
-inline void PushRect(
-	render_group* Group, basis* Basis, rectangle Rectangle, vector4 Color
-)
+inline void PushRect(render_group* Group, rectangle Rectangle, vector4 Color)
 {
 	// NOTE: Basis should be the top left of the unrotated rect
+	// render_entry_rectangle* Entry = PushStruct(
+	// 	Group->Arena, render_entry_rectangle
+	// );
+	// Group->LastEntry = (uint8_t*) Entry;
+	// Entry->Header.Type = EntryType_Rectangle;
+	// Entry->Color = Color;
+
+	// screen_pos_dim ScreenPosDim = GetScreenPosDim(
+	// 	Basis, Group->WorldToCamera, Group->CameraToScreen
+	// );	
+	// Entry->Pos = ScreenPosDim.Pos;
+	// Entry->XAxis = Rectangle.Dim.X * ScreenPosDim.XAxis;
+	// Entry->YAxis = Rectangle.Dim.Y * ScreenPosDim.YAxis;
+
 	render_entry_rectangle* Entry = PushStruct(
 		Group->Arena, render_entry_rectangle
 	);
@@ -629,12 +695,16 @@ inline void PushRect(
 	Entry->Header.Type = EntryType_Rectangle;
 	Entry->Color = Color;
 
+	basis Basis = MakeBasis(
+		GetBottomLeft(Rectangle), Vector2(1.0f, 0.0f), Vector2(0.0f, 1.0f)
+	);
+
 	screen_pos_dim ScreenPosDim = GetScreenPosDim(
-		Basis, Group->WorldToCamera, Group->CameraToScreen
-	);	
+		&Basis, Group->WorldToCamera, Group->CameraToScreen
+	);
 	Entry->Pos = ScreenPosDim.Pos;
-	Entry->XAxis = Rectangle.Dim.X * ScreenPosDim.XAxis;
-	Entry->YAxis = Rectangle.Dim.Y * ScreenPosDim.YAxis;
+	Entry->XAxis = ((float) Rectangle.Dim.X) * ScreenPosDim.XAxis;
+	Entry->YAxis = ((float) Rectangle.Dim.Y) * ScreenPosDim.YAxis;
 }
 
 inline void PushClear(render_group* Group, vector4 Color)
@@ -662,12 +732,48 @@ bool IsInRotatedQuad(
 	return (Edge0 < 0) && (Edge1 < 0) && (Edge2 < 0) && (Edge3 < 0);
 }
 
+inline vector4 Unpack4x8(uint32_t Packed)
+{
+	return Vector4(
+		(float) ((Packed >> 16) & 0xFF),
+		(float) ((Packed >> 8) & 0xFF),
+		(float) (Packed & 0xFF),
+		(float) ((Packed >> 24) & 0xFF)
+	);
+}
+
+inline vector4 Rgb255ToNormalColor(vector4 C)
+{
+	vector4 Result;
+
+	Result.R = (float) (C.R / 255.0f);
+	Result.G = (float) (C.G / 255.0f);
+	Result.B = (float) (C.B / 255.0f);
+	Result.A = (float) (C.A / 255.0f);
+
+	return Result;
+}
+
+inline vector4 NormalColorToRgb255(vector4 C)
+{
+	vector4 Result;
+
+	Result.R = 255.0f * C.R;
+	Result.G = 255.0f * C.G;
+	Result.B = 255.0f * C.B;
+	Result.A = 255.0f * C.A;
+
+	return Result;
+}
+
 void DrawRectangle(
 	loaded_bitmap* Buffer, 
 	rectangle Rectangle,
 	vector4 vColor 
 )
 {
+	TIMED_BLOCK();
+
 	int32_t MinX = RoundFloat32ToInt32(Rectangle.Min.X);
 	int32_t MinY = RoundFloat32ToInt32(Rectangle.Min.Y);
 	int32_t MaxX = RoundFloat32ToInt32(Rectangle.Min.X + Rectangle.Dim.X);
@@ -735,9 +841,10 @@ void DrawRectangleSlowly(
 	vector2 Origin,
 	vector2 XAxis,
 	vector2 YAxis,
-	vector4 ColorV
+	vector4 Color
 )
 {
+	TIMED_BLOCK();
 	float fMinX = (float) Buffer->Width;
 	float fMinY = (float) Buffer->Height;
 	float fMaxX = 0;
@@ -809,12 +916,6 @@ void DrawRectangleSlowly(
 		MaxY = Buffer->Height;
 	}
 
-	uint32_t Color = (
-		(RoundFloat32ToInt32(ColorV.R * 0xFF) << 16) |
-		(RoundFloat32ToInt32(ColorV.G * 0xFF) << 8) |
-		RoundFloat32ToInt32(ColorV.B * 0xFF)
-	);
-
 	vector2 XAxisPerp = Perpendicular(XAxis);
 	vector2 YAxisPerp = Perpendicular(YAxis);
 
@@ -840,7 +941,19 @@ void DrawRectangleSlowly(
 			);
 			if(InRotatedQuad)
 			{
-				*Pixel = Color;
+				uint32_t Source = *Pixel;
+				vector4 v4Source = Rgb255ToNormalColor(Unpack4x8(Source));
+
+				vector4 BlendedColor = Lerp(v4Source, Color.A, Color);
+				vector4 BlendedColorRgb255 = NormalColorToRgb255(BlendedColor);
+
+				*Pixel = (
+					(((uint32_t) 0xFF) << 24) | 
+					(((uint32_t) BlendedColorRgb255.R) << 16) |
+					(((uint32_t) BlendedColorRgb255.G) << 8) |
+					((uint32_t) BlendedColorRgb255.B)
+				);
+				// *Pixel = Color;
 			}
 			Pixel++;
 		}
@@ -939,16 +1052,6 @@ void DrawBitmap(
 	}
 }
 
-inline vector4 Unpack4x8(uint32_t Packed)
-{
-	return Vector4(
-		(float) ((Packed >> 16) & 0xFF),
-		(float) ((Packed >> 8) & 0xFF),
-		(float) (Packed & 0xFF),
-		(float) ((Packed >> 24) & 0xFF)
-	);
-}
-
 inline __m128 VectorizedUnpack4x8(uint32_t Packed)
 {
 	__m128 Result;
@@ -957,30 +1060,6 @@ inline __m128 VectorizedUnpack4x8(uint32_t Packed)
 	*Element++ = (float) ((Packed >> 8) & 0xFF);
 	*Element++ = (float) (Packed & 0xFF);
 	*Element++ = (float) ((Packed >> 24) & 0xFF);
-	return Result;
-}
-
-inline vector4 Rgb255ToNormalColor(vector4 C)
-{
-	vector4 Result;
-
-	Result.R = (float) (C.R / 255.0f);
-	Result.G = (float) (C.G / 255.0f);
-	Result.B = (float) (C.B / 255.0f);
-	Result.A = (float) (C.A / 255.0f);
-
-	return Result;
-}
-
-inline vector4 NormalColorToRgb255(vector4 C)
-{
-	vector4 Result;
-
-	Result.R = 255.0f * C.R;
-	Result.G = 255.0f * C.G;
-	Result.B = 255.0f * C.B;
-	Result.A = 255.0f * C.A;
-
 	return Result;
 }
 

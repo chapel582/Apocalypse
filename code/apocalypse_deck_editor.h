@@ -29,10 +29,19 @@ struct text_input
 	uint32_t BufferSize;
 	rectangle Rectangle;
 	float FontHeight;
+
 	char CharDown;
 	float RepeatTimer;
 	float RepeatDelay;
 	float RepeatPeriod;
+	
+	bool AlphaIncreasing;
+	vector4 CursorColor;
+
+	vector4 FontColor;
+	vector4 BackgroundColor;
+	bitmap_handle Background;
+
 	text_input_repeat_callback* RepeatCallback;
 	char* Buffer;
 	text_input_callback* SubmitCallback;

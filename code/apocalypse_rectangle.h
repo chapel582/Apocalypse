@@ -30,6 +30,11 @@ inline vector2 GetTopLeft(rectangle Rectangle)
 	return Result;
 }
 
+inline vector2 GetBottomLeft(rectangle Rectangle)
+{
+	return Rectangle.Min;
+}
+
 inline vector2 GetCenter(rectangle Rectangle)
 {
 	return Rectangle.Min + (0.5f * Rectangle.Dim);

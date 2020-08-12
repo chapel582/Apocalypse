@@ -4,6 +4,7 @@
 #include "apocalypse_info_card.h"
 #include "apocalypse_card_definitions.h"
 #include "apocalypse_deck_storage.h"
+#include "apocalypse_render_group.h"
 
 void AddLetterToTextInput(text_input* TextInput)
 {
@@ -371,6 +372,10 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		// CONT: the submission can be abstracted
 		TextInput->RepeatDelay = 1.0f;
 		TextInput->RepeatPeriod = 0.05f;
+		TextInput->FontColor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+		TextInput->CursorColor = TextInput->FontColor;
+		TextInput->BackgroundColor = Vector4(0.1f, 0.1f, 0.1f, 1.0f);
+		TextInput->Background = BitmapHandle_TestCard2;
 	}
 
 	SceneState->Alert = Alert();
@@ -663,6 +668,27 @@ void UpdateAndRenderDeckEditor(
 	// SECTION START: Update text input
 	{
 		text_input* TextInput = &SceneState->DeckNameInput;
+
+		float Period = 1.0f;
+		if(TextInput->AlphaIncreasing)
+		{
+			TextInput->CursorColor.A += DtForFrame / Period;
+			if(TextInput->CursorColor.A >= 1.0f)
+			{
+				TextInput->CursorColor.A = 1.0f;
+				TextInput->AlphaIncreasing = false;
+			}
+		}
+		else
+		{
+			TextInput->CursorColor.A -= DtForFrame / Period;
+			if(TextInput->CursorColor.A <= 0.0f)
+			{
+				TextInput->CursorColor.A = 0.0f;
+				TextInput->AlphaIncreasing = true;
+			}
+		}
+
 		if(CheckFlag(TextInput, TextInput_CharDownDelay))
 		{
 			if(TextInput->RepeatTimer >= TextInput->RepeatDelay)
@@ -777,22 +803,65 @@ void UpdateAndRenderDeckEditor(
 	if(CheckFlag(&SceneState->DeckNameInput, TextInput_Active))
 	{
 		text_input* TextInput = &SceneState->DeckNameInput;
-		vector2 TopLeft = GetTopLeft(TextInput->Rectangle);
+		render_group* RenderGroup = &GameState->RenderGroup;
+		PushSizedBitmap(
+			RenderGroup,
+			&GameState->Assets,
+			TextInput->Background,
+			GetCenter(TextInput->Rectangle),
+			TextInput->Rectangle.Dim,				
+			TextInput->BackgroundColor
+		);
+		push_text_result PushTextResult = {};
+
 		if(TextInput->Buffer[0] != 0)
-		{
-			PushTextTopLeft(
-				&GameState->RenderGroup,
+		{		
+			vector2 TopLeft = GetTopLeft(TextInput->Rectangle);	
+			PushTextResult = PushTextTopLeft(
+				RenderGroup,
 				&GameState->Assets,
 				FontHandle_TestFont,
 				TextInput->Buffer,
 				TextInput->BufferSize,
 				TextInput->FontHeight,
 				TopLeft,
-				Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+				TextInput->FontColor,
 				&GameState->FrameArena
+			);
+			if(PushTextResult.Code == PushText_Success)
+			{
+				vector2 OffsetScreen = PushTextResult.Offset;
+				vector2 OffsetWorld = TransformVectorToBasis(
+					RenderGroup->CameraToScreen, OffsetScreen
+				);
+				vector2 OffsetCamera = TransformVectorToBasis(
+					RenderGroup->WorldToCamera, OffsetWorld
+				);
+
+				PushRect(
+					RenderGroup,
+					MakeRectangle(
+						TextInput->Rectangle.Min + OffsetCamera,
+						Vector2(2.0f, TextInput->FontHeight)
+					),
+					TextInput->CursorColor
+				);
+			}			
+		}
+		if(PushTextResult.Code != PushText_Success)
+		{
+			// TODO: make the lpad more programmatic
+			PushRect(
+				RenderGroup,
+				MakeRectangle(
+					TextInput->Rectangle.Min + Vector2(2.0f, 0.0f),
+					Vector2(2.0f, TextInput->FontHeight)
+				),
+				TextInput->CursorColor
 			);
 		}
 	}
+
 	if(SceneState->DeckNameSet)
 	{
 		PushText(

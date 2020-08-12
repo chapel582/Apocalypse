@@ -670,23 +670,9 @@ end:
 	return Result;
 }
 
-// TODO: make a push rect that doesn't require pushing a basis and will make it based on the rect you push
 inline void PushRect(render_group* Group, rectangle Rectangle, vector4 Color)
 {
-	// NOTE: Basis should be the top left of the unrotated rect
-	// render_entry_rectangle* Entry = PushStruct(
-	// 	Group->Arena, render_entry_rectangle
-	// );
-	// Group->LastEntry = (uint8_t*) Entry;
-	// Entry->Header.Type = EntryType_Rectangle;
-	// Entry->Color = Color;
-
-	// screen_pos_dim ScreenPosDim = GetScreenPosDim(
-	// 	Basis, Group->WorldToCamera, Group->CameraToScreen
-	// );	
-	// Entry->Pos = ScreenPosDim.Pos;
-	// Entry->XAxis = Rectangle.Dim.X * ScreenPosDim.XAxis;
-	// Entry->YAxis = Rectangle.Dim.Y * ScreenPosDim.YAxis;
+	// NOTE: Basis should be the bottom left of the unrotated rect
 
 	render_entry_rectangle* Entry = PushStruct(
 		Group->Arena, render_entry_rectangle

@@ -29,6 +29,7 @@
 #include "apocalypse_deck_storage.cpp"
 #include "apocalypse_card_definitions.cpp"
 #include "apocalypse_info_card.cpp"
+#include "apocalypse_alert.cpp"
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
@@ -144,6 +145,8 @@ void GameUpdateAndRender(
 		GameState->Scene = SceneType_CardGame;
 		GameState->LastFrameScene = GameState->Scene;
 	}
+
+	GameState->Time += DtForFrame;
 
 	switch(GameState->Scene)
 	{

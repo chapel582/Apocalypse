@@ -4,6 +4,7 @@
 #include "apocalypse_rectangle.h"
 #include "apocalypse_button.h"
 #include "apocalypse_deck_storage.h"
+#include "apocalypse_alert.h"
 
 #include <string.h> // TODO: for text_input. move when that file is made
 
@@ -133,6 +134,8 @@ struct deck_editor_state
 	vector2 InfoCardCenter;
 	vector2 InfoCardXBound;
 	vector2 InfoCardYBound;
+
+	alert Alert;
 
 	ui_button* SaveDeckButton;
 };

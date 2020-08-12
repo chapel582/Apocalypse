@@ -7,6 +7,7 @@
 #include "apocalypse_deck_storage.h"
 #include "apocalypse_card_definitions.h"
 #include "apocalypse_info_card.h"
+#include "apocalypse_alert.h"
 
 #define MAX_RESOURCE_STRING_SIZE 40
 void FormatResourceString(
@@ -74,27 +75,12 @@ inline player_id GetOpponent(player_id Player)
 	}
 }
 
-void DisplayMessageFor(
-	game_state* GameState,
-	card_game_state* SceneState,
-	char* Message,
-	float Time
-)
-{
-	SceneState->DisplayMessageUntil = GameState->Time + Time;
-	strcpy_s(
-		SceneState->MessageBuffer,
-		ARRAY_COUNT(SceneState->MessageBuffer),
-		Message
-	);	
-}
-
 void CannotActivateCardMessage(
-	game_state* GameState, card_game_state* SceneState
+	game_state* GameState, alert* Alert
 )
 {
 	DisplayMessageFor(
-		GameState, SceneState, "Cannot activate card. Too few resources", 1.0f
+		GameState, Alert, "Cannot activate card. Too few resources", 1.0f
 	);
 }
 
@@ -236,7 +222,7 @@ void DrawCard(
 	if(CardSet->CardCount >= MAX_CARDS_PER_SET)
 	{
 		DisplayMessageFor(
-			GameState, SceneState, "Can't draw card. Hand full", 1.0f
+			GameState, &SceneState->Alert, "Can't draw card. Hand full", 1.0f
 		);
 		return;
 	}
@@ -518,6 +504,8 @@ void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		SetResource(PlayerResources, PlayerResource_Black, rand() % 10 + 1);
 	}
 
+	SceneState->Alert = Alert();
+
 	// TODO: remove me!
 	// PlaySound(
 	// 	&GameState->PlayingSoundList,
@@ -541,7 +529,6 @@ void UpdateAndRenderCardGame(
 	float DtForFrame
 )
 {
-	GameState->Time += DtForFrame;
 	bool EndTurn = false;
 
 	// SECTION START: User input
@@ -613,7 +600,7 @@ void UpdateAndRenderCardGame(
 								else
 								{
 									CannotActivateCardMessage(
-										GameState, SceneState
+										GameState, &SceneState->Alert
 									);
 								}
 							}
@@ -639,7 +626,7 @@ void UpdateAndRenderCardGame(
 										else
 										{
 											CannotActivateCardMessage(
-												GameState, SceneState
+												GameState, &SceneState->Alert
 											);
 										}
 									}
@@ -891,93 +878,6 @@ void UpdateAndRenderCardGame(
 				);
 				if(Card->HoveredOver)
 				{
-					// PushSizedBitmap(
-					// 	&GameState->RenderGroup,
-					// 	&GameState->Assets,
-					// 	BitmapHandle_TestCard2,
-					// 	SceneState->InfoCardCenter,
-					// 	SceneState->InfoCardXBound,
-					// 	SceneState->InfoCardYBound,
-					// 	Card->Color
-					// );
-
-					// #define ATTACK_HEALTH_MAX_LENGTH 8
-					// uint32_t MaxCharacters = (
-					// 	2 * ATTACK_HEALTH_MAX_LENGTH + 
-					// 	4 * MAX_RESOURCE_STRING_SIZE
-					// );
-					// char* ResourceString = PushArray(
-					// 	&GameState->FrameArena,
-					// 	MaxCharacters,
-					// 	char
-					// );
-					// string_appender StringAppender = MakeStringAppender(
-					// 	ResourceString, MaxCharacters 
-					// );
-
-					// AppendToString(
-					// 	&StringAppender, "Attack: %d\n", Card->Attack
-					// );
-					// AppendToString(
-					// 	&StringAppender, "Health: %d\n", Card->Health
-					// );
-
-					// AppendResourceStringToInfoCard(
-					// 	Card,
-					// 	&Card->PlayDelta[Card->Owner],
-					// 	&StringAppender,
-					// 	"Self",
-					// 	"Play"
-					// );
-					// AppendResourceStringToInfoCard(
-					// 	Card,
-					// 	&Card->TapDelta[Card->Owner],
-					// 	&StringAppender,
-					// 	"Self",
-					// 	"Tap"
-					// );
-
-					// player_id Opp = GetOpponent(Card->Owner);
-					// AppendResourceStringToInfoCard(
-					// 	Card,
-					// 	&Card->PlayDelta[Opp],
-					// 	&StringAppender,
-					// 	"Opp",
-					// 	"Play"
-					// );
-					// AppendResourceStringToInfoCard(
-					// 	Card,
-					// 	&Card->TapDelta[Opp],
-					// 	&StringAppender,
-					// 	"Opp",
-					// 	"Tap"
-					// );
-
-					// if(Card->SetType == CardSet_Tableau)
-					// {
-					// 	AppendToString(
-					// 		&StringAppender,
-					// 		"TapsLeft: %d\n",
-					// 		Card->TapsAvailable - Card->TimesTapped
-					// 	);
-					// }
-
-					// vector2 TopLeft = (
-					// 	SceneState->InfoCardCenter - 
-					// 	0.5f * SceneState->InfoCardXBound + 
-					// 	0.5f * SceneState->InfoCardYBound
-					// );
-					// PushTextTopLeft(
-					// 	&GameState->RenderGroup,
-					// 	&GameState->Assets,
-					// 	FontHandle_TestFont,
-					// 	ResourceString,
-					// 	MaxCharacters,
-					// 	20.0f,
-					// 	TopLeft,
-					// 	Vector4(0.0f, 0.0f, 0.0f, 1.0f),
-					// 	&GameState->FrameArena
-					// );
 					PushInfoCard(
 						&GameState->RenderGroup,
 						&GameState->Assets,
@@ -1042,25 +942,7 @@ void UpdateAndRenderCardGame(
 	}
 	// SECTION STOP: Push resources
 
-	// SECTION START: Display message
-	if(GameState->Time < SceneState->DisplayMessageUntil)
-	{
-		PushTextCentered(
-			&GameState->RenderGroup,
-			&GameState->Assets,
-			FontHandle_TestFont,
-			SceneState->MessageBuffer,
-			ARRAY_COUNT(SceneState->MessageBuffer),
-			50.0f,
-			Vector2(
-				BackBuffer->Width / 2.0f, 
-				(BackBuffer->Height / 2.0f)
-			),
-			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-			&GameState->FrameArena
-		);
-	}
-	// SECTION STOP: Display message
+	PushCenteredAlert(&SceneState->Alert, GameState, BackBuffer);
 
 #if 0 // NOTE: tests for bitmaps
 	PushSizedBitmap(

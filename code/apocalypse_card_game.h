@@ -14,6 +14,7 @@
 #include "apocalypse_card_definitions.h"
 #include "apocalypse_player_id.h"
 #include "apocalypse_deck_storage.h"
+#include "apocalypse_alert.h"
 
 typedef enum
 {
@@ -158,8 +159,7 @@ struct card_game_state
 	vector2 InfoCardCenter;
 	vector2 InfoCardXBound;
 	vector2 InfoCardYBound;
-	float DisplayMessageUntil;
-	char MessageBuffer[256];
+	alert Alert;
 	card_definitions* Definitions;
 	float CardWidth;
 	float CardHeight;	

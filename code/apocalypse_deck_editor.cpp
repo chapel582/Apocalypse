@@ -49,6 +49,8 @@ void PressAndHoldKeyboardEvent(
 
 struct save_deck_button_args
 {
+	game_state* GameState;
+	alert* Alert;
 	uint32_t* CardCount;
 	deck_editor_card* DeckCards;
 	char* DeckName;
@@ -58,6 +60,8 @@ void SaveDeckButtonCallback(void* Data)
 {
 	save_deck_button_args* Args = (save_deck_button_args*) Data;
 	loaded_deck Deck = {};
+	game_state* GameState = Args->GameState;
+	alert* Alert = Args->Alert;
 	uint32_t CardCount = *Args->CardCount;
 	deck_editor_card* Cards = Args->DeckCards;
 	for(uint32_t Index = 0; Index < CardCount; Index++)
@@ -71,6 +75,7 @@ void SaveDeckButtonCallback(void* Data)
 	char PathToDeck[256];
 	GetDeckPath(PathToDeck, sizeof(PathToDeck), Args->DeckName);
 	SaveDeck(PathToDeck, &Deck);
+	DisplayMessageFor(GameState, Alert, "Saved Deck", 1.0f);
 }
 
 void AddCardToDeck(
@@ -368,6 +373,8 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		TextInput->RepeatPeriod = 0.05f;
 	}
 
+	SceneState->Alert = Alert();
+
 	vector2 SaveButtonDim = Vector2(
 		1.5f * SceneState->DeckCards.Dim.X, SceneState->DeckCards.Dim.Y
 	);
@@ -379,6 +386,8 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		PushStruct(&GameState->TransientArena, save_deck_button_args)
 	);
 	*SaveDeckButtonArgs = {};
+	SaveDeckButtonArgs->GameState = GameState;
+	SaveDeckButtonArgs->Alert = &SceneState->Alert;
 	SaveDeckButtonArgs->DeckName = SceneState->DeckName;
 	SaveDeckButtonArgs->DeckCards = SceneState->DeckCards.Cards;
 	SaveDeckButtonArgs->CardCount = &SceneState->DeckCards.ActiveCardCount;
@@ -798,4 +807,6 @@ void UpdateAndRenderDeckEditor(
 			&GameState->FrameArena
 		);
 	}
+
+	PushCenteredAlert(&SceneState->Alert, GameState, BackBuffer);
 }

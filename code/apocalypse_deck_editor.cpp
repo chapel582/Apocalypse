@@ -48,6 +48,51 @@ void PressAndHoldKeyboardEvent(
 	}
 }
 
+void PushCursor(
+	text_input* TextInput, render_group* RenderGroup, vector2 Offset
+)
+{
+	if(CheckFlag(TextInput, TextInput_Selected))
+	{
+		PushRect(
+			RenderGroup,
+			MakeRectangle(
+				TextInput->Rectangle.Min + Offset,
+				Vector2(2.0f, TextInput->FontHeight)
+			),
+			TextInput->CursorColor
+		);
+	}
+}
+
+struct submit_deck_name_args
+{
+	standard_submit_args StandardArgs;
+	deck_editor_state* SceneState;
+};
+
+void SubmitDeckName(void* Data)
+{
+	submit_deck_name_args* Args = (submit_deck_name_args*) Data; 
+	StandardSubmit(&Args->StandardArgs);
+	deck_editor_state* SceneState = Args->SceneState;
+	SceneState->DeckNameSet = true;
+
+	uint32_t VisibleInteractable = (
+		UiButton_Interactable | UiButton_Visible
+	);
+	AddButtonsFlags(
+		SceneState->StaticButtons,
+		ARRAY_COUNT(SceneState->StaticButtons),
+		VisibleInteractable
+	);
+	AddButtonsFlags(
+		SceneState->CollectionButtons,
+		ARRAY_COUNT(SceneState->CollectionButtons),
+		VisibleInteractable
+	);
+}
+
 struct save_deck_button_args
 {
 	game_state* GameState;
@@ -113,6 +158,9 @@ void AddCardToDeck(
 				Vector4(0.0f, 0.0f, 0.0f, 1.0f),
 				NULL,
 				NULL
+			);
+			SetFlags(
+				DeckCard->Button, UiButton_Visible | UiButton_Interactable
 			);
 			break;
 		}
@@ -239,6 +287,10 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	InitButtons(
 		SceneState->DeckButtons, 
 		ARRAY_COUNT(SceneState->DeckButtons)
+	);
+	InitButtons(
+		SceneState->StaticButtons, 
+		ARRAY_COUNT(SceneState->StaticButtons)
 	);
 	
 	SceneState->DeckCards.Dim = Vector2(90.0f, 30.0f);
@@ -367,7 +419,7 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		TextInput->Buffer = PushArray(
 			&GameState->TransientArena, TextInput->BufferSize, char
 		);
-		TextInput->SubmitCallback = StandardSubmit;
+		TextInput->SubmitCallback = SubmitDeckName;
 		// TODO: maybe need to track submit callback data when initializing so 	
 		// CONT: the submission can be abstracted
 		TextInput->RepeatDelay = 1.0f;
@@ -462,6 +514,25 @@ void UpdateAndRenderDeckEditor(
 				)
 			);
 
+			if(CheckFlag(&SceneState->DeckNameInput, TextInput_Active))
+			{
+				text_input* TextInput = &SceneState->DeckNameInput;
+				if(PointInRectangle(MouseEventWorldPos, TextInput->Rectangle))
+				{
+					if(MouseEvent->Type == PrimaryUp)
+					{
+						SetFlag(TextInput, TextInput_Selected);
+					}
+				}
+				else
+				{
+					if(MouseEvent->Type == PrimaryUp)
+					{
+						ClearFlag(TextInput, TextInput_Selected);
+					}
+				}
+			}
+
 			ButtonsHandleMouseEvent(
 				SceneState->CollectionButtons,
 				ARRAY_COUNT(SceneState->CollectionButtons),
@@ -541,13 +612,16 @@ void UpdateAndRenderDeckEditor(
 						case(0x0D):
 						{
 							// NOTE: Return
-							standard_submit_args SubmitArgs = {};
-							SubmitArgs.TextInput = TextInput;
-							SubmitArgs.DataLength = TextInput->CursorPos;
-							SubmitArgs.Buffer = TextInput->Buffer;
-							SubmitArgs.Dest = SceneState->DeckName;
+							submit_deck_name_args SubmitArgs = {};
+							SubmitArgs.SceneState = SceneState;
+							standard_submit_args* StandardArgs = (
+								&SubmitArgs.StandardArgs
+							);
+							StandardArgs->TextInput = TextInput;
+							StandardArgs->DataLength = TextInput->CursorPos;
+							StandardArgs->Buffer = TextInput->Buffer;
+							StandardArgs->Dest = SceneState->DeckName;
 							TextInput->SubmitCallback(&SubmitArgs);
-							SceneState->DeckNameSet = true;
 							break;
 						}
 						case(0x20):
@@ -772,7 +846,10 @@ void UpdateAndRenderDeckEditor(
 				&GameState->FrameArena, 
 				White
 			);
-			if(CheckFlag(Button, UiButton_HoveredOver))
+			if(
+				CheckFlag(Button, UiButton_Interactable) && 
+				CheckFlag(Button, UiButton_HoveredOver)
+			)
 			{
 				card_definition* Definition = DeckCard->Definition;
 				PushInfoCard(
@@ -838,27 +915,13 @@ void UpdateAndRenderDeckEditor(
 					RenderGroup->WorldToCamera, OffsetWorld
 				);
 
-				PushRect(
-					RenderGroup,
-					MakeRectangle(
-						TextInput->Rectangle.Min + OffsetCamera,
-						Vector2(2.0f, TextInput->FontHeight)
-					),
-					TextInput->CursorColor
-				);
-			}			
+				PushCursor(TextInput, RenderGroup, OffsetCamera);
+			}
 		}
 		if(PushTextResult.Code != PushText_Success)
 		{
 			// TODO: make the lpad more programmatic
-			PushRect(
-				RenderGroup,
-				MakeRectangle(
-					TextInput->Rectangle.Min + Vector2(2.0f, 0.0f),
-					Vector2(2.0f, TextInput->FontHeight)
-				),
-				TextInput->CursorColor
-			);
+			PushCursor(TextInput, RenderGroup, Vector2(2.0f, 0.0f));
 		}
 	}
 

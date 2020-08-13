@@ -33,7 +33,7 @@ void ButtonsHandleMouseEvent(
 	)
 	{
 		ui_button* Button = &Buttons[ButtonIndex];
-		if(CheckFlag(Button, UiButton_Active))
+		if(CheckFlag(Button, UiButton_Interactable))
 		{
 			if(PointInRectangle(MouseEventWorldPos, Button->Rectangle))
 			{
@@ -77,14 +77,14 @@ ui_button* AddButton(
 	)
 	{
 		ui_button* Button = &Buttons[ButtonIndex];
-		if(!CheckFlag(Button, UiButton_Active))
+		if(!CheckFlag(Button, UiButton_Allocated))
 		{
 			ButtonToUse = Button;
 			break;
 		}
 	}
 	ASSERT(ButtonToUse != NULL);
-	SetFlag(ButtonToUse, UiButton_Active);
+	SetFlag(ButtonToUse, UiButton_Allocated);
 	ButtonToUse->Rectangle = Rectangle;
 	ButtonToUse->Callback = Callback;
 	ButtonToUse->Data = Data;
@@ -95,6 +95,24 @@ ui_button* AddButton(
 	return ButtonToUse;
 }
 
+void AddButtonsFlags(
+	ui_button* Buttons, uint32_t ButtonArrayCount, uint32_t Flags
+)
+{
+	for(
+		uint32_t ButtonIndex = 0;
+		ButtonIndex < ButtonArrayCount;
+		ButtonIndex++
+	)
+	{
+		ui_button* Button = &Buttons[ButtonIndex];
+		if(CheckFlag(Button, UiButton_Allocated))
+		{
+			Button->Flags |= Flags;
+		}
+	}
+}
+
 void PushButtonToRenderGroup(
 	ui_button* Button,
 	render_group* Group,
@@ -103,7 +121,7 @@ void PushButtonToRenderGroup(
 	vector4 Color
 )
 {
-	if(CheckFlag(Button, UiButton_Active))
+	if(CheckFlag(Button, UiButton_Visible))
 	{
 		vector2 ButtonCenter = GetCenter(Button->Rectangle);
 		PushSizedBitmap(

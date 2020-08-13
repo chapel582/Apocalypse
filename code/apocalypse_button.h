@@ -6,8 +6,10 @@
 typedef void button_callback(void* Data);
 typedef enum 
 {
-	UiButton_Active = 1 << 0,
-	UiButton_HoveredOver = 1 << 1
+	UiButton_Allocated = 1 << 0, // NOTE: Use ClearAllFlags to clear allocated
+	UiButton_Interactable = 1 << 1,
+	UiButton_Visible = 1 << 2,
+	UiButton_HoveredOver = 1 << 3
 } ui_button_flag;
 
 struct ui_button
@@ -25,6 +27,11 @@ struct ui_button
 inline void SetFlag(ui_button* Button, ui_button_flag Flag)
 {
 	Button->Flags |= Flag; 
+}
+
+inline void SetFlags(ui_button* Button, uint32_t Flags)
+{
+	Button->Flags |= Flags; 
 }
 
 inline void ClearFlag(ui_button* Button, ui_button_flag Flag)

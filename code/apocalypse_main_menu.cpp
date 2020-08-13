@@ -21,7 +21,7 @@ void StartMainMenu(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	);
 	vector2 Dim = Vector2(BackBuffer->Width / 5.5f, BackBuffer->Height / 20.0f); 
 	vector2 ButtonMin = Center - 0.5f * Dim;
-	AddButton(
+	ui_button* Button = AddButton(
 		SceneState->Buttons,
 		ARRAY_COUNT(SceneState->Buttons),
 		MakeRectangle(ButtonMin, Dim),
@@ -32,9 +32,10 @@ void StartMainMenu(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		StartCardGameCallback,
 		GameState
 	);
+	SetFlags(Button, UiButton_Visible | UiButton_Interactable);
 
 	ButtonMin.Y -= 1.5f * Dim.Y;
-	AddButton(
+	Button = AddButton(
 		SceneState->Buttons,
 		ARRAY_COUNT(SceneState->Buttons),
 		MakeRectangle(ButtonMin, Dim),
@@ -45,6 +46,7 @@ void StartMainMenu(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		StartDeckEditorCallback,
 		GameState
 	);
+	SetFlags(Button, UiButton_Visible | UiButton_Interactable);
 }
 
 void UpdateAndRenderMainMenu(

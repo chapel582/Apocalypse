@@ -529,6 +529,9 @@ void UpdateAndRenderDeckEditor(
 					if(MouseEvent->Type == PrimaryUp)
 					{
 						ClearFlag(TextInput, TextInput_Selected);
+						ClearFlag(TextInput, TextInput_CharDownDelay);
+						ClearFlag(TextInput, TextInput_CharDown);
+						ClearFlag(TextInput, TextInput_ShiftIsDown);
 					}
 				}
 			}

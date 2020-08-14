@@ -110,13 +110,17 @@ void SaveDeckButtonCallback(void* Data)
 	alert* Alert = Args->Alert;
 	uint32_t CardCount = *Args->CardCount;
 	deck_editor_card* Cards = Args->DeckCards;
-	for(uint32_t Index = 0; Index < CardCount; Index++)
+	uint8_t IdIndex = 0;
+	for(uint32_t CardIndex = 0; CardIndex < CardCount; CardIndex++)
 	{
-		deck_editor_card* Card = Cards + Index;
-		Deck.Ids[Index] = Card->Definition->Id;
+		deck_editor_card* Card = Cards + CardIndex;
+		for(uint32_t Added = 0; Added < Card->Count; Added++)
+		{
+			Deck.Ids[IdIndex++] = Card->Definition->Id;
+		}
 	}
-	ASSERT(CardCount < 0xFF);
-	Deck.Header.CardCount = (uint8_t) CardCount;
+	ASSERT(IdIndex < 0xFF);
+	Deck.Header.CardCount = IdIndex;
 
 	char PathToDeck[256];
 	GetDeckPath(PathToDeck, sizeof(PathToDeck), Args->DeckName);
@@ -125,12 +129,48 @@ void SaveDeckButtonCallback(void* Data)
 }
 
 void AddCardToDeck(
+	game_state* GameState,
 	deck_editor_state* SceneState,
 	deck_editor_cards* DeckCards,
 	card_definition* Definition
 )
 {
+	if(DeckCards->CardsInDeck >= MAX_CARDS_IN_DECK)
+	{
+		DisplayMessageFor(
+			GameState,
+			&SceneState->Alert,
+			"Cannot add card to deck. Too many cards.",
+			1.0f
+		);
+		goto end;
+	}
+
 	deck_editor_card* DeckCard;
+	bool FoundCard = false;
+	for(int Index = 0; Index < MAX_CARDS_IN_DECK; Index++)
+	{
+		DeckCard = DeckCards->Cards + Index;
+		if(IsActive(DeckCard) && DeckCard->Definition == Definition)
+		{
+			DeckCard->Count++;
+			snprintf(
+				DeckCard->Button->Text,
+				ARRAY_COUNT(DeckCard->Button->Text), 
+				"%d x %d",
+				Definition->Id,
+				DeckCard->Count
+			);
+			FoundCard = true;
+			break;
+		}
+	}
+	if(FoundCard)
+	{
+		DeckCards->CardsInDeck++;
+		goto end;
+	}
+
 	vector2 Dim = DeckCards->Dim;
 	for(int Index = 0; Index < MAX_CARDS_IN_DECK; Index++)
 	{
@@ -141,23 +181,33 @@ void AddCardToDeck(
 			rectangle Rectangle = MakeRectangle(
 				Vector2(
 					DeckCards->XPos,
-					DeckCards->YStart - (Dim.Y + DeckCards->YMargin) * (DeckCards->ActiveCardCount + 1)
+					(
+						DeckCards->YStart - 
+						(Dim.Y + DeckCards->YMargin) * 
+						(DeckCards->ActiveCardCount + 1)
+					)
 				),
 				Dim
 			);
+
 			// TODO: add remove card from deck callback
-			char Buffer[256];
-			snprintf(Buffer, ARRAY_COUNT(Buffer), "%d", Definition->Id);
+			DeckCard->Count++;
 			DeckCard->Button = AddButton(
 				SceneState->DeckButtons,
 				ARRAY_COUNT(SceneState->DeckButtons),
 				Rectangle,
 				BitmapHandle_TestCard2,
 				FontHandle_TestFont,
-				Buffer,
+				NULL,
 				Vector4(0.0f, 0.0f, 0.0f, 1.0f),
 				NULL,
 				NULL
+			);
+			snprintf(
+				DeckCard->Button->Text,
+				ARRAY_COUNT(DeckCard->Button->Text),
+				"%d",
+				Definition->Id
 			);
 			SetFlags(
 				DeckCard->Button, UiButton_Visible | UiButton_Interactable
@@ -165,13 +215,18 @@ void AddCardToDeck(
 			break;
 		}
 	}
-
+	
 	DeckCards->ActiveCardCount++;
-	// TODO: handle someone trying to add a card when at the limit
+	DeckCards->CardsInDeck++;
+	goto end;
+	
+end:
+	return;
 }
 
 struct add_card_to_deck_args
 {
+	game_state* GameState;
 	deck_editor_state* SceneState;
 	deck_editor_cards* DeckCards;
 	card_definition* Definition;
@@ -180,7 +235,9 @@ struct add_card_to_deck_args
 void AddCardToDeckCallback(void* Data)
 {
 	add_card_to_deck_args* Args = (add_card_to_deck_args*) Data;
-	AddCardToDeck(Args->SceneState, Args->DeckCards, Args->Definition);
+	AddCardToDeck(
+		Args->GameState, Args->SceneState, Args->DeckCards, Args->Definition
+	);
 }
 
 // TODO: remove card from deck
@@ -293,16 +350,18 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		ARRAY_COUNT(SceneState->StaticButtons)
 	);
 	
-	SceneState->DeckCards.Dim = Vector2(90.0f, 30.0f);
-	SceneState->DeckCards.XPos = (
-		BackBuffer->Width - SceneState->DeckCards.Dim.X
+	deck_editor_cards* DeckCards = &SceneState->DeckCards;
+	*DeckCards = {};
+	DeckCards->Dim = Vector2(90.0f, 30.0f);
+	DeckCards->XPos = (
+		BackBuffer->Width - DeckCards->Dim.X
 	);
-	SceneState->DeckCards.YStart = (float) BackBuffer->Height;
-	SceneState->DeckCards.YMargin = 0.1f * SceneState->DeckCards.Dim.Y;
+	DeckCards->YStart = (float) BackBuffer->Height;
+	DeckCards->YMargin = 0.1f * DeckCards->Dim.Y;
 	memset(
-		SceneState->DeckCards.Cards,
+		DeckCards->Cards,
 		0,
-		ARRAY_COUNT(SceneState->DeckCards.Cards) * sizeof(deck_editor_card)
+		ARRAY_COUNT(DeckCards->Cards) * sizeof(deck_editor_card)
 	);
 
 	SceneState->Definitions = DefineCards(&GameState->TransientArena);
@@ -339,6 +398,7 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 				add_card_to_deck_args* Data = PushStruct(
 					&GameState->TransientArena, add_card_to_deck_args
 				);
+				Data->GameState = GameState;
 				Data->SceneState = SceneState;
 				Data->DeckCards = &SceneState->DeckCards;
 				Data->Definition = Definitions->Array + Index;

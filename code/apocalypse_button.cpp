@@ -91,7 +91,10 @@ ui_button* AddButton(
 	ButtonToUse->Background = Background;
 	ButtonToUse->Font = Font;
 	ButtonToUse->TextColor = TextColor;
-	strcpy_s(ButtonToUse->Text, ARRAY_COUNT(ButtonToUse->Text), Text);
+	if(Text != NULL)
+	{
+		strcpy_s(ButtonToUse->Text, ARRAY_COUNT(ButtonToUse->Text), Text);
+	}
 	return ButtonToUse;
 }
 

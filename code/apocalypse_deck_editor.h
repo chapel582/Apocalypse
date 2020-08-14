@@ -95,6 +95,7 @@ inline bool IsActive(collection_card* CollectionCard)
 
 struct deck_editor_card
 {
+	uint32_t Count;
 	ui_button* Button;
 	card_definition* Definition; 
 };
@@ -107,7 +108,8 @@ inline bool IsActive(deck_editor_card* DeckCard)
 struct deck_editor_cards
 {
 	deck_editor_card Cards[MAX_CARDS_IN_DECK];
-	uint32_t ActiveCardCount;
+	uint32_t ActiveCardCount; // NOTE: the number of deck_editor_card buttons
+	uint32_t CardsInDeck; // NOTE: total number of cards in the deck
 	float XPos;
 	float YStart;
 	float YMargin;

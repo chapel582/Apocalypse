@@ -37,9 +37,15 @@ void PressAndHoldKeyboardEvent(
 	{
 		ClearFlag(TextInput, TextInput_CharDownDelay);
 		ClearFlag(TextInput, TextInput_CharDown);
+
+		TextInput->CursorColor.A = 1.0f;
+		TextInput->CursorAlphaState = CursorAlphaState_Decreasing; 
 	}
 	else
 	{
+		TextInput->CursorColor.A = 1.0f;
+		TextInput->CursorAlphaState = CursorAlphaState_Static;
+
 		TextInput->CharDown = Character;
 		TextInput->RepeatTimer = 0.0f;
 		TextInput->RepeatCallback = RepeatCallback;
@@ -486,6 +492,7 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		TextInput->RepeatPeriod = 0.05f;
 		TextInput->FontColor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 		TextInput->CursorColor = TextInput->FontColor;
+		TextInput->CursorAlphaState = CursorAlphaState_Decreasing;
 		TextInput->BackgroundColor = Vector4(0.1f, 0.1f, 0.1f, 1.0f);
 		TextInput->Background = BitmapHandle_TestCard2;
 	}
@@ -807,22 +814,22 @@ void UpdateAndRenderDeckEditor(
 		text_input* TextInput = &SceneState->DeckNameInput;
 
 		float Period = 1.0f;
-		if(TextInput->AlphaIncreasing)
+		if(TextInput->CursorAlphaState == CursorAlphaState_Increasing)
 		{
 			TextInput->CursorColor.A += DtForFrame / Period;
 			if(TextInput->CursorColor.A >= 1.0f)
 			{
 				TextInput->CursorColor.A = 1.0f;
-				TextInput->AlphaIncreasing = false;
+				TextInput->CursorAlphaState = CursorAlphaState_Decreasing;
 			}
 		}
-		else
+		else if(TextInput->CursorAlphaState == CursorAlphaState_Decreasing)
 		{
 			TextInput->CursorColor.A -= DtForFrame / Period;
 			if(TextInput->CursorColor.A <= 0.0f)
 			{
 				TextInput->CursorColor.A = 0.0f;
-				TextInput->AlphaIncreasing = true;
+				TextInput->CursorAlphaState = CursorAlphaState_Increasing;
 			}
 		}
 

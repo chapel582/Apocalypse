@@ -18,6 +18,13 @@ typedef enum
 	TextInput_CharDown = 1 << 5 // NOTE: mutually exclusize from CharDownDelay
 } text_input_flag;
 
+typedef enum 
+{
+	CursorAlphaState_Static,
+	CursorAlphaState_Increasing,
+	CursorAlphaState_Decreasing
+} cursor_alpha_state;
+
 typedef void text_input_callback(void* Data);
 struct text_input;
 typedef void text_input_repeat_callback(text_input* TextInput);
@@ -35,7 +42,7 @@ struct text_input
 	float RepeatDelay;
 	float RepeatPeriod;
 	
-	bool AlphaIncreasing;
+	cursor_alpha_state CursorAlphaState;
 	vector4 CursorColor;
 
 	vector4 FontColor;

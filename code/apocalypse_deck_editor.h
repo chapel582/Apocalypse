@@ -100,9 +100,18 @@ inline bool IsActive(collection_card* CollectionCard)
 	return CollectionCard->Definition != NULL;
 }
 
+struct deck_editor_card;
+struct deck_editor_cards;
+struct remove_card_from_deck_args
+{
+	deck_editor_cards* DeckCards;
+	deck_editor_card* DeckCard;
+};
+
 struct deck_editor_card
 {
 	uint32_t Count;
+	remove_card_from_deck_args RemoveCardFromDeckArgs;
 	ui_button* Button;
 	card_definition* Definition; 
 };

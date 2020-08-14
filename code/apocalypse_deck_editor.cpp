@@ -134,6 +134,77 @@ void SaveDeckButtonCallback(void* Data)
 	DisplayMessageFor(GameState, Alert, "Saved Deck", 1.0f);
 }
 
+void RemoveCardFromDeck(
+	deck_editor_cards* DeckCards, deck_editor_card* DeckCard
+)
+{
+	ASSERT(DeckCards->CardsInDeck != 0);
+
+	DeckCard->Count--;
+	DeckCards->CardsInDeck--;
+
+	if(DeckCard->Count > 0)
+	{
+		if(DeckCard->Count == 1)
+		{
+			snprintf(
+				DeckCard->Button->Text,
+				ARRAY_COUNT(DeckCard->Button->Text), 
+				"%d",
+				DeckCard->Definition->Id
+			);
+		}
+		else
+		{
+			snprintf(
+				DeckCard->Button->Text,
+				ARRAY_COUNT(DeckCard->Button->Text), 
+				"%d x %d",
+				DeckCard->Definition->Id,
+				DeckCard->Count
+			);
+		}
+	}
+	else
+	{
+		DeckCards->ActiveCardCount--;
+
+		DeckCard->Definition = NULL;
+		RemoveButton(DeckCard->Button);
+
+		vector2 Dim = DeckCards->Dim;
+		uint32_t ActiveCards = 0;
+		for(int Index = 0; Index < MAX_CARDS_IN_DECK; Index++)
+		{
+			DeckCard = DeckCards->Cards + Index;
+			if(IsActive(DeckCard))
+			{
+				rectangle Rectangle = MakeRectangle(
+					Vector2(
+						DeckCards->XPos,
+						(
+							DeckCards->YStart - 
+							(Dim.Y + DeckCards->YMargin) * 
+							(ActiveCards + 1)
+						)
+					),
+					Dim
+				);
+
+				DeckCard->Button->Rectangle = Rectangle;
+
+				ActiveCards++;
+			}
+		}
+	}
+}
+
+void RemoveCardFromDeckCallback(void* Data)
+{
+	remove_card_from_deck_args* Args = (remove_card_from_deck_args*) Data;
+	RemoveCardFromDeck(Args->DeckCards, Args->DeckCard);
+}
+
 void AddCardToDeck(
 	game_state* GameState,
 	deck_editor_state* SceneState,
@@ -196,8 +267,11 @@ void AddCardToDeck(
 				Dim
 			);
 
-			// TODO: add remove card from deck callback
 			DeckCard->Count++;
+
+			DeckCard->RemoveCardFromDeckArgs.DeckCards = DeckCards;
+			DeckCard->RemoveCardFromDeckArgs.DeckCard = DeckCard;
+
 			DeckCard->Button = AddButton(
 				SceneState->DeckButtons,
 				ARRAY_COUNT(SceneState->DeckButtons),
@@ -206,8 +280,8 @@ void AddCardToDeck(
 				FontHandle_TestFont,
 				NULL,
 				Vector4(0.0f, 0.0f, 0.0f, 1.0f),
-				NULL,
-				NULL
+				RemoveCardFromDeckCallback,
+				&DeckCard->RemoveCardFromDeckArgs
 			);
 			snprintf(
 				DeckCard->Button->Text,

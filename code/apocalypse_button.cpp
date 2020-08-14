@@ -98,6 +98,11 @@ ui_button* AddButton(
 	return ButtonToUse;
 }
 
+void RemoveButton(ui_button* Button)
+{
+	ClearAllFlags(Button);
+}
+
 void AddButtonsFlags(
 	ui_button* Buttons, uint32_t ButtonArrayCount, uint32_t Flags
 )

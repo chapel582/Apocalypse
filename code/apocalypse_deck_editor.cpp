@@ -973,7 +973,7 @@ void UpdateAndRenderDeckEditor(
 	}
 	for(
 		uint32_t DeckCardIndex = 0;
-		DeckCardIndex < SceneState->DeckCards.ActiveCardCount;
+		DeckCardIndex < MAX_CARDS_IN_DECK;
 		DeckCardIndex++
 	)
 	{

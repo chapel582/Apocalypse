@@ -109,3 +109,31 @@ void PushInfoCard(
 		FrameArena
 	);
 }
+
+inline void PushInfoCard(
+	render_group* RenderGroup,
+	assets* Assets,
+	vector2 InfoCardCenter,
+	vector2 InfoCardXBound,
+	vector2 InfoCardYBound,
+	vector4 Color,
+	memory_arena* FrameArena,
+	card_definition* Definition,
+	int32_t TapsRemaining
+)
+{
+	PushInfoCard(
+		RenderGroup,
+		Assets,
+		InfoCardCenter,
+		InfoCardXBound,
+		InfoCardYBound,
+		Color,
+		FrameArena,
+		Definition->Attack,
+		Definition->Health,
+		Definition->PlayDelta,
+		Definition->TapDelta,
+		TapsRemaining
+	);
+}

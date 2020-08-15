@@ -14,39 +14,21 @@ void StartMainMenu(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	ResetAssets(&GameState->Assets);
 	main_menu_state* SceneState = (main_menu_state*) GameState->SceneState;
 	
-	InitButtons(SceneState->Buttons, ARRAY_COUNT(SceneState->Buttons));
-
+	ui_context* UiContext = &SceneState->UiContext;
+	InitUiContext(UiContext);
 	vector2 Center = Vector2(
 		BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f
 	);
 	vector2 Dim = Vector2(BackBuffer->Width / 5.5f, BackBuffer->Height / 20.0f); 
 	vector2 ButtonMin = Center - 0.5f * Dim;
-	ui_button* Button = AddButton(
-		SceneState->Buttons,
-		ARRAY_COUNT(SceneState->Buttons),
-		MakeRectangle(ButtonMin, Dim),
-		BitmapHandle_TestCard2,
-		FontHandle_TestFont,
-		"Card Game",
-		Vector4(0.0f, 0.0f, 0.0f, 1.0f),
-		StartCardGameCallback,
-		GameState
+	InitButton(
+		UiContext, &SceneState->CardGameButton, MakeRectangle(ButtonMin, Dim)
 	);
-	SetFlags(Button, UiButton_Visible | UiButton_Interactable);
-
+	
 	ButtonMin.Y -= 1.5f * Dim.Y;
-	Button = AddButton(
-		SceneState->Buttons,
-		ARRAY_COUNT(SceneState->Buttons),
-		MakeRectangle(ButtonMin, Dim),
-		BitmapHandle_TestCard2,
-		FontHandle_TestFont,
-		"Deck Editor",
-		Vector4(0.0f, 0.0f, 0.0f, 1.0f),
-		StartDeckEditorCallback,
-		GameState
+	InitButton(
+		UiContext, &SceneState->DeckEditorButton, MakeRectangle(ButtonMin, Dim)
 	);
-	SetFlags(Button, UiButton_Visible | UiButton_Interactable);
 }
 
 void UpdateAndRenderMainMenu(
@@ -85,12 +67,26 @@ void UpdateAndRenderMainMenu(
 				)
 			);
 
-			ButtonsHandleMouseEvent(
-				SceneState->Buttons,
-				ARRAY_COUNT(SceneState->Buttons),
+			button_handle_event_result Result = ButtonHandleEvent(
+				&SceneState->UiContext,
+				&SceneState->CardGameButton,
 				MouseEvent,
 				MouseEventWorldPos
 			);
+			if(Result == ButtonHandleEvent_TakeAction)
+			{
+				GameState->Scene = SceneType_CardGame;
+			}
+			Result = ButtonHandleEvent(
+				&SceneState->UiContext,
+				&SceneState->DeckEditorButton,
+				MouseEvent,
+				MouseEventWorldPos
+			);
+			if(Result == ButtonHandleEvent_TakeAction)
+			{
+				GameState->Scene = SceneType_DeckEditor;
+			}
 			
 			UserEventIndex++;
 		}
@@ -105,22 +101,33 @@ void UpdateAndRenderMainMenu(
 				break;
 			}
 
-			if(KeyboardEvent->IsDown != KeyboardEvent->WasDown)
-			{
-				
-			}
-
 			UserEventIndex++;
 		}
 	}
 
 	PushClear(&GameState->RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
 
-	PushButtonsToRenderGroup(
-		SceneState->Buttons,
-		ARRAY_COUNT(SceneState->Buttons),
+	vector4 Black = Vector4(0.0f, 0.0f, 0.0f, 1.0f);
+	PushButtonToRenderGroup(
+		SceneState->CardGameButton.Rectangle,
+		BitmapHandle_TestCard2,
 		&GameState->RenderGroup,
 		&GameState->Assets, 
+		"Start Card Game",
+		sizeof("Start Card Game"),
+		FontHandle_TestFont,
+		Black, 
+		&GameState->FrameArena
+	);
+	PushButtonToRenderGroup(
+		SceneState->DeckEditorButton.Rectangle,
+		BitmapHandle_TestCard2,
+		&GameState->RenderGroup,
+		&GameState->Assets, 
+		"Deck Editor",
+		sizeof("Deck Editor"),
+		FontHandle_TestFont,
+		Black,
 		&GameState->FrameArena
 	);
 }

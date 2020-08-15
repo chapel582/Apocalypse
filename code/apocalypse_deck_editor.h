@@ -91,28 +91,13 @@ void StandardSubmit(void* Data)
 
 struct collection_card
 {
-	ui_button* Button;
-	card_definition* Definition;
-};
-
-inline bool IsActive(collection_card* CollectionCard)
-{
-	return CollectionCard->Definition != NULL;
-}
-
-struct deck_editor_card;
-struct deck_editor_cards;
-struct remove_card_from_deck_args
-{
-	deck_editor_cards* DeckCards;
-	deck_editor_card* DeckCard;
+	ui_button Button;
 };
 
 struct deck_editor_card
 {
 	uint32_t Count;
-	remove_card_from_deck_args RemoveCardFromDeckArgs;
-	ui_button* Button;
+	ui_id UiId;
 	card_definition* Definition; 
 };
 
@@ -124,8 +109,6 @@ inline bool IsActive(deck_editor_card* DeckCard)
 struct deck_editor_cards
 {
 	deck_editor_card Cards[MAX_CARDS_IN_DECK];
-	uint32_t ActiveCardCount; // NOTE: the number of deck_editor_card buttons
-	uint32_t CardsInDeck; // NOTE: total number of cards in the deck
 	float XPos;
 	float YStart;
 	float YMargin;
@@ -135,9 +118,6 @@ struct deck_editor_cards
 #define COLLECTION_CARDS_DISPLAYED 8
 struct deck_editor_state
 {
-	ui_button CollectionButtons[COLLECTION_CARDS_DISPLAYED];
-	ui_button DeckButtons[MAX_CARDS_IN_DECK];
-	ui_button StaticButtons[32];
 	card_definitions* Definitions;
 
 	// NOTE: collection card stuff
@@ -164,7 +144,10 @@ struct deck_editor_state
 
 	alert Alert;
 
-	ui_button* SaveDeckButton;
+	ui_context UiContext;
+	ui_button SaveButton;
+	ui_button CollectionPrev;
+	ui_button CollectionNext;
 };
 
 void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer);
@@ -176,7 +159,6 @@ void UpdateAndRenderDeckEditor(
 	game_keyboard_events* KeyboardEvents,
 	float DtForFrame
 );
-void StartDeckEditorCallback(void* Data);
 
 #define APOCALYPSE_DECK_EDITOR_H
 #endif

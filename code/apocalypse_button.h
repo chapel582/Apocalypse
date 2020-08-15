@@ -2,76 +2,52 @@
 
 #include "apocalypse_assets.h"
 #include "apocalypse_vector.h"
-
-typedef void button_callback(void* Data);
-typedef enum 
-{
-	UiButton_Allocated = 1 << 0, // NOTE: Use ClearAllFlags to clear allocated
-	UiButton_Interactable = 1 << 1,
-	UiButton_Visible = 1 << 2,
-	UiButton_HoveredOver = 1 << 3
-} ui_button_flag;
+#include "apocalypse_platform.h"
+#include "apocalypse_ui.h"
+#include "apocalypse_rectangle.h"
 
 struct ui_button
 {
-	uint32_t Flags;
-	bitmap_handle Background;
+	ui_id Id;
 	rectangle Rectangle;
-	font_handle Font;
-	char Text[256];
-	vector4 TextColor;
-	button_callback* Callback;
-	void* Data;
 };
 
-inline void SetFlag(ui_button* Button, ui_button_flag Flag)
+inline void InitButton(
+	ui_context* Context, ui_button* Button, rectangle Rectangle
+)
 {
-	Button->Flags |= Flag; 
+	Button->Id = GetId(Context);
+	Button->Rectangle = Rectangle;
 }
 
-inline void SetFlags(ui_button* Button, uint32_t Flags)
+typedef enum
 {
-	Button->Flags |= Flags; 
-}
+	ButtonHandleEvent_TakeAction,
+	ButtonHandleEvent_NoAction
+} button_handle_event_result;
 
-inline void ClearFlag(ui_button* Button, ui_button_flag Flag)
-{
-	Button->Flags &= ~Flag;
-}
-
-inline void ClearAllFlags(ui_button* Button)
-{
-	Button->Flags = 0;
-}
-
-inline bool CheckFlag(ui_button* Button, ui_button_flag Flag)
-{
-	return (Button->Flags & Flag) > 0;
-}
-
-void InitButtons(ui_button* Buttons, uint32_t ButtonArrayCount);
-void ButtonsHandleMouseEvent(
-	ui_button* Buttons,
-	uint32_t ButtonArrayCount,
+button_handle_event_result ButtonHandleEvent(
+	ui_context* UiContext,
+	ui_button* Button,
 	game_mouse_event* MouseEvent,
 	vector2 MouseEventWorldPos
 );
-ui_button* AddButton(
-	ui_button* Buttons,
-	uint32_t ButtonArrayCount,
+button_handle_event_result ButtonHandleEvent(
+	ui_context* UiContext,
+	ui_id Id,
+	rectangle Rectangle,
+	game_mouse_event* MouseEvent,
+	vector2 MouseEventWorldPos
+);
+void PushButtonToRenderGroup(
 	rectangle Rectangle,
 	bitmap_handle Background,
-	font_handle Font,
-	char* Text,
-	vector4 TextColor,
-	button_callback* Callback,
-	void* Data
-);
-void PushButtonsToRenderGroup(
-	ui_button* Buttons,
-	uint32_t ButtonArrayCount,
 	render_group* Group,
 	assets* Assets, 
+	char* Text,
+	uint32_t TextBufferSize,
+	font_handle Font,
+	vector4 TextColor,
 	memory_arena* FrameArena
 );
 

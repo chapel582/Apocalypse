@@ -504,7 +504,7 @@ void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		SetResource(PlayerResources, PlayerResource_Black, rand() % 10 + 1);
 	}
 
-	SceneState->Alert = Alert();
+	SceneState->Alert = MakeAlert();
 
 	// TODO: remove me!
 	// PlaySound(
@@ -512,12 +512,6 @@ void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	// 	WavHandle_TestMusic,
 	// 	&GameState->TransientArena
 	// );
-}
-
-void StartCardGameCallback(void* Data)
-{
-	game_state* GameState = (game_state*) Data;
-	GameState->Scene = SceneType_CardGame;
 }
 
 void UpdateAndRenderCardGame(

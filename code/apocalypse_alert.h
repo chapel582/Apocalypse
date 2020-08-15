@@ -9,7 +9,7 @@ struct alert
 	char MessageBuffer[256]; // TODO: consider making this non-static
 };
 
-inline alert Alert()
+inline alert MakeAlert()
 {
 	alert Result = {};
 	return Result;

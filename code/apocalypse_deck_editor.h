@@ -3,91 +3,9 @@
 #include "apocalypse_card_definitions.h"
 #include "apocalypse_rectangle.h"
 #include "apocalypse_button.h"
+#include "apocalypse_text_input.h"
 #include "apocalypse_deck_storage.h"
 #include "apocalypse_alert.h"
-
-#include <string.h> // TODO: for text_input. move when that file is made
-
-typedef enum 
-{
-	TextInput_Active = 1 << 0,
-	TextInput_Selected = 1 << 1,
-	TextInput_ShiftIsDown = 1 << 2,
-	TextInput_NewlinesEnabled = 1 << 3,
-	TextInput_CharDownDelay = 1 << 4, // NOTE: mutually exclusize from CharDown
-	TextInput_CharDown = 1 << 5 // NOTE: mutually exclusize from CharDownDelay
-} text_input_flag;
-
-typedef enum 
-{
-	CursorAlphaState_Static,
-	CursorAlphaState_Increasing,
-	CursorAlphaState_Decreasing
-} cursor_alpha_state;
-
-typedef void text_input_callback(void* Data);
-struct text_input;
-typedef void text_input_repeat_callback(text_input* TextInput);
-
-struct text_input
-{
-	uint32_t Flags;
-	uint32_t CursorPos;
-	uint32_t BufferSize;
-	rectangle Rectangle;
-	float FontHeight;
-
-	char CharDown;
-	float RepeatTimer;
-	float RepeatDelay;
-	float RepeatPeriod;
-	
-	cursor_alpha_state CursorAlphaState;
-	vector4 CursorColor;
-
-	vector4 FontColor;
-	vector4 BackgroundColor;
-	bitmap_handle Background;
-
-	text_input_repeat_callback* RepeatCallback;
-	char* Buffer;
-	text_input_callback* SubmitCallback;
-};
-
-inline bool CheckFlag(text_input* TextInput, text_input_flag Flag)
-{
-	return (TextInput->Flags & Flag) > 0;
-}
-
-inline void SetFlag(text_input* TextInput, text_input_flag Flag)
-{
-	TextInput->Flags |= Flag;
-}
-
-inline void ClearFlag(text_input* TextInput, text_input_flag Flag)
-{
-	TextInput->Flags &= ~Flag;
-}
-
-inline void ClearAllFlags(text_input* TextInput)
-{
-	TextInput->Flags = 0;
-}
-
-struct standard_submit_args
-{
-	uint32_t DataLength;
-	text_input* TextInput;
-	char* Buffer;
-	char* Dest;
-};
-
-void StandardSubmit(void* Data)
-{
-	standard_submit_args* Args = (standard_submit_args*) Data;
-	memcpy(Args->Dest, Args->Buffer, Args->DataLength);
-	ClearFlag(Args->TextInput, TextInput_Active);
-}
 
 struct collection_card
 {
@@ -134,10 +52,13 @@ struct deck_editor_state
 	deck_editor_cards DeckCards;
 	
 	text_input DeckNameInput;
+	rectangle DeckNameInputRectangle;
 	char* DeckName;
 	uint32_t DeckNameBufferSize;
+
 	vector2 DeckNamePos;
 	bool DeckNameSet;
+
 	vector2 InfoCardCenter;
 	vector2 InfoCardXBound;
 	vector2 InfoCardYBound;

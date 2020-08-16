@@ -25,6 +25,7 @@
 #include "apocalypse_card_game.cpp"
 #include "apocalypse_main_menu.cpp"
 #include "apocalypse_button.cpp"
+#include "apocalypse_text_input.cpp"
 #include "apocalypse_deck_editor.cpp"
 #include "apocalypse_deck_storage.cpp"
 #include "apocalypse_card_definitions.cpp"

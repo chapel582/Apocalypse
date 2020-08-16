@@ -6,85 +6,6 @@
 #include "apocalypse_deck_storage.h"
 #include "apocalypse_render_group.h"
 
-void AddLetterToTextInput(text_input* TextInput)
-{
-	TextInput->Buffer[TextInput->CursorPos] = TextInput->CharDown;
-	TextInput->CursorPos++;
-	if(TextInput->CursorPos >= TextInput->BufferSize)
-	{
-		TextInput->CursorPos = TextInput->BufferSize - 1;
-	}
-	TextInput->Buffer[TextInput->CursorPos] = 0;
-}
-
-void Backspace(text_input* TextInput)
-{
-	if(TextInput->CursorPos > 0)
-	{
-		TextInput->CursorPos--;	
-	}
-	TextInput->Buffer[TextInput->CursorPos] = 0;
-}
-
-void PressAndHoldKeyboardEvent(
-	text_input* TextInput,
-	text_input_repeat_callback* RepeatCallback,
-	game_keyboard_event* KeyboardEvent,
-	char Character
-)
-{
-	if(!KeyboardEvent->IsDown)
-	{
-		ClearFlag(TextInput, TextInput_CharDownDelay);
-		ClearFlag(TextInput, TextInput_CharDown);
-
-		TextInput->CursorColor.A = 1.0f;
-		TextInput->CursorAlphaState = CursorAlphaState_Decreasing; 
-	}
-	else
-	{
-		TextInput->CursorColor.A = 1.0f;
-		TextInput->CursorAlphaState = CursorAlphaState_Static;
-
-		TextInput->CharDown = Character;
-		TextInput->RepeatTimer = 0.0f;
-		TextInput->RepeatCallback = RepeatCallback;
-		RepeatCallback(TextInput);
-		SetFlag(TextInput, TextInput_CharDownDelay);
-	}
-}
-
-void PushCursor(
-	text_input* TextInput, render_group* RenderGroup, vector2 Offset
-)
-{
-	if(CheckFlag(TextInput, TextInput_Selected))
-	{
-		PushRect(
-			RenderGroup,
-			MakeRectangle(
-				TextInput->Rectangle.Min + Offset,
-				Vector2(2.0f, TextInput->FontHeight)
-			),
-			TextInput->CursorColor
-		);
-	}
-}
-
-struct submit_deck_name_args
-{
-	standard_submit_args StandardArgs;
-	deck_editor_state* SceneState;
-};
-
-void SubmitDeckName(void* Data)
-{
-	submit_deck_name_args* Args = (submit_deck_name_args*) Data; 
-	StandardSubmit(&Args->StandardArgs);
-	deck_editor_state* SceneState = Args->SceneState;
-	SceneState->DeckNameSet = true;
-}
-
 void SaveEditableDeck(
 	game_state* GameState,
 	alert* Alert,
@@ -332,33 +253,25 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	);
 	SceneState->DeckNameSet = false;
 
+	text_input* TextInput = &SceneState->DeckNameInput;
 	{
-		text_input* TextInput = &SceneState->DeckNameInput;
 		*TextInput = {};
 		ClearAllFlags(TextInput);
-		SetFlag(TextInput, TextInput_Active);
-		SetFlag(TextInput, TextInput_Selected);
+		TextInput->UiId = GetId(&SceneState->UiContext);
 		TextInput->CursorPos = 0;
 		TextInput->FontHeight = 20.0f;
-		TextInput->Rectangle = MakeRectangleCentered(
-			Vector2(BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f),
-			Vector2(BackBuffer->Width / 5.0f, TextInput->FontHeight)
-		);
 		TextInput->BufferSize = SceneState->DeckNameBufferSize;
-		TextInput->Buffer = PushArray(
-			&GameState->TransientArena, TextInput->BufferSize, char
-		);
-		TextInput->SubmitCallback = SubmitDeckName;
-		// TODO: maybe need to track submit callback data when initializing so 	
-		// CONT: the submission can be abstracted
+		TextInput->Buffer = SceneState->DeckName;
 		TextInput->RepeatDelay = 1.0f;
 		TextInput->RepeatPeriod = 0.05f;
-		TextInput->FontColor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-		TextInput->CursorColor = TextInput->FontColor;
+		TextInput->CursorColor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 		TextInput->CursorAlphaState = CursorAlphaState_Decreasing;
-		TextInput->BackgroundColor = Vector4(0.1f, 0.1f, 0.1f, 1.0f);
-		TextInput->Background = BitmapHandle_TestCard2;
 	}
+	SceneState->DeckNameInputRectangle = MakeRectangleCentered(
+		Vector2(BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f),
+		Vector2(BackBuffer->Width / 5.0f, TextInput->FontHeight)
+	);
+	SetActive(&SceneState->UiContext, TextInput->UiId);
 
 	SceneState->Alert = MakeAlert();
 
@@ -399,6 +312,8 @@ void UpdateAndRenderDeckEditor(
 	user_event_index UserEventIndex = 0;
 	int MouseEventIndex = 0;
 	int KeyboardEventIndex = 0;
+
+	ui_context* UiContext = &SceneState->UiContext;
 	while(
 		(MouseEventIndex < MouseEvents->Length) ||
 		(KeyboardEventIndex < KeyboardEvents->Length)
@@ -422,136 +337,125 @@ void UpdateAndRenderDeckEditor(
 					Vector2(MouseEvent->XPos, MouseEvent->YPos)
 				)
 			);
-
-			if(CheckFlag(&SceneState->DeckNameInput, TextInput_Active))
+			if(!SceneState->DeckNameSet)
 			{
-				text_input* TextInput = &SceneState->DeckNameInput;
-				if(PointInRectangle(MouseEventWorldPos, TextInput->Rectangle))
-				{
-					if(MouseEvent->Type == PrimaryUp)
-					{
-						SetFlag(TextInput, TextInput_Selected);
-					}
-				}
-				else
-				{
-					if(MouseEvent->Type == PrimaryUp)
-					{
-						ClearFlag(TextInput, TextInput_Selected);
-						ClearFlag(TextInput, TextInput_CharDownDelay);
-						ClearFlag(TextInput, TextInput_CharDown);
-						ClearFlag(TextInput, TextInput_ShiftIsDown);
-					}
-				}
+				TextInputHandleMouse(
+					UiContext,
+					&SceneState->DeckNameInput,
+					SceneState->DeckNameInputRectangle,
+					MouseEvent,
+					MouseEventWorldPos
+				);
 			}
-
-			ui_context* UiContext = &SceneState->UiContext;
-			button_handle_event_result Result;
-			for(
-				uint32_t Index = 0;
-				Index < ARRAY_COUNT(SceneState->CollectionCards);
-				Index++
-			)
+			else
 			{
-				collection_card* CollectionCard = (
-					SceneState->CollectionCards + Index
-				);
-
-				uint32_t CollectionIndex = (
-					SceneState->CollectionStartIndex + Index
-				);
-				if(CollectionIndex < SceneState->Definitions->NumCards)
+				button_handle_event_result Result;
+				for(
+					uint32_t Index = 0;
+					Index < ARRAY_COUNT(SceneState->CollectionCards);
+					Index++
+				)
 				{
-					Result = ButtonHandleEvent(
-						UiContext,
-						&CollectionCard->Button,
-						MouseEvent,
-						MouseEventWorldPos
+					collection_card* CollectionCard = (
+						SceneState->CollectionCards + Index
 					);
-					if(Result == ButtonHandleEvent_TakeAction)
+
+					uint32_t CollectionIndex = (
+						SceneState->CollectionStartIndex + Index
+					);
+					if(CollectionIndex < SceneState->Definitions->NumCards)
 					{
-						card_definition* Definition = (
-							SceneState->Definitions->Array + CollectionIndex
+						Result = ButtonHandleEvent(
+							UiContext,
+							&CollectionCard->Button,
+							MouseEvent,
+							MouseEventWorldPos
 						);
-						AddCardToDeck(
-							GameState,
-							SceneState,
-							&SceneState->DeckCards,
-							Definition
-						);
-						break;
+						if(Result == ButtonHandleEvent_TakeAction)
+						{
+							card_definition* Definition = (
+								SceneState->Definitions->Array + CollectionIndex
+							);
+							AddCardToDeck(
+								GameState,
+								SceneState,
+								&SceneState->DeckCards,
+								Definition
+							);
+							break;
+						}
 					}
 				}
-			}
 
-			deck_editor_cards* DeckCards = &SceneState->DeckCards;
-			vector2 Dim = DeckCards->Dim;
-			uint32_t ActiveCards = 0;
-			for(
-				uint32_t Index = 0;
-				Index < ARRAY_COUNT(DeckCards->Cards);
-				Index++
-			)
-			{
-				deck_editor_card* DeckCard = DeckCards->Cards + Index;
-				if(IsActive(DeckCard))
+				deck_editor_cards* DeckCards = &SceneState->DeckCards;
+				vector2 Dim = DeckCards->Dim;
+				uint32_t ActiveCards = 0;
+				for(
+					uint32_t Index = 0;
+					Index < ARRAY_COUNT(DeckCards->Cards);
+					Index++
+				)
 				{
-					rectangle Rectangle = MakeDeckCardRectangle(
-						DeckCards, Dim, ActiveCards
-					);
-
-					Result = ButtonHandleEvent(
-						UiContext,
-						DeckCard->UiId,
-						Rectangle,
-						MouseEvent,
-						MouseEventWorldPos
-					);
-					if(Result == ButtonHandleEvent_TakeAction)
+					deck_editor_card* DeckCard = DeckCards->Cards + Index;
+					if(IsActive(DeckCard))
 					{
-						RemoveCardFromDeck(DeckCards, DeckCard);
-						break;
+						rectangle Rectangle = MakeDeckCardRectangle(
+							DeckCards, Dim, ActiveCards
+						);
+
+						Result = ButtonHandleEvent(
+							UiContext,
+							DeckCard->UiId,
+							Rectangle,
+							MouseEvent,
+							MouseEventWorldPos
+						);
+						if(Result == ButtonHandleEvent_TakeAction)
+						{
+							RemoveCardFromDeck(DeckCards, DeckCard);
+							break;
+						}
+						ActiveCards++;
 					}
-					ActiveCards++;
 				}
-			}
-			
-			Result = ButtonHandleEvent(
-				UiContext,
-				&SceneState->SaveButton,
-				MouseEvent,
-				MouseEventWorldPos
-			);
-			if(Result == ButtonHandleEvent_TakeAction)
-			{
-				SaveEditableDeck(
-					GameState,
-					&SceneState->Alert,
-					DeckCards,
-					SceneState->DeckName
+				
+				Result = ButtonHandleEvent(
+					UiContext,
+					&SceneState->SaveButton,
+					MouseEvent,
+					MouseEventWorldPos
 				);
-			}
+				if(Result == ButtonHandleEvent_TakeAction)
+				{
+					SaveEditableDeck(
+						GameState,
+						&SceneState->Alert,
+						DeckCards,
+						SceneState->DeckName
+					);
+				}
 
-			Result = ButtonHandleEvent(
-				UiContext,
-				&SceneState->CollectionPrev,
-				MouseEvent,
-				MouseEventWorldPos
-			);
-			if(Result == ButtonHandleEvent_TakeAction)
-			{
-				CollectionCardsPrev(SceneState);
-			}
+				Result = ButtonHandleEvent(
+					UiContext,
+					&SceneState->CollectionPrev,
+					MouseEvent,
+					MouseEventWorldPos
+				);
+				if(Result == ButtonHandleEvent_TakeAction)
+				{
+					CollectionCardsPrev(SceneState);
+				}
 
-			Result = ButtonHandleEvent(
-				UiContext,
-				&SceneState->CollectionNext,
-				MouseEvent,
-				MouseEventWorldPos
-			);
-			if(Result == ButtonHandleEvent_TakeAction)
-			{
-				CollectionCardsNext(SceneState);
+				Result = ButtonHandleEvent(
+					UiContext,
+					&SceneState->CollectionNext,
+					MouseEvent,
+					MouseEventWorldPos
+				);
+				if(Result == ButtonHandleEvent_TakeAction)
+				{
+					CollectionCardsNext(SceneState);
+				}	
 			}
 
 			UserEventIndex++;
@@ -569,171 +473,12 @@ void UpdateAndRenderDeckEditor(
 
 			if(KeyboardEvent->IsDown != KeyboardEvent->WasDown)
 			{
-				if(
-					CheckFlag(&SceneState->DeckNameInput, TextInput_Active) &&
-					CheckFlag(&SceneState->DeckNameInput, TextInput_Selected)
-				)
+				text_input_kb_result KeyboardResult = TextInputHandleKeyboard(
+					UiContext, &SceneState->DeckNameInput, KeyboardEvent
+				);
+				if(KeyboardResult == TextInputKbResult_Submit)
 				{
-					text_input* TextInput = &SceneState->DeckNameInput;
-					switch(KeyboardEvent->Code)
-					{
-						// TODO: Handle backspace and delete
-						case(0x08):
-						{
-							// NOTE: backspace
-							PressAndHoldKeyboardEvent(
-								TextInput,
-								Backspace,
-								KeyboardEvent,
-								KeyboardEvent->Code
-							);
-							break;
-						}
-						case(0x09):
-						{
-							// NOTE: Tab
-							// TODO: implement
-							break;
-						}
-						case(0x10):
-						{
-							// NOTE: Shift
-							// TODO: implement
-							// TODO: handle someone pressing shift already when
-							// CONT: selecting the text box
-							if(KeyboardEvent->IsDown)
-							{
-								SetFlag(TextInput, TextInput_ShiftIsDown);
-							}
-							else
-							{
-								ClearFlag(TextInput, TextInput_ShiftIsDown);
-							}
-							break;
-						}
-						case(0x0D):
-						{
-							// NOTE: Return
-							submit_deck_name_args SubmitArgs = {};
-							SubmitArgs.SceneState = SceneState;
-							standard_submit_args* StandardArgs = (
-								&SubmitArgs.StandardArgs
-							);
-							StandardArgs->TextInput = TextInput;
-							StandardArgs->DataLength = TextInput->CursorPos;
-							StandardArgs->Buffer = TextInput->Buffer;
-							StandardArgs->Dest = SceneState->DeckName;
-							TextInput->SubmitCallback(&SubmitArgs);
-							break;
-						}
-						case(0x20):
-						{
-							// NOTE: Space
-							PressAndHoldKeyboardEvent(
-								TextInput,
-								AddLetterToTextInput,
-								KeyboardEvent,
-								KeyboardEvent->Code
-							);
-							break;
-						}
-						case(0x25):
-						{
-							// NOTE: Left
-							// TODO: implement							
-							break;
-						}
-						case(0x26):
-						{
-							// NOTE: Up
-							// TODO: implement							
-							break;
-						}
-						case(0x27):
-						{
-							// NOTE: Right
-							// TODO: implement							
-							break;
-						}
-						case(0x28):
-						{
-							// NOTE: Down
-							// TODO: implement
-							break;
-						}
-						case(0x30):
-						case(0x31):
-						case(0x32):
-						case(0x33):
-						case(0x34):
-						case(0x35):
-						case(0x36):
-						case(0x37):
-						case(0x38):
-						case(0x39):
-						{
-							// NOTE: Numbers
-							PressAndHoldKeyboardEvent(
-								TextInput,
-								AddLetterToTextInput,
-								KeyboardEvent,
-								KeyboardEvent->Code
-							);
-							break;
-						}
-						case(0x41):
-						case(0x42):
-						case(0x43):
-						case(0x44):
-						case(0x45):
-						case(0x46):
-						case(0x47):
-						case(0x48):
-						case(0x49):
-						case(0x4A):
-						case(0x4B):
-						case(0x4C):
-						case(0x4D):
-						case(0x4E):
-						case(0x4F):
-						case(0x50):
-						case(0x51):
-						case(0x52):
-						case(0x53):
-						case(0x54):
-						case(0x55):
-						case(0x56):
-						case(0x57):
-						case(0x58):
-						case(0x59):
-						case(0x5A):
-						case(0x5B):
-						{
-							// NOTE: Letters
-							char Letter;
-							if(!CheckFlag(TextInput, TextInput_ShiftIsDown))
-							{
-								Letter = KeyboardEvent->Code + 0x20; 
-							}
-							else
-							{
-								Letter = KeyboardEvent->Code;
-							}
-							PressAndHoldKeyboardEvent(
-								TextInput,
-								AddLetterToTextInput,
-								KeyboardEvent,
-								Letter
-							);
-							break;
-						}
-						case(0x7F):
-						{
-							// NOTE: Delete
-							// TODO: implement
-							break;
-						}
-					}
+					SceneState->DeckNameSet = true;
 				}
 			}
 
@@ -741,51 +486,7 @@ void UpdateAndRenderDeckEditor(
 		}
 	}
 
-	// SECTION START: Update text input
-	{
-		text_input* TextInput = &SceneState->DeckNameInput;
-
-		float Period = 1.0f;
-		if(TextInput->CursorAlphaState == CursorAlphaState_Increasing)
-		{
-			TextInput->CursorColor.A += DtForFrame / Period;
-			if(TextInput->CursorColor.A >= 1.0f)
-			{
-				TextInput->CursorColor.A = 1.0f;
-				TextInput->CursorAlphaState = CursorAlphaState_Decreasing;
-			}
-		}
-		else if(TextInput->CursorAlphaState == CursorAlphaState_Decreasing)
-		{
-			TextInput->CursorColor.A -= DtForFrame / Period;
-			if(TextInput->CursorColor.A <= 0.0f)
-			{
-				TextInput->CursorColor.A = 0.0f;
-				TextInput->CursorAlphaState = CursorAlphaState_Increasing;
-			}
-		}
-
-		if(CheckFlag(TextInput, TextInput_CharDownDelay))
-		{
-			if(TextInput->RepeatTimer >= TextInput->RepeatDelay)
-			{
-				TextInput->RepeatTimer = 0.0f;
-				TextInput->RepeatCallback(TextInput);
-				ClearFlag(TextInput, TextInput_CharDownDelay);
-				SetFlag(TextInput, TextInput_CharDown);
-			}
-		}
-		else if(CheckFlag(TextInput, TextInput_CharDown))
-		{
-			if(TextInput->RepeatTimer >= TextInput->RepeatPeriod)
-			{
-				TextInput->RepeatTimer = 0.0f;
-				TextInput->RepeatCallback(TextInput);
-			}	
-		}
-		TextInput->RepeatTimer += DtForFrame;
-	}
-	// SECTION STOP: Update text input
+	UpdateTextInput(UiContext, &SceneState->DeckNameInput, DtForFrame);
 
 	PushClear(&GameState->RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
 	
@@ -794,50 +495,20 @@ void UpdateAndRenderDeckEditor(
 
 	if(!SceneState->DeckNameSet)
 	{
-		text_input* TextInput = &SceneState->DeckNameInput;
-		render_group* RenderGroup = &GameState->RenderGroup;
-		PushSizedBitmap(
-			RenderGroup,
+		vector4 FontColor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+		vector4 BackgroundColor = Vector4(0.1f, 0.1f, 0.1f, 1.0f);
+		bitmap_handle Background = BitmapHandle_TestCard2;
+		PushTextInput(
+			UiContext,
+			&SceneState->DeckNameInput,
+			FontColor,
+			SceneState->DeckNameInputRectangle,
+			Background,
+			BackgroundColor,
 			&GameState->Assets,
-			TextInput->Background,
-			GetCenter(TextInput->Rectangle),
-			TextInput->Rectangle.Dim,				
-			TextInput->BackgroundColor
+			&GameState->RenderGroup,
+			&GameState->FrameArena
 		);
-		push_text_result PushTextResult = {};
-
-		if(TextInput->Buffer[0] != 0)
-		{		
-			vector2 TopLeft = GetTopLeft(TextInput->Rectangle);	
-			PushTextResult = PushTextTopLeft(
-				RenderGroup,
-				&GameState->Assets,
-				FontHandle_TestFont,
-				TextInput->Buffer,
-				TextInput->BufferSize,
-				TextInput->FontHeight,
-				TopLeft,
-				TextInput->FontColor,
-				&GameState->FrameArena
-			);
-			if(PushTextResult.Code == PushText_Success)
-			{
-				vector2 OffsetScreen = PushTextResult.Offset;
-				vector2 OffsetWorld = TransformVectorToBasis(
-					RenderGroup->CameraToScreen, OffsetScreen
-				);
-				vector2 OffsetCamera = TransformVectorToBasis(
-					RenderGroup->WorldToCamera, OffsetWorld
-				);
-
-				PushCursor(TextInput, RenderGroup, OffsetCamera);
-			}
-		}
-		if(PushTextResult.Code != PushText_Success)
-		{
-			// TODO: make the lpad more programmatic
-			PushCursor(TextInput, RenderGroup, Vector2(2.0f, 0.0f));
-		}
 	}
 	else
 	{
@@ -882,7 +553,7 @@ void UpdateAndRenderDeckEditor(
 					NULL
 				);
 
-				if(IsHot(&SceneState->UiContext, CollectionCard->Button.Id))
+				if(IsHot(UiContext, CollectionCard->Button.Id))
 				{
 					PushInfoCard(
 						&GameState->RenderGroup,

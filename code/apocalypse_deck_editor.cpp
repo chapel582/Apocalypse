@@ -172,7 +172,7 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	
 	deck_editor_cards* DeckCards = &SceneState->DeckCards;
 	*DeckCards = {};
-	DeckCards->Dim = Vector2(90.0f, 30.0f);
+	DeckCards->Dim = Vector2(110.0f, 30.0f);
 	DeckCards->XPos = (
 		BackBuffer->Width - DeckCards->Dim.X
 	);
@@ -549,7 +549,7 @@ void UpdateAndRenderDeckEditor(
 					Definition->Name,
 					sizeof(Definition->Name),
 					FontHandle_TestFont,
-					10.0f,
+					12.0f,
 					Black,
 					&GameState->FrameArena
 				);

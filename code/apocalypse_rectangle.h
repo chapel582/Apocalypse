@@ -1,5 +1,7 @@
 #ifndef APOCALYPSE_RECTANGLE_H
 
+#include "apocalypse_vector.h"
+
 struct rectangle
 {
 	vector2 Min; // NOTE: Bottom left by convention
@@ -22,12 +24,22 @@ inline rectangle MakeRectangleCentered(vector2 Center, vector2 Dim)
 	return Result;
 }
 
+inline float GetTop(rectangle Rectangle)
+{
+	return Rectangle.Min.Y + Rectangle.Dim.Y;
+}
+
 inline vector2 GetTopLeft(rectangle Rectangle)
 {
 	vector2 Result;
 	Result.X = Rectangle.Min.X;
-	Result.Y = Rectangle.Min.Y + Rectangle.Dim.Y;
+	Result.Y = GetTop(Rectangle);
 	return Result;
+}
+
+inline float GetBottom(rectangle Rectangle)
+{
+	return Rectangle.Min.Y;
 }
 
 inline vector2 GetBottomLeft(rectangle Rectangle)
@@ -38,6 +50,27 @@ inline vector2 GetBottomLeft(rectangle Rectangle)
 inline vector2 GetCenter(rectangle Rectangle)
 {
 	return Rectangle.Min + (0.5f * Rectangle.Dim);
+}
+
+inline void SetLeft(rectangle* Rectangle, float Left)
+{
+	Rectangle->Min.X = Left;
+}
+
+inline void SetBottom(rectangle* Rectangle, float Bottom)
+{
+	Rectangle->Min.Y = Bottom;
+}
+
+inline void SetTop(rectangle* Rectangle, float Top)
+{
+	Rectangle->Min.Y = Top - Rectangle->Dim.Y;  
+}
+
+inline void SetTopLeft(rectangle* Rectangle, vector2 TopLeft)
+{
+	Rectangle->Min.X = TopLeft.X;
+	SetTop(Rectangle, TopLeft.Y);
 }
 
 bool PointInRectangle(vector2 Point, rectangle Rectangle)

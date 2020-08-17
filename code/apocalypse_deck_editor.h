@@ -6,6 +6,7 @@
 #include "apocalypse_text_input.h"
 #include "apocalypse_deck_storage.h"
 #include "apocalypse_alert.h"
+#include "apocalypse_scroll.h"
 
 struct collection_card
 {
@@ -31,6 +32,7 @@ struct deck_editor_cards
 	float YStart;
 	float YMargin;
 	vector2 Dim;
+	uint32_t ActiveButtons;
 };
 
 #define COLLECTION_CARDS_DISPLAYED 8
@@ -69,6 +71,11 @@ struct deck_editor_state
 	ui_button SaveButton;
 	ui_button CollectionPrev;
 	ui_button CollectionNext;
+
+	scroll_bar DeckScrollBar;
+	rectangle DeckScrollBarRect;
+	float DeckScrollBarTop;
+	float MaxDeckScrollBarY;
 };
 
 void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer);

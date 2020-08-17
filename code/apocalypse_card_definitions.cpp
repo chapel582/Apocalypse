@@ -173,6 +173,94 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 1, 0);
 	SetName(Definition, "TestAgain8", sizeof("TestAgain8"));
 
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 1, 1);
+	InitPlayerResource(&Definition->PlayDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 1, 0);
+	SetName(Definition, "TestAgain9", sizeof("TestAgain9"));
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 1, 1);
+	InitPlayerResource(&Definition->PlayDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 1, 0);
+	SetName(Definition, "Test10", sizeof("Test10"));
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 1, 1);
+	InitPlayerResource(&Definition->PlayDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 1, 0);
+	SetName(Definition, "Test11", sizeof("Test11"));
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 1, 1);
+	InitPlayerResource(&Definition->PlayDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 1, 0);
+	SetName(Definition, "TestWee", sizeof("TestWee"));
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 1, 1);
+	InitPlayerResource(&Definition->PlayDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 1, 0);
+	SetName(Definition, "Test12", sizeof("Test12"));
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 1, 1);
+	InitPlayerResource(&Definition->PlayDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 1, 0);
+	SetName(Definition, "Test13", sizeof("Test13"));
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 1, 1);
+	InitPlayerResource(&Definition->PlayDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 1, 0);
+	SetName(Definition, "TestSlimSlam", sizeof("TestSlimSlam"));
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 1, 1);
+	InitPlayerResource(&Definition->PlayDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 1, 0);
+	SetName(Definition, "Test14", sizeof("Test14"));
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 1, 1);
+	InitPlayerResource(&Definition->PlayDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 1, 0);
+	SetName(Definition, "Test15", sizeof("Test15"));
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 1, 1);
+	InitPlayerResource(&Definition->PlayDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 1, 0);
+	SetName(Definition, "Test16", sizeof("Test16"));
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 1, 1);
+	InitPlayerResource(&Definition->PlayDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 1, 0);
+	SetName(Definition, "Test17", sizeof("Test17"));
+
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;
 	

@@ -17,18 +17,18 @@ void SaveEditableDeck(
 	uint8_t IdIndex = 0;
 	deck_editor_card* Cards = DeckCards->Cards;
 	for(
-		uint32_t CardIndex = 0;
-		CardIndex < ARRAY_COUNT(DeckCards->Cards);
-		CardIndex++
+		uint32_t CardIndex = 0; CardIndex < MAX_CARDS_IN_DECK; CardIndex++
 	)
 	{
 		deck_editor_card* Card = Cards + CardIndex;
-		if(IsActive(Card))
+		if(!IsActive(Card))
 		{
-			for(uint32_t Added = 0; Added < Card->Count; Added++)
-			{
-				Deck.Ids[IdIndex++] = Card->Definition->Id;
-			}
+			break;
+		}
+		ASSERT(Card->Count > 0);
+		for(uint32_t Added = 0; Added < Card->Count; Added++)
+		{
+			Deck.Ids[IdIndex++] = Card->Definition->Id;
 		}
 	}
 	ASSERT(IdIndex < 0xFF);
@@ -43,13 +43,15 @@ void SaveEditableDeck(
 uint32_t GetCardsInDeck(deck_editor_cards* DeckCards)
 {
 	uint32_t CardsInDeck = 0;
-	for(int Index = 0; Index < ARRAY_COUNT(DeckCards->Cards); Index++)
+	for(int Index = 0; Index < MAX_CARDS_IN_DECK; Index++)
 	{
 		deck_editor_card* Card = DeckCards->Cards + Index;
-		if(IsActive(Card))
+		if(!IsActive(Card))
 		{
-			CardsInDeck++;
+			break;
 		}
+		ASSERT(Card->Count > 0);
+		CardsInDeck += Card->Count;
 	}
 	return CardsInDeck;
 }
@@ -111,8 +113,64 @@ void SortDeckCards(deck_editor_cards* DeckCards)
 	}
 }
 
+rectangle MakeDeckCardRectangle(
+	deck_editor_cards* DeckCards, vector2 Dim, uint32_t ButtonIndex
+)
+{
+	return MakeRectangle(
+		Vector2(
+			DeckCards->XPos,
+			DeckCards->YStart - (Dim.Y + DeckCards->YMargin) * (ButtonIndex + 1)
+		),
+		Dim
+	);
+}
+
+float GetAllDeckCardsHeight(deck_editor_cards* DeckCards)
+{
+	rectangle FirstDeckCard = MakeDeckCardRectangle(
+		DeckCards, DeckCards->Dim, 0
+	);
+	rectangle LastDeckCard = MakeDeckCardRectangle(
+		DeckCards, DeckCards->Dim, DeckCards->ActiveButtons - 1
+	);
+	return GetTop(FirstDeckCard) - GetBottom(LastDeckCard);
+}
+
+bool IsScrollBarInteractable(deck_editor_state* SceneState)
+{
+	return SceneState->DeckScrollBarRect.Dim.Y < SceneState->MaxDeckScrollBarY;
+}
+
+void UpdateDeckScrollBar(
+	deck_editor_cards* DeckCards, deck_editor_state* SceneState
+)
+{
+	float AllDeckCardsHeight = GetAllDeckCardsHeight(DeckCards);
+	float MaxDeckScrollBarY = SceneState->MaxDeckScrollBarY;
+	UpdateScrollBarDim(
+		&SceneState->DeckScrollBarRect,
+		MaxDeckScrollBarY / AllDeckCardsHeight, 
+		MaxDeckScrollBarY
+	);
+
+	float FractionSeenStartFromTop = (
+		(DeckCards->YStart - SceneState->DeckScrollBarTop) / 
+		AllDeckCardsHeight
+	);
+	SetTop(
+		&SceneState->DeckScrollBarRect, 
+		(
+			SceneState->DeckScrollBarTop - 
+			FractionSeenStartFromTop * MaxDeckScrollBarY
+		)
+	);
+}
+
 void RemoveCardFromDeck(
-	deck_editor_cards* DeckCards, deck_editor_card* DeckCard
+	deck_editor_cards* DeckCards,
+	deck_editor_card* DeckCard,
+	deck_editor_state* SceneState
 )
 {
 	DeckCard->Count--;
@@ -120,8 +178,10 @@ void RemoveCardFromDeck(
 	if(DeckCard->Count <= 0)
 	{
 		DeckCard->Definition = NULL;
+		DeckCards->ActiveButtons--;
 	}
 	SortDeckCards(DeckCards);
+	UpdateDeckScrollBar(DeckCards, SceneState);
 }
 
 void AddCardToDeck(
@@ -147,7 +207,12 @@ void AddCardToDeck(
 	for(int Index = 0; Index < MAX_CARDS_IN_DECK; Index++)
 	{
 		DeckCard = DeckCards->Cards + Index;
-		if(IsActive(DeckCard) && DeckCard->Definition == Definition)
+		if(!IsActive(DeckCard))
+		{
+			break;
+		}
+		
+		if(DeckCard->Definition == Definition)
 		{
 			DeckCard->Count++;
 			FoundCard = true;
@@ -160,19 +225,25 @@ void AddCardToDeck(
 	}
 
 	vector2 Dim = DeckCards->Dim;
-	for(int Index = 0; Index < MAX_CARDS_IN_DECK; Index++)
+	for(
+		int Index = DeckCards->ActiveButtons;
+		Index < MAX_CARDS_IN_DECK;
+		Index++
+	)
 	{
 		DeckCard = DeckCards->Cards + Index;
 		if(!IsActive(DeckCard))
 		{
 			DeckCard->UiId = GetId(&SceneState->UiContext);
 			DeckCard->Definition = Definition;
-			DeckCard->Count++;
+			DeckCard->Count = 1;
+			DeckCards->ActiveButtons++;
 			break;
 		}
 	}
 
 	SortDeckCards(DeckCards);
+	UpdateDeckScrollBar(DeckCards, SceneState);
 	goto end;
 	
 end:
@@ -207,19 +278,6 @@ void CollectionCardsPrev(deck_editor_state* SceneState)
 	}
 }
 
-rectangle MakeDeckCardRectangle(
-	deck_editor_cards* DeckCards, vector2 Dim, uint32_t ActiveCards
-)
-{
-	return MakeRectangle(
-		Vector2(
-			DeckCards->XPos,
-			DeckCards->YStart - (Dim.Y + DeckCards->YMargin) * (ActiveCards + 1)
-		),
-		Dim
-	);
-}
-
 void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 {
 	ResetMemArena(&GameState->TransientArena);
@@ -229,13 +287,24 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	ResetAssets(&GameState->Assets);
 	deck_editor_state* SceneState = (deck_editor_state*) GameState->SceneState;
 	InitUiContext(&SceneState->UiContext);
+	ui_context* UiContext = &SceneState->UiContext;
+
+	InitScrollBar(UiContext, &SceneState->DeckScrollBar);
+	vector2 DeckScrollBarDim = Vector2(30.0f, 0.0f);
+	vector2 DeckScrollBarMin = Vector2(
+		BackBuffer->Width - DeckScrollBarDim.X, 0.0f
+	);
+	SceneState->DeckScrollBarRect = MakeRectangle(
+		DeckScrollBarMin, DeckScrollBarDim
+	);
+	SceneState->DeckScrollBarTop = (float) BackBuffer->Height;
+	SceneState->MaxDeckScrollBarY = (float) BackBuffer->Height;
 	
 	deck_editor_cards* DeckCards = &SceneState->DeckCards;
 	*DeckCards = {};
+	DeckCards->ActiveButtons = 0;
 	DeckCards->Dim = Vector2(160.0f, 30.0f);
-	DeckCards->XPos = (
-		BackBuffer->Width - DeckCards->Dim.X
-	);
+	DeckCards->XPos = DeckScrollBarMin.X - DeckCards->Dim.X;
 	DeckCards->YStart = (float) BackBuffer->Height;
 	DeckCards->YMargin = 0.1f * DeckCards->Dim.Y;
 	memset(
@@ -275,7 +344,7 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 					Dim
 				);
 				InitButton(
-					&SceneState->UiContext,
+					UiContext,
 					&CollectionCard->Button,
 					Rectangle
 				);
@@ -292,7 +361,7 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		BrowseCollectionButtonDim
 	);
 	InitButton(
-		&SceneState->UiContext,
+		UiContext,
 		&SceneState->CollectionPrev,
 		ScrollButtonRectangle
 	);
@@ -302,7 +371,7 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		BrowseCollectionButtonDim
 	);
 	InitButton(
-		&SceneState->UiContext,
+		UiContext,
 		&SceneState->CollectionNext,
 		ScrollButtonRectangle
 	);
@@ -317,7 +386,7 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	{
 		*TextInput = {};
 		ClearAllFlags(TextInput);
-		TextInput->UiId = GetId(&SceneState->UiContext);
+		TextInput->UiId = GetId(UiContext);
 		TextInput->CursorPos = 0;
 		TextInput->FontHeight = 20.0f;
 		TextInput->BufferSize = SceneState->DeckNameBufferSize;
@@ -331,7 +400,7 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		Vector2(BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f),
 		Vector2(BackBuffer->Width / 5.0f, TextInput->FontHeight)
 	);
-	SetActive(&SceneState->UiContext, TextInput->UiId);
+	SetActive(UiContext, TextInput->UiId);
 
 	SceneState->Alert = MakeAlert();
 
@@ -343,7 +412,7 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		SaveButtonDim
 	);
 	InitButton(
-		&SceneState->UiContext,
+		UiContext,
 		&SceneState->SaveButton, 
 		SaveButtonRectangle
 	);
@@ -449,33 +518,32 @@ void UpdateAndRenderDeckEditor(
 
 				deck_editor_cards* DeckCards = &SceneState->DeckCards;
 				vector2 Dim = DeckCards->Dim;
-				uint32_t ActiveCards = 0;
 				for(
-					uint32_t Index = 0;
-					Index < ARRAY_COUNT(DeckCards->Cards);
-					Index++
+					uint32_t ButtonIndex = 0;
+					ButtonIndex < ARRAY_COUNT(DeckCards->Cards);
+					ButtonIndex++
 				)
 				{
-					deck_editor_card* DeckCard = DeckCards->Cards + Index;
-					if(IsActive(DeckCard))
+					deck_editor_card* DeckCard = DeckCards->Cards + ButtonIndex;
+					if(!IsActive(DeckCard))
 					{
-						rectangle Rectangle = MakeDeckCardRectangle(
-							DeckCards, Dim, ActiveCards
-						);
+						break;
+					}
+					rectangle Rectangle = MakeDeckCardRectangle(
+						DeckCards, Dim, ButtonIndex
+					);
 
-						Result = ButtonHandleEvent(
-							UiContext,
-							DeckCard->UiId,
-							Rectangle,
-							MouseEvent,
-							MouseEventWorldPos
-						);
-						if(Result == ButtonHandleEvent_TakeAction)
-						{
-							RemoveCardFromDeck(DeckCards, DeckCard);
-							break;
-						}
-						ActiveCards++;
+					Result = ButtonHandleEvent(
+						UiContext,
+						DeckCard->UiId,
+						Rectangle,
+						MouseEvent,
+						MouseEventWorldPos
+					);
+					if(Result == ButtonHandleEvent_TakeAction)
+					{
+						RemoveCardFromDeck(DeckCards, DeckCard, SceneState);
+						break;
 					}
 				}
 				
@@ -515,7 +583,39 @@ void UpdateAndRenderDeckEditor(
 				if(Result == ButtonHandleEvent_TakeAction)
 				{
 					CollectionCardsNext(SceneState);
-				}	
+				}
+
+				if(IsScrollBarInteractable(SceneState))
+				{
+					scroll_bar_handle_mouse_code ScrollBarResult = (
+						ScrollBarHandleMouse(
+							UiContext,
+							&SceneState->DeckScrollBar,
+							&SceneState->DeckScrollBarRect,
+							MouseEvent,
+							MouseEventWorldPos,
+							0.0f,
+							SceneState->DeckScrollBarTop
+						)
+					);
+					if(ScrollBarResult == ScrollBarHandleMouse_Moved)
+					{
+						float AllDeckCardsHeight = (
+							GetAllDeckCardsHeight(DeckCards)
+						);
+						float FractionSeenStartFromTop = (
+							(
+								GetTop(SceneState->DeckScrollBarRect) - 
+								SceneState->DeckScrollBarTop
+							) /
+							SceneState->MaxDeckScrollBarY
+						); 
+						DeckCards->YStart = (
+							SceneState->DeckScrollBarTop - 
+							(FractionSeenStartFromTop * AllDeckCardsHeight)
+						);
+					}
+				}				
 			}
 
 			UserEventIndex++;
@@ -548,7 +648,9 @@ void UpdateAndRenderDeckEditor(
 
 	UpdateTextInput(UiContext, &SceneState->DeckNameInput, DtForFrame);
 
-	PushClear(&GameState->RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
+	render_group* DefaultRenderGroup = &GameState->RenderGroup;
+	assets* Assets = &GameState->Assets;
+	PushClear(DefaultRenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
 	
 	vector4 White = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 	vector4 Black = Vector4(0.0f, 0.0f, 0.0f, 1.0f);
@@ -565,16 +667,16 @@ void UpdateAndRenderDeckEditor(
 			SceneState->DeckNameInputRectangle,
 			Background,
 			BackgroundColor,
-			&GameState->Assets,
-			&GameState->RenderGroup,
+			Assets,
+			DefaultRenderGroup,
 			&GameState->FrameArena
 		);
 	}
 	else
 	{
 		PushText(
-			&GameState->RenderGroup,
-			&GameState->Assets,
+			DefaultRenderGroup,
+			Assets,
 			FontHandle_TestFont,
 			SceneState->DeckName,
 			SceneState->DeckNameBufferSize,
@@ -604,8 +706,8 @@ void UpdateAndRenderDeckEditor(
 				PushButtonToRenderGroup(
 					CollectionCard->Button.Rectangle,
 					BitmapHandle_TestCard2,
-					&GameState->RenderGroup,
-					&GameState->Assets, 
+					DefaultRenderGroup,
+					Assets, 
 					Definition->Name,
 					sizeof(Definition->Name),
 					FontHandle_TestFont,
@@ -617,8 +719,8 @@ void UpdateAndRenderDeckEditor(
 				if(IsHot(UiContext, CollectionCard->Button.Id))
 				{
 					PushInfoCard(
-						&GameState->RenderGroup,
-						&GameState->Assets,
+						DefaultRenderGroup,
+						Assets,
 						SceneState->InfoCardCenter,
 						SceneState->InfoCardXBound,
 						SceneState->InfoCardYBound,
@@ -636,65 +738,64 @@ void UpdateAndRenderDeckEditor(
 			char Buffer[128];
 			deck_editor_cards* DeckCards = &SceneState->DeckCards;
 			vector2 Dim = DeckCards->Dim;
-			uint32_t ActiveCards = 0;
 			for(int Index = 0; Index < MAX_CARDS_IN_DECK; Index++)
 			{
 				deck_editor_card* DeckCard = DeckCards->Cards + Index;
-				if(IsActive(DeckCard))
+				if(!IsActive(DeckCard))
 				{
-					rectangle Rectangle = MakeDeckCardRectangle(
-						DeckCards, Dim, ActiveCards
-					);
+					break;
+				}
+				
+				rectangle Rectangle = MakeDeckCardRectangle(
+					DeckCards, Dim, Index
+				);
 
-					ASSERT(DeckCard->Count > 0);
-					if(DeckCard->Count == 1)
-					{
-						snprintf(
-							Buffer,
-							sizeof(Buffer),
-							"%s",
-							DeckCard->Definition->Name
-						);
-					}
-					else if(DeckCard->Count > 1)
-					{
-						snprintf(
-							Buffer,
-							sizeof(Buffer),
-							"%s x %d",
-							DeckCard->Definition->Name,
-							DeckCard->Count
-						);
-					}
-
-					PushButtonToRenderGroup(
-						Rectangle,
-						BitmapHandle_TestCard2,
-						&GameState->RenderGroup,
-						&GameState->Assets, 
+				ASSERT(DeckCard->Count > 0);
+				if(DeckCard->Count == 1)
+				{
+					snprintf(
 						Buffer,
 						sizeof(Buffer),
-						FontHandle_TestFont,
-						Black,
-						&GameState->FrameArena
+						"%s",
+						DeckCard->Definition->Name
 					);
+				}
+				else if(DeckCard->Count > 1)
+				{
+					snprintf(
+						Buffer,
+						sizeof(Buffer),
+						"%s x %d",
+						DeckCard->Definition->Name,
+						DeckCard->Count
+					);
+				}
 
-					if(IsHot(&SceneState->UiContext, DeckCard->UiId))
-					{
-						PushInfoCard(
-							&GameState->RenderGroup,
-							&GameState->Assets,
-							SceneState->InfoCardCenter,
-							SceneState->InfoCardXBound,
-							SceneState->InfoCardYBound,
-							White,
-							&GameState->FrameArena,
-							DeckCard->Definition,
-							-1
-						);	
-					}
+				PushButtonToRenderGroup(
+					Rectangle,
+					BitmapHandle_TestCard2,
+					DefaultRenderGroup,
+					Assets, 
+					Buffer,
+					sizeof(Buffer),
+					FontHandle_TestFont,
+					Black,
+					&GameState->FrameArena
+				);
 
-					ActiveCards++;
+				if(IsHot(&SceneState->UiContext, DeckCard->UiId))
+				{
+					PushInfoCard(
+						DefaultRenderGroup,
+						Assets,
+						SceneState->InfoCardCenter,
+						SceneState->InfoCardXBound,
+						SceneState->InfoCardYBound,
+						White,
+						&GameState->FrameArena,
+						DeckCard->Definition,
+						-1
+					);	
 				}
 			}
 		}
@@ -703,8 +804,8 @@ void UpdateAndRenderDeckEditor(
 		PushButtonToRenderGroup(
 			SceneState->SaveButton.Rectangle,
 			BitmapHandle_TestCard2,
-			&GameState->RenderGroup,
-			&GameState->Assets, 
+			DefaultRenderGroup,
+			Assets, 
 			"Save Deck",
 			sizeof("Save Deck"),
 			FontHandle_TestFont,
@@ -716,26 +817,37 @@ void UpdateAndRenderDeckEditor(
 		PushButtonToRenderGroup(
 			SceneState->CollectionPrev.Rectangle,
 			BitmapHandle_TestCard2,
-			&GameState->RenderGroup,
-			&GameState->Assets, 
+			DefaultRenderGroup,
+			Assets, 
 			NULL,
 			9,
 			FontHandle_TestFont,
 			White,
 			NULL
 		);
-		// NOTE: PUsh collection next
+		// NOTE: Push collection next
 		PushButtonToRenderGroup(
 			SceneState->CollectionNext.Rectangle,
 			BitmapHandle_TestCard2,
-			&GameState->RenderGroup,
-			&GameState->Assets, 
+			DefaultRenderGroup,
+			Assets, 
 			NULL,
 			9,
 			FontHandle_TestFont,
 			White,
 			NULL
 		);
+
+		// NOTE: Push deck editor scroll bar
+		if(IsScrollBarInteractable(SceneState))
+		{
+			PushScrollBarToRenderGroup(
+				SceneState->DeckScrollBarRect,
+				BitmapHandle_TestCard2,
+				DefaultRenderGroup,
+				Assets
+			);
+		}
 	}
 
 	PushCenteredAlert(&SceneState->Alert, GameState, BackBuffer);

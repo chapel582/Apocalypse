@@ -5,6 +5,18 @@
 #include <string.h>
 #include <stdarg.h>
 
+char Lower(char Char)
+{
+	if(Char >= 0x41 && Char <= 0x5A)
+	{
+		return Char + 0x20;
+	}
+	else
+	{
+		return Char;
+	}
+}
+
 uint32_t UInt32ToString(
 	char* Buffer, uint32_t MaxBufferSize, uint32_t Input
 )

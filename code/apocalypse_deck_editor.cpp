@@ -54,6 +54,63 @@ uint32_t GetCardsInDeck(deck_editor_cards* DeckCards)
 	return CardsInDeck;
 }
 
+void SwapDeckCards(deck_editor_card* CardPtr, deck_editor_card* NextCardPtr)
+{
+	deck_editor_card Card = *CardPtr;
+	deck_editor_card NextCard = *NextCardPtr;
+	*CardPtr = NextCard;
+	*NextCardPtr = Card;
+}
+
+void SortDeckCards(deck_editor_cards* DeckCards)
+{
+	// NOTE: alphabetical sort
+	// NOTE: using bubble sort b/c the data can't get that big
+	// NOTE: b/c we're doing a lot of swapping anyway, this code also fills in 
+	// CONT: the gaps in the deck_editor array so all adjacent stuff is active
+	for(
+		int32_t SortingOn = CARD_NAME_SIZE - 1; 
+		SortingOn >= 0;
+		SortingOn--)
+	{
+		bool Sorted;
+		do
+		{
+			Sorted = true;
+			for(
+				uint32_t CardIndex = 0;
+				CardIndex < MAX_CARDS_IN_DECK - 1;
+				CardIndex++
+			)
+			{
+				deck_editor_card* CardPtr = DeckCards->Cards + CardIndex;
+				card_definition* Definition = CardPtr->Definition;
+				deck_editor_card* NextCardPtr = CardPtr + 1;
+				card_definition* NextDefinition = NextCardPtr->Definition;
+
+				if(Definition == NULL && NextDefinition != NULL)
+				{
+					SwapDeckCards(CardPtr, NextCardPtr);
+					Sorted = false;
+				}
+				else if(Definition != NULL && NextDefinition != NULL)
+				{
+					char CardNameChar = *(Definition->Name + SortingOn);
+					char NextNameChar = *(NextDefinition->Name + SortingOn);
+
+					char CardNameLower = Lower(CardNameChar);
+					char NextNameLower = Lower(NextNameChar);
+					if(CardNameLower > NextNameLower)
+					{
+						SwapDeckCards(CardPtr, NextCardPtr);
+						Sorted = false;
+					}
+				}
+			}
+		} while(!Sorted);
+	}
+}
+
 void RemoveCardFromDeck(
 	deck_editor_cards* DeckCards, deck_editor_card* DeckCard
 )
@@ -64,6 +121,7 @@ void RemoveCardFromDeck(
 	{
 		DeckCard->Definition = NULL;
 	}
+	SortDeckCards(DeckCards);
 }
 
 void AddCardToDeck(
@@ -112,7 +170,9 @@ void AddCardToDeck(
 			DeckCard->Count++;
 			break;
 		}
-	}	
+	}
+
+	SortDeckCards(DeckCards);
 	goto end;
 	
 end:
@@ -172,7 +232,7 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	
 	deck_editor_cards* DeckCards = &SceneState->DeckCards;
 	*DeckCards = {};
-	DeckCards->Dim = Vector2(110.0f, 30.0f);
+	DeckCards->Dim = Vector2(160.0f, 30.0f);
 	DeckCards->XPos = (
 		BackBuffer->Width - DeckCards->Dim.X
 	);

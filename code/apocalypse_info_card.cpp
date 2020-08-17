@@ -47,6 +47,7 @@ void PushInfoCard(
 	vector2 InfoCardYBound,
 	vector4 Color,
 	memory_arena* FrameArena,
+	char* Name,
 	int16_t Attack,
 	int16_t Health,
 	player_resources* PlayDelta,
@@ -65,13 +66,15 @@ void PushInfoCard(
 	);
 
 	uint32_t MaxCharacters = (
-		2 * ATTACK_HEALTH_MAX_LENGTH + 4 * MAX_RESOURCE_STRING_SIZE
+		CARD_NAME_SIZE + 
+		2 * ATTACK_HEALTH_MAX_LENGTH + 
+		4 * MAX_RESOURCE_STRING_SIZE
 	);
 	char* ResourceString = PushArray(FrameArena, MaxCharacters, char);
 	string_appender StringAppender = MakeStringAppender(
 		ResourceString, MaxCharacters 
 	);
-
+	AppendToString(&StringAppender, "%s\n", Name);
 	AppendToString(&StringAppender, "Attack: %d\n", Attack);
 	AppendToString(&StringAppender, "Health: %d\n", Health);
 
@@ -130,6 +133,7 @@ inline void PushInfoCard(
 		InfoCardYBound,
 		Color,
 		FrameArena,
+		Definition->Name,
 		Definition->Attack,
 		Definition->Health,
 		Definition->PlayDelta,

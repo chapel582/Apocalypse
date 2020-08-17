@@ -47,6 +47,18 @@ void PushButtonToRenderGroup(
 	char* Text,
 	uint32_t TextBufferSize,
 	font_handle Font,
+	float FontSize,
+	vector4 TextColor,
+	memory_arena* FrameArena
+);
+void PushButtonToRenderGroup(
+	rectangle Rectangle,
+	bitmap_handle Background,
+	render_group* Group,
+	assets* Assets, 
+	char* Text,
+	uint32_t TextBufferSize,
+	font_handle Font,
 	vector4 TextColor,
 	memory_arena* FrameArena
 );

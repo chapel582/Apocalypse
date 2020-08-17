@@ -77,6 +77,7 @@ void PushButtonToRenderGroup(
 	char* Text,
 	uint32_t TextBufferSize,
 	font_handle Font,
+	float FontSize,
 	vector4 TextColor,
 	memory_arena* FrameArena
 )
@@ -102,11 +103,37 @@ void PushButtonToRenderGroup(
 				Font,
 				Text,
 				TextBufferSize,
-				0.9f * Rectangle.Dim.Y, 
+				FontSize, 
 				ButtonCenter,
 				TextColor,
 				FrameArena 
 			);
 		}
 	}
+}
+
+inline void PushButtonToRenderGroup(
+	rectangle Rectangle,
+	bitmap_handle Background,
+	render_group* Group,
+	assets* Assets, 
+	char* Text,
+	uint32_t TextBufferSize,
+	font_handle Font,
+	vector4 TextColor,
+	memory_arena* FrameArena
+)
+{
+	PushButtonToRenderGroup(
+		Rectangle,
+		Background,
+		Group,
+		Assets, 
+		Text,
+		TextBufferSize,
+		Font,
+		0.9f * Rectangle.Dim.Y,
+		TextColor,
+		FrameArena
+	);
 }

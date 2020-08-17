@@ -14,6 +14,7 @@ void PushInfoCard(
 	vector2 InfoCardYBound,
 	vector4 Color,
 	memory_arena* FrameArena,
+	char* Name,
 	int16_t Attack,
 	int16_t Health,
 	player_resources* PlayDelta,

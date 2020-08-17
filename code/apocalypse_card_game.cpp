@@ -881,6 +881,7 @@ void UpdateAndRenderCardGame(
 						SceneState->InfoCardYBound,
 						Card->Color,
 						&GameState->FrameArena,
+						Card->Definition->Name,
 						Card->Attack,
 						Card->Health,
 						Card->PlayDelta,

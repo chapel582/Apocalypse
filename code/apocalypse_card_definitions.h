@@ -4,7 +4,9 @@
 #include "apocalypse_player_resources.h"
 
 #include <stdint.h>
+#include <string.h>
 
+#define CARD_NAME_SIZE 64
 struct card_definition
 {
 	uint32_t Id;
@@ -13,6 +15,7 @@ struct card_definition
 	int32_t TapsAvailable;
 	int16_t Attack;
 	int16_t Health;
+	char Name[CARD_NAME_SIZE];
 };
 
 struct card_definitions
@@ -33,6 +36,12 @@ inline void InitCard(
 	Card->TapsAvailable = TapsAvailable;
 	Card->Attack = Attack;
 	Card->Health = Health;
+}
+
+inline void SetName(card_definition* Definition, char* Name, uint32_t NameSize)
+{
+	memset(Definition->Name, 0, NameSize);
+	memcpy(Definition->Name, Name, NameSize);
 }
 
 card_definitions* DefineCards(memory_arena* MemoryArena);

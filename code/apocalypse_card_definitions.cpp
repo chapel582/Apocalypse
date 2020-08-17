@@ -2,6 +2,8 @@
 #include "apocalypse_memory_arena.h"
 #include "apocalypse_card_definitions.h"
 
+#include "string.h"
+
 #define MAX_CARDS_IN_GAME 200
 card_definitions* DefineCards(memory_arena* MemoryArena)
 {
@@ -17,6 +19,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->TapDelta[Player_One], 1, 1, 0, 0, 0);
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 1, 1, 0, 0, 0);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 1, 1, 0, 0, 0);
+	SetName(Definition, "ACard", sizeof("ACard"));
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 1, 1);
@@ -24,6 +27,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 0, 0);
+	SetName(Definition, "AACard", sizeof("AACard"));
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 1, 1);
@@ -31,6 +35,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 0, 0);
+	SetName(Definition, "BCard", sizeof("BCard"));
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 1, 1);
@@ -38,6 +43,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 0, 0);
+	SetName(Definition, "BBCard", sizeof("BBCard"));
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 1, 1);
@@ -45,6 +51,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 0, 0);
+	SetName(Definition, "AAACard", sizeof("AAACard"));
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 1, 1);
@@ -52,6 +59,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 0, 0);
+	SetName(Definition, "AAACard", sizeof("AAACard"));
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 1, 1);
@@ -59,6 +67,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->TapDelta[Player_One], 1, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 0, 0);
+	SetName(Definition, "ABard", sizeof("ABard"));
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 1, 1);
@@ -66,6 +75,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 1, 0, 0, 0);
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 0, 0);
+	SetName(Definition, "aBard", sizeof("aBard"));
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 1, 1);
@@ -73,6 +83,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 1, 0, 0);
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 0, 0);
+	SetName(Definition, "qukcooo", sizeof("qukcooo"));
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 1, 1);
@@ -80,6 +91,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 1, 0);
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 0, 0);
+	SetName(Definition, "wom wom", sizeof("wom wom"));
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 1, 1);
@@ -87,6 +99,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 1);
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 0, 0);
+	SetName(Definition, "TestAgain", sizeof("TestAgain"));
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 1, 1);
@@ -94,6 +107,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 1, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 0, 0);
+	SetName(Definition, "TestOhNo", sizeof("TestOhNo"));
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 1, 1);
@@ -101,6 +115,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 1, 0, 0, 0);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 0, 0);
+	SetName(Definition, "TestAgain2", sizeof("TestAgain2"));
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 1, 1);
@@ -108,6 +123,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 1, 0, 0);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 0, 0);
+	SetName(Definition, "TestAgain3", sizeof("TestAgain3"));
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 1, 1);
@@ -115,6 +131,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 1, 0);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 0, 0);
+	SetName(Definition, "TestAgain4", sizeof("TestAgain4"));
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 1, 1);
@@ -122,6 +139,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 1);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 0, 0);
+	SetName(Definition, "TestAgain5", sizeof("TestAgain5"));
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 1, 1);
@@ -129,6 +147,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 1, 0, 0, 0, 0);
+	SetName(Definition, "TestAgain6", sizeof("TestAgain6"));
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 1, 1);
@@ -136,6 +155,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 1, 0, 0, 0);
+	SetName(Definition, "Break up", sizeof("Break up"));
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 1, 1);
@@ -143,6 +163,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 1, 0, 0);
+	SetName(Definition, "TestAgain7", sizeof("TestAgain7"));
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 1, 1);
@@ -150,6 +171,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 1, 0);
+	SetName(Definition, "TestAgain8", sizeof("TestAgain8"));
 
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;

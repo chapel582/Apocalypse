@@ -546,11 +546,12 @@ void UpdateAndRenderDeckEditor(
 					BitmapHandle_TestCard2,
 					&GameState->RenderGroup,
 					&GameState->Assets, 
-					NULL,
-					0,
+					Definition->Name,
+					sizeof(Definition->Name),
 					FontHandle_TestFont,
-					White,
-					NULL
+					10.0f,
+					Black,
+					&GameState->FrameArena
 				);
 
 				if(IsHot(UiContext, CollectionCard->Button.Id))
@@ -572,7 +573,7 @@ void UpdateAndRenderDeckEditor(
 
 		// NOTE: push deck cards
 		{
-			char Buffer[256];
+			char Buffer[128];
 			deck_editor_cards* DeckCards = &SceneState->DeckCards;
 			vector2 Dim = DeckCards->Dim;
 			uint32_t ActiveCards = 0;
@@ -591,8 +592,8 @@ void UpdateAndRenderDeckEditor(
 						snprintf(
 							Buffer,
 							sizeof(Buffer),
-							"%d",
-							DeckCard->Definition->Id
+							"%s",
+							DeckCard->Definition->Name
 						);
 					}
 					else if(DeckCard->Count > 1)
@@ -600,8 +601,8 @@ void UpdateAndRenderDeckEditor(
 						snprintf(
 							Buffer,
 							sizeof(Buffer),
-							"%d x %d",
-							DeckCard->Definition->Id,
+							"%s x %d",
+							DeckCard->Definition->Name,
 							DeckCard->Count
 						);
 					}

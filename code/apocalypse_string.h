@@ -5,6 +5,8 @@
 #include <string.h>
 #include <stdarg.h>
 
+// TODO: move most of this code to the cpp file
+
 char Lower(char Char)
 {
 	if(Char >= 0x41 && Char <= 0x5A)
@@ -100,6 +102,63 @@ void AppendToString(string_appender* StringAppender, char* FormatString, ...)
 inline void TerminateString(string_appender* StringAppender)
 {
 	*StringAppender->CopyTo = 0;
+}
+
+struct flat_string_array_reader
+{
+	char* CurrentString;
+	uint32_t BytesRemaining;
+};
+
+void InitFlatStringArrayReader(
+	flat_string_array_reader* Reader, char* Buffer, uint32_t BufferSize
+)
+{
+	*Reader = {};
+	Reader->CurrentString = Buffer;
+	Reader->BytesRemaining = BufferSize; 
+}
+
+char* GetNextString(flat_string_array_reader* Reader)
+{
+	// NOTE: returns NULL if next string cannot be found
+	// NOTE: assumes memory past the last 0 is uninitialized 
+	char* Checker = Reader->CurrentString;
+	while((*Checker != 0) && (Reader->BytesRemaining > 0))
+	{
+		Checker++;
+		Reader->BytesRemaining--;
+	}
+	while((*Checker == 0) && (Reader->BytesRemaining > 0))
+	{
+		Checker++;
+		Reader->BytesRemaining--;
+	}
+	if(*Checker != 0)
+	{
+		Reader->CurrentString = Checker;
+		return Checker;
+	}
+	else
+	{
+		return NULL;
+	}
+}
+
+uint32_t FindIndex(char* String, char Character, uint32_t BufferSize)
+{
+	char* LastChar = String;
+	uint32_t Index;
+	for(Index = 0; Index < BufferSize; Index++)
+	{
+		if(*LastChar == Character || *LastChar == 0)
+		{
+			break;
+		}
+		LastChar++;
+	}
+
+	return Index;
 }
 
 #define APOCALYPSE_STRING_H

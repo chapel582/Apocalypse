@@ -336,9 +336,9 @@ void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	// TODO: load decks based on interaction at start of new card game
 	{
 		char Buffer[256];
-		GetDeckPath(Buffer, sizeof(Buffer), "P1Deck");
+		FormatDeckPath(Buffer, sizeof(Buffer), "P1Deck");
 		P1Deck = LoadDeck(Buffer);
-		GetDeckPath(Buffer, sizeof(Buffer), "P2Deck");
+		FormatDeckPath(Buffer, sizeof(Buffer), "P2Deck");
 		P2Deck = LoadDeck(Buffer);
 	}
 

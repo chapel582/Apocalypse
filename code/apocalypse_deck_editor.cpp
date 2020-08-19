@@ -35,7 +35,7 @@ void SaveEditableDeck(
 	Deck.Header.CardCount = IdIndex;
 
 	char PathToDeck[256];
-	GetDeckPath(PathToDeck, sizeof(PathToDeck), DeckName);
+	FormatDeckPath(PathToDeck, sizeof(PathToDeck), DeckName);
 	SaveDeck(PathToDeck, &Deck);
 	DisplayMessageFor(GameState, Alert, "Saved Deck", 1.0f);
 }
@@ -113,16 +113,23 @@ void SortDeckCards(deck_editor_cards* DeckCards)
 	}
 }
 
+rectangle MakeNextRectangle(
+	float XPos, float YStart, float YMargin, vector2 Dim, uint32_t Index
+)
+{
+	// NOTE: Makes the next vertical rectangle in a vertical stack of 
+	// CONT: rectangles
+	return MakeRectangle(
+		Vector2(XPos, YStart - (Dim.Y + YMargin) * (Index + 1)), Dim
+	);
+}
+
 rectangle MakeDeckCardRectangle(
 	deck_editor_cards* DeckCards, vector2 Dim, uint32_t ButtonIndex
 )
 {
-	return MakeRectangle(
-		Vector2(
-			DeckCards->XPos,
-			DeckCards->YStart - (Dim.Y + DeckCards->YMargin) * (ButtonIndex + 1)
-		),
-		Dim
+	return MakeNextRectangle(
+		DeckCards->XPos, DeckCards->YStart, DeckCards->YMargin, Dim, ButtonIndex
 	);
 }
 
@@ -402,6 +409,28 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	);
 	SetActive(UiContext, TextInput->UiId);
 
+	SceneState->DeckNamesSize = PLATFORM_MAX_PATH * MAX_DECKS_SAVED;
+	SceneState->DeckNames = PushArray(
+		&GameState->TransientArena,
+		SceneState->DeckNamesSize,
+		char
+	);
+	memset(SceneState->DeckNames, 0, SceneState->DeckNamesSize);
+	GetAllDeckPaths(SceneState->DeckNames, SceneState->DeckNamesSize);
+	SceneState->LoadDeckButtonDim = Vector2(160.0f, 30.0f);
+	SceneState->LoadDeckButtonsYStart = (float) BackBuffer->Height;
+	SceneState->LoadDeckButtonsYMargin = 0.1f * SceneState->LoadDeckButtonDim.Y;
+	load_deck_button* LoadDeckButtons = SceneState->LoadDeckButtons;
+	for(
+		uint32_t ButtonIndex = 0;
+		ButtonIndex < ARRAY_COUNT(SceneState->LoadDeckButtons);
+		ButtonIndex++
+	)
+	{
+		load_deck_button* Button = LoadDeckButtons + ButtonIndex;
+		Button->UiId = GetId(UiContext);
+	}
+
 	SceneState->Alert = MakeAlert();
 
 	vector2 SaveButtonDim = Vector2(
@@ -468,13 +497,99 @@ void UpdateAndRenderDeckEditor(
 			);
 			if(!SceneState->DeckNameSet)
 			{
+				rectangle DeckNameInputRectangle = (
+					SceneState->DeckNameInputRectangle
+				);
 				TextInputHandleMouse(
 					UiContext,
 					&SceneState->DeckNameInput,
-					SceneState->DeckNameInputRectangle,
+					DeckNameInputRectangle,
 					MouseEvent,
 					MouseEventWorldPos
 				);
+
+				vector2 Dim = SceneState->LoadDeckButtonDim;
+				load_deck_button* LoadDeckButtons = SceneState->LoadDeckButtons;
+				char* CurrentDeckName = SceneState->DeckNames;
+				flat_string_array_reader FlatArrayReader;
+				InitFlatStringArrayReader(
+					&FlatArrayReader,
+					CurrentDeckName,
+					SceneState->DeckNamesSize
+				);
+				for(
+					uint32_t ButtonIndex = 0;
+					ButtonIndex < ARRAY_COUNT(SceneState->LoadDeckButtons);
+					ButtonIndex++
+				)
+				{
+					if(CurrentDeckName == NULL)
+					{
+						break;
+					}
+					load_deck_button* LoadDeckButton = (
+						LoadDeckButtons + ButtonIndex
+					);
+					rectangle Rectangle = MakeNextRectangle(
+						GetRight(DeckNameInputRectangle) + 10.0f,
+						SceneState->LoadDeckButtonsYStart,
+						SceneState->LoadDeckButtonsYMargin,
+						SceneState->LoadDeckButtonDim,
+						ButtonIndex
+					);
+
+					button_handle_event_result Result = ButtonHandleEvent(
+						UiContext,
+						LoadDeckButton->UiId,
+						Rectangle,
+						MouseEvent,
+						MouseEventWorldPos
+					);
+					if(Result == ButtonHandleEvent_TakeAction)
+					{
+						uint32_t DotIndex = FindIndex(
+							CurrentDeckName, '.', FlatArrayReader.BytesRemaining
+						);
+						strcpy_s(
+							SceneState->DeckName,
+							SceneState->DeckNameBufferSize,
+							CurrentDeckName
+						);
+						SceneState->DeckName[DotIndex] = 0;
+						SceneState->DeckNameSet = true;
+						// TODO: add the deck's cards to the editor
+						loaded_deck LoadedDeck = {};
+						char DeckPath[PLATFORM_MAX_PATH];
+						FormatDeckPath(
+							DeckPath,
+							ARRAY_COUNT(DeckPath),
+							SceneState->DeckName
+						);
+						LoadedDeck = LoadDeck(DeckPath);
+						for(
+							uint32_t CardIndex = 0;
+							CardIndex < LoadedDeck.Header.CardCount;
+							CardIndex++
+						)
+						{
+							card_definition* Definition = (
+								SceneState->Definitions->Array + 
+								LoadedDeck.Ids[CardIndex]
+							);
+							AddCardToDeck(
+								GameState,
+								SceneState,
+								&SceneState->DeckCards,
+								Definition
+							);
+						}
+						break;
+					}
+					else
+					{
+						CurrentDeckName = GetNextString(&FlatArrayReader); 
+					}
+				}
 			}
 			else
 			{
@@ -660,17 +775,64 @@ void UpdateAndRenderDeckEditor(
 		vector4 FontColor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 		vector4 BackgroundColor = Vector4(0.1f, 0.1f, 0.1f, 1.0f);
 		bitmap_handle Background = BitmapHandle_TestCard2;
+		rectangle DeckNameInputRectangle = SceneState->DeckNameInputRectangle;
 		PushTextInput(
 			UiContext,
 			&SceneState->DeckNameInput,
 			FontColor,
-			SceneState->DeckNameInputRectangle,
+			DeckNameInputRectangle,
 			Background,
 			BackgroundColor,
 			Assets,
 			DefaultRenderGroup,
 			&GameState->FrameArena
 		);
+
+		vector2 Dim = SceneState->LoadDeckButtonDim;
+		load_deck_button* LoadDeckButtons = SceneState->LoadDeckButtons;
+		flat_string_array_reader FlatArrayReader;
+		char* CurrentDeckName = SceneState->DeckNames;
+		InitFlatStringArrayReader(
+			&FlatArrayReader, CurrentDeckName, SceneState->DeckNamesSize
+		);
+		for(
+			uint32_t ButtonIndex = 0;
+			ButtonIndex < ARRAY_COUNT(SceneState->LoadDeckButtons);
+			ButtonIndex++
+		)
+		{
+			if(CurrentDeckName == NULL)
+			{
+				break;
+			}
+			load_deck_button* LoadDeckButton = (
+				LoadDeckButtons + ButtonIndex
+			);
+			rectangle Rectangle = MakeNextRectangle(
+				GetRight(DeckNameInputRectangle) + 10.0f,
+				SceneState->LoadDeckButtonsYStart,
+				SceneState->LoadDeckButtonsYMargin,
+				SceneState->LoadDeckButtonDim,
+				ButtonIndex
+			);
+
+			uint32_t StopAt = FindIndex(
+				CurrentDeckName, '.', FlatArrayReader.BytesRemaining
+			);
+			PushButtonToRenderGroup(
+				Rectangle,
+				BitmapHandle_TestCard2,
+				DefaultRenderGroup,
+				Assets, 
+				CurrentDeckName,
+				StopAt,
+				FontHandle_TestFont,
+				Black,
+				&GameState->FrameArena
+			);
+
+			CurrentDeckName = GetNextString(&FlatArrayReader);
+		}
 	}
 	else
 	{

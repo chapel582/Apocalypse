@@ -50,9 +50,12 @@ inline uint32_t SafeTruncateUInt64(uint64_t Value)
 	return (uint32_t) Value;
 }
 
-// TODO: remove DEBUG IO
 // NOTE: These are blocking calls that don't protect against lost data
 // CONT: they are intended for debug purposes only
+
+// TODO: handle non-windows max path
+#define PLATFORM_MAX_PATH 260
+
 typedef enum
 {
 	PlatformReadFileResult_Success,
@@ -72,6 +75,10 @@ platform_read_file_result PlatformReadFile(
 );
 bool PlatformWriteEntireFile(
 	char* FileName, void* Memory, uint32_t MemorySize
+);
+// TODO: PlatformFindAllFiles needs error handling
+void PlatformFindAllFiles(
+	char* FilePattern, char* FileNames, uint32_t FileNamesSize 
 );
 
 #if APOCALYPSE_INTERNAL

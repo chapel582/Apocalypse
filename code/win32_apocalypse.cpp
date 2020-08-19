@@ -168,6 +168,35 @@ end:
 	return Result;
 }
 
+void PlatformFindAllFiles(
+	char* FilePattern, char* FileNames, uint32_t FileNamesSize 
+)
+{
+	WIN32_FIND_DATA FindData;
+	HANDLE FindHandle = FindFirstFileA(FilePattern, &FindData);
+	if(INVALID_HANDLE_VALUE == FindHandle)
+	{
+		// TODO: return error code
+		goto end;
+	}
+
+	uint32_t BytesLeftInBuffer = FileNamesSize;
+	char* CopyTo = FileNames;
+	do
+	{
+		uint32_t FileNameLen = (uint32_t) strlen(FindData.cFileName);
+		memcpy(CopyTo, FindData.cFileName, FileNameLen);
+		BytesLeftInBuffer -= FileNameLen;
+		CopyTo += FileNameLen + 1;
+	} while(FindNextFileA(FindHandle, &FindData) != 0);
+
+	FindClose(FindHandle);
+	goto end;
+
+end:
+	return;
+}
+
 // NOTE: DLL stubs
 #define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter)
 typedef DIRECT_SOUND_CREATE(direct_sound_create);

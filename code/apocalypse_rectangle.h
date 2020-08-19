@@ -24,6 +24,11 @@ inline rectangle MakeRectangleCentered(vector2 Center, vector2 Dim)
 	return Result;
 }
 
+inline float GetRight(rectangle Rectangle)
+{
+	return Rectangle.Min.X + Rectangle.Dim.X;
+}
+
 inline float GetTop(rectangle Rectangle)
 {
 	return Rectangle.Min.Y + Rectangle.Dim.Y;

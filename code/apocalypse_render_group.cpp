@@ -612,7 +612,12 @@ push_text_result PushTextCentered(
 	char* CodePointPtr = CodePoints;
 	float PixelWidth = LPad;
 	float MaxWidth = 0.0f;
-	for(uint32_t Index = 0; Index < MaxCodePointCount; Index++)
+	uint32_t CodePointIndex;
+	for(
+		CodePointIndex = 0;
+		CodePointIndex < MaxCodePointCount;
+		CodePointIndex++
+	)
 	{
 		uint32_t CodePoint = (uint32_t) *CodePointPtr;
 		if(CodePoint == 0)
@@ -642,6 +647,10 @@ push_text_result PushTextCentered(
 		}
 		
 		CodePointPtr++;
+	}
+	if(CodePointIndex == MaxCodePointCount && MaxWidth == 0.0f)
+	{
+		MaxWidth = PixelWidth;
 	}
 
 	vector2 BaselineOffsetFromCenter = TransformVectorToBasis(

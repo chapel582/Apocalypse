@@ -1,6 +1,7 @@
 #ifndef APOCALYPSE_LOAD_DECK_H
 
 #define MAX_CARDS_IN_DECK 60
+#define MAX_DECKS_SAVED 1024
 
 #pragma pack(push, 1)
 struct loaded_deck_header
@@ -17,7 +18,8 @@ struct loaded_deck
 
 void SaveDeck(char* PathToDeck, loaded_deck* Deck);
 loaded_deck LoadDeck(char* PathToDeck);
-void GetDeckPath(char* Buffer, uint32_t MaxBufferSize, char* DeckName);
+void FormatDeckPath(char* Buffer, uint32_t MaxBufferSize, char* DeckName);
+void GetAllDeckPaths(char* Buffer, uint32_t MaxBufferSize);
 
 #define APOCALYPSE_LOAD_DECK_H
 #endif

@@ -35,6 +35,11 @@ struct deck_editor_cards
 	uint32_t ActiveButtons;
 };
 
+struct load_deck_button
+{
+	ui_id UiId;
+};
+
 #define COLLECTION_CARDS_DISPLAYED 8
 struct deck_editor_state
 {
@@ -57,6 +62,13 @@ struct deck_editor_state
 	rectangle DeckNameInputRectangle;
 	char* DeckName;
 	uint32_t DeckNameBufferSize;
+
+	load_deck_button LoadDeckButtons[MAX_DECKS_SAVED];
+	char* DeckNames;
+	uint32_t DeckNamesSize;
+	vector2 LoadDeckButtonDim;
+	float LoadDeckButtonsYStart;
+	float LoadDeckButtonsYMargin;
 
 	vector2 DeckNamePos;
 	bool DeckNameSet;

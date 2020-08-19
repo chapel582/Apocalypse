@@ -9,6 +9,8 @@
 	things up
 */
 
+#define DECKS_PATH "../decks/"
+
 loaded_deck LoadDeck(char* PathToDeck)
 {
 	loaded_deck Result;
@@ -27,7 +29,15 @@ void SaveDeck(char* PathToDeck, loaded_deck* Deck)
 	PlatformWriteEntireFile(PathToDeck, Deck, sizeof(*Deck));
 }
 
-void GetDeckPath(char* Buffer, uint32_t MaxBufferSize, char* DeckName)
+void FormatDeckPath(char* Buffer, uint32_t MaxBufferSize, char* DeckName)
 {
-	snprintf(Buffer, MaxBufferSize, "../decks/%s.deck", DeckName);
+	snprintf(Buffer, MaxBufferSize, DECKS_PATH "%s.deck", DeckName);
+}
+
+void GetAllDeckPaths(char* Buffer, uint32_t MaxBufferSize)
+{
+	// TODO: error handling if the person has too many decks
+	PlatformFindAllFiles(
+		DECKS_PATH "*.deck", Buffer, MaxBufferSize 
+	);	
 }

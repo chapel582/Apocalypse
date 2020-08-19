@@ -53,7 +53,7 @@ struct assets;
 struct load_asset_job;
 struct load_asset_job
 {
-	char FileName[256]; // TODO: Platform max path
+	char FileName[PLATFORM_MAX_PATH];
 	assets* Assets;
 	void* Result;
 	asset_info* Info;

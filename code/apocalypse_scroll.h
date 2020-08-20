@@ -25,6 +25,14 @@ inline void InitScrollBar(ui_context* UiContext, scroll_bar* ScrollBar)
 	ScrollBar->LastY = 0.0f;
 }
 
+scroll_bar_handle_mouse_code ScrollBoxHandleMouse(
+	rectangle* ScrollBarRect,
+	rectangle* ScrollBox,
+	game_mouse_event* MouseEvent,
+	vector2 MouseEventWorldPos,
+	float MinY, 
+	float MaxY
+);
 scroll_bar_handle_mouse_code ScrollBarHandleMouse(
 	ui_context* UiContext,
 	scroll_bar* ScrollBar,

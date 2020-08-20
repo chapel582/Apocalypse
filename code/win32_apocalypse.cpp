@@ -976,6 +976,24 @@ int CALLBACK WinMain(
 							);
 							break;
 						}
+						case(WM_MOUSEWHEEL):
+						{
+							Win32WriteMouseEvent(
+								&MouseEvents,
+								Message.lParam,
+								MouseWheel,
+								&UserEventIndex,
+								GlobalBackBuffer.Height
+							);
+							game_mouse_event* MouseEvent = (
+								&MouseEvents.Events[MouseEvents.Length - 1]
+							);
+							MouseEvent->WheelScroll = (
+								(float) GET_WHEEL_DELTA_WPARAM(Message.wParam) /
+								(float) WHEEL_DELTA
+							);
+							break;
+						}
 						case(WM_SYSKEYDOWN):
 						case(WM_SYSKEYUP):
 						case(WM_KEYDOWN):

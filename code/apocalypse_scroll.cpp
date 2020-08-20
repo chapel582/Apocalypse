@@ -1,5 +1,42 @@
 #include "apocalypse_scroll.h"
 
+void ClampRectY(rectangle* Rectangle, float MinY, float MaxY)
+{
+	if(GetBottom(*Rectangle) < MinY)
+	{
+		SetBottom(Rectangle, MinY);
+	}
+	if(GetTop(*Rectangle) > MaxY)
+	{
+		SetTop(Rectangle, MaxY);				
+	}
+}
+
+scroll_bar_handle_mouse_code ScrollBoxHandleMouse(
+	rectangle* ScrollBarRect,
+	rectangle* ScrollBox,
+	game_mouse_event* MouseEvent,
+	vector2 MouseEventWorldPos,
+	float MinY, 
+	float MaxY
+)
+{
+	// TODO: should we have a function call that couples this with ScrollBarHandleMouse?
+	scroll_bar_handle_mouse_code Result = ScrollBarHandleMouse_NoAction;
+	bool Inside = PointInRectangle(MouseEventWorldPos, *ScrollBox);
+	if(Inside)
+	{
+		if(MouseEvent->Type == MouseWheel)
+		{
+			ScrollBarRect->Min.Y += MouseEvent->WheelScroll * (MaxY - MinY);
+			ClampRectY(ScrollBarRect, MinY, MaxY);
+			Result = ScrollBarHandleMouse_Moved;
+		}
+	}
+
+	return Result;
+}
+
 scroll_bar_handle_mouse_code ScrollBarHandleMouse(
 	ui_context* UiContext,
 	scroll_bar* ScrollBar,
@@ -24,14 +61,7 @@ scroll_bar_handle_mouse_code ScrollBarHandleMouse(
 		{
 			Rectangle->Min.Y += MouseEventWorldPos.Y - ScrollBar->LastY;
 			ScrollBar->LastY = MouseEventWorldPos.Y;
-			if(GetBottom(*Rectangle) < MinY)
-			{
-				SetBottom(Rectangle, MinY);
-			}
-			if(GetTop(*Rectangle) > MaxY)
-			{
-				SetTop(Rectangle, MaxY);				
-			}
+			ClampRectY(Rectangle, MinY, MaxY);
 			Result = ScrollBarHandleMouse_Moved;
 		}
 	}

@@ -86,6 +86,7 @@ struct deck_editor_state
 
 	scroll_bar DeckScrollBar;
 	rectangle DeckScrollBarRect;
+	rectangle DeckScrollBox;
 	float DeckScrollBarTop;
 	float MaxDeckScrollBarY;
 };

@@ -169,18 +169,27 @@ typedef enum
 	PrimaryUp,
 	SecondaryDown,
 	SecondaryUp,
-	MouseMove
+	MouseMove,
+	MouseWheel
 } mouse_event_type;
 
 // NOTE: user events (mouse and keyboard) have UserEventIndex field
-// NOTE: this is to allow them to 
+// NOTE: this is to allow them to make sure all user events are ordered
 typedef uint16_t user_event_index;
+
 struct game_mouse_event
 {
 	user_event_index UserEventIndex;
-	int XPos; // NOTE: should be xpos from bottom left
-	int YPos; // NOTE: should be xpos from bottom left
+	int XPos; // NOTE: should be xpos from bottom left of screen
+	int YPos; // NOTE: should be ypos from bottom left of screen
 	mouse_event_type Type;
+
+	//NOTE: Wheel delta is a normalized float between -1 and 1 
+
+	// TODO: see what a good way is to combine this across platforms
+	// TODO: if you need to add more data specific to a mouse event, see if we
+	// CONT: need to have a union here
+	float WheelScroll; 
 };
 
 struct game_mouse_events
@@ -197,6 +206,7 @@ struct game_keyboard_event
 	uint8_t Code; // NOTE: right now this is just the VK from Windows
 	// TODO: see if it would be helpful to combine the two below into a 
 	// CONT: single byte with flags
+	// TODO: maybe just make IsDown, WasDown flags in a uint8
 	uint8_t IsDown; // NOTE: compact bool
 	uint8_t WasDown; // NOTE: compact bool
 };

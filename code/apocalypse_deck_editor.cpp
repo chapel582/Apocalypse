@@ -73,7 +73,8 @@ void SortDeckCards(deck_editor_cards* DeckCards)
 	for(
 		int32_t SortingOn = CARD_NAME_SIZE - 1; 
 		SortingOn >= 0;
-		SortingOn--)
+		SortingOn--
+	)
 	{
 		bool Sorted;
 		do
@@ -285,6 +286,26 @@ void CollectionCardsPrev(deck_editor_state* SceneState)
 	}
 }
 
+void ScrollDeckCardPositions(
+	deck_editor_state* SceneState, deck_editor_cards* DeckCards
+)
+{
+	float AllDeckCardsHeight = (
+		GetAllDeckCardsHeight(DeckCards)
+	);
+	float FractionSeenStartFromTop = (
+		(
+			GetTop(SceneState->DeckScrollBarRect) - 
+			SceneState->DeckScrollBarTop
+		) /
+		SceneState->MaxDeckScrollBarY
+	); 
+	DeckCards->YStart = (
+		SceneState->DeckScrollBarTop - 
+		(FractionSeenStartFromTop * AllDeckCardsHeight)
+	);
+}
+
 void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 {
 	ResetMemArena(&GameState->TransientArena);
@@ -318,6 +339,11 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		DeckCards->Cards,
 		0,
 		ARRAY_COUNT(DeckCards->Cards) * sizeof(deck_editor_card)
+	);
+
+	SceneState->DeckScrollBox = MakeRectangle(
+		Vector2(DeckCards->XPos, 0.0f), 
+		Vector2(DeckCards->Dim.X + DeckScrollBarDim.X, DeckCards->YStart)
 	);
 
 	SceneState->Definitions = DefineCards(&GameState->TransientArena);
@@ -702,33 +728,35 @@ void UpdateAndRenderDeckEditor(
 
 				if(IsScrollBarInteractable(SceneState))
 				{
+					// TODO: can box handle and bar handle be combined?
+					float MinY = 0.0f;
 					scroll_bar_handle_mouse_code ScrollBarResult = (
-						ScrollBarHandleMouse(
-							UiContext,
-							&SceneState->DeckScrollBar,
+						ScrollBoxHandleMouse(
 							&SceneState->DeckScrollBarRect,
+							&SceneState->DeckScrollBox,
 							MouseEvent,
 							MouseEventWorldPos,
-							0.0f,
+							MinY, 
 							SceneState->DeckScrollBarTop
 						)
+					);					
+					if(ScrollBarResult == ScrollBarHandleMouse_Moved)
+					{
+						ScrollDeckCardPositions(SceneState, DeckCards);
+					}
+
+					ScrollBarResult = ScrollBarHandleMouse(
+						UiContext,
+						&SceneState->DeckScrollBar,
+						&SceneState->DeckScrollBarRect,
+						MouseEvent,
+						MouseEventWorldPos,
+						0.0f,
+						SceneState->DeckScrollBarTop
 					);
 					if(ScrollBarResult == ScrollBarHandleMouse_Moved)
 					{
-						float AllDeckCardsHeight = (
-							GetAllDeckCardsHeight(DeckCards)
-						);
-						float FractionSeenStartFromTop = (
-							(
-								GetTop(SceneState->DeckScrollBarRect) - 
-								SceneState->DeckScrollBarTop
-							) /
-							SceneState->MaxDeckScrollBarY
-						); 
-						DeckCards->YStart = (
-							SceneState->DeckScrollBarTop - 
-							(FractionSeenStartFromTop * AllDeckCardsHeight)
-						);
+						ScrollDeckCardPositions(SceneState, DeckCards);
 					}
 				}				
 			}

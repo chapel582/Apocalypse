@@ -1,18 +1,6 @@
 #include "apocalypse_scroll.h"
 
-void ClampRectY(rectangle* Rectangle, float MinY, float MaxY)
-{
-	if(GetBottom(*Rectangle) < MinY)
-	{
-		SetBottom(Rectangle, MinY);
-	}
-	if(GetTop(*Rectangle) > MaxY)
-	{
-		SetTop(Rectangle, MaxY);				
-	}
-}
-
-scroll_bar_handle_mouse_code ScrollBoxHandleMouse(
+scroll_handle_mouse_code ScrollBoxHandleMouse(
 	rectangle* ScrollBarRect,
 	rectangle* ScrollBox,
 	game_mouse_event* MouseEvent,
@@ -21,8 +9,7 @@ scroll_bar_handle_mouse_code ScrollBoxHandleMouse(
 	float MaxY
 )
 {
-	// TODO: should we have a function call that couples this with ScrollBarHandleMouse?
-	scroll_bar_handle_mouse_code Result = ScrollBarHandleMouse_NoAction;
+	scroll_handle_mouse_code Result = ScrollHandleMouse_NoAction;
 	bool Inside = PointInRectangle(MouseEventWorldPos, *ScrollBox);
 	if(Inside)
 	{
@@ -30,14 +17,49 @@ scroll_bar_handle_mouse_code ScrollBoxHandleMouse(
 		{
 			ScrollBarRect->Min.Y += MouseEvent->WheelScroll * (MaxY - MinY);
 			ClampRectY(ScrollBarRect, MinY, MaxY);
-			Result = ScrollBarHandleMouse_Moved;
+			Result = ScrollHandleMouse_Moved;
 		}
 	}
 
 	return Result;
 }
 
-scroll_bar_handle_mouse_code ScrollBarHandleMouse(
+scroll_handle_mouse_code ScrollTroughHandleMouse(
+	ui_context* UiContext,
+	scroll_bar* ScrollBar,
+	rectangle* ScrollBarRect,
+	rectangle* ScrollTrough,
+	game_mouse_event* MouseEvent,
+	vector2 MouseEventWorldPos,
+	float MinY, 
+	float MaxY
+)
+{
+	scroll_handle_mouse_code Result = ScrollHandleMouse_NoAction;
+	bool Inside = PointInRectangle(MouseEventWorldPos, *ScrollTrough);
+	ui_id BarId = ScrollBar->UiId;
+
+	if(Inside && !IsHot(UiContext, BarId))
+	{
+		if(MouseEvent->Type == PrimaryDown)
+		{
+			if(MouseEventWorldPos.Y < GetBottom(*ScrollBarRect))
+			{
+				SetTop(ScrollBarRect, GetBottom(*ScrollBarRect));
+			}
+			else if(MouseEventWorldPos.Y > GetTop(*ScrollBarRect))
+			{
+				SetBottom(ScrollBarRect, GetTop(*ScrollBarRect));
+			}
+			ClampRectY(ScrollBarRect, MinY, MaxY);
+			Result = ScrollHandleMouse_Moved;
+		}
+	}
+
+	return Result;
+}
+
+scroll_handle_mouse_code ScrollBarHandleMouse(
 	ui_context* UiContext,
 	scroll_bar* ScrollBar,
 	rectangle* Rectangle,
@@ -47,7 +69,7 @@ scroll_bar_handle_mouse_code ScrollBarHandleMouse(
 	float MaxY
 )
 {
-	scroll_bar_handle_mouse_code Result = ScrollBarHandleMouse_NoAction;
+	scroll_handle_mouse_code Result = ScrollHandleMouse_NoAction;
 	bool Inside = PointInRectangle(MouseEventWorldPos, *Rectangle);
 	ui_id Id = ScrollBar->UiId;
 
@@ -62,7 +84,7 @@ scroll_bar_handle_mouse_code ScrollBarHandleMouse(
 			Rectangle->Min.Y += MouseEventWorldPos.Y - ScrollBar->LastY;
 			ScrollBar->LastY = MouseEventWorldPos.Y;
 			ClampRectY(Rectangle, MinY, MaxY);
-			Result = ScrollBarHandleMouse_Moved;
+			Result = ScrollHandleMouse_Moved;
 		}
 	}
 	else if(IsHot(UiContext, Id))
@@ -87,6 +109,61 @@ scroll_bar_handle_mouse_code ScrollBarHandleMouse(
 	}
 
 	return Result;
+}
+
+scroll_handle_mouse_code ScrollHandleMouse(
+	ui_context* UiContext,
+	scroll_bar* ScrollBar,
+	rectangle* ScrollBarRect,
+	rectangle* ScrollBox,
+	game_mouse_event* MouseEvent,
+	vector2 MouseEventWorldPos,
+	float MinY, 
+	float MaxY
+)
+{
+	scroll_handle_mouse_code Result = ScrollBoxHandleMouse(
+		ScrollBarRect, ScrollBox, MouseEvent, MouseEventWorldPos, MinY, MaxY
+	);
+	if(Result == ScrollHandleMouse_Moved)
+	{
+		return Result;
+	}
+
+	Result = ScrollBarHandleMouse(
+		UiContext,
+		ScrollBar,
+		ScrollBarRect,
+		MouseEvent,
+		MouseEventWorldPos,
+		MinY,
+		MaxY
+	);
+	if(Result == ScrollHandleMouse_Moved)
+	{
+		return Result;
+	}
+
+	rectangle ScrollTrough = MakeRectangle(
+		Vector2(ScrollBarRect->Min.X, MinY),
+		Vector2(ScrollBarRect->Dim.X, MaxY - MinY)
+	);
+	Result = ScrollTroughHandleMouse(
+		UiContext,
+		ScrollBar,
+		ScrollBarRect,
+		&ScrollTrough,
+		MouseEvent,
+		MouseEventWorldPos,
+		MinY, 
+		MaxY
+	);
+	if(Result == ScrollHandleMouse_Moved)
+	{
+		return Result;
+	}
+
+	return ScrollHandleMouse_NoAction;
 }
 
 void UpdateScrollBarDim(

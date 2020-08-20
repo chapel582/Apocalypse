@@ -728,33 +728,18 @@ void UpdateAndRenderDeckEditor(
 
 				if(IsScrollBarInteractable(SceneState))
 				{
-					// TODO: can box handle and bar handle be combined?
 					float MinY = 0.0f;
-					scroll_bar_handle_mouse_code ScrollBarResult = (
-						ScrollBoxHandleMouse(
-							&SceneState->DeckScrollBarRect,
-							&SceneState->DeckScrollBox,
-							MouseEvent,
-							MouseEventWorldPos,
-							MinY, 
-							SceneState->DeckScrollBarTop
-						)
-					);					
-					if(ScrollBarResult == ScrollBarHandleMouse_Moved)
-					{
-						ScrollDeckCardPositions(SceneState, DeckCards);
-					}
-
-					ScrollBarResult = ScrollBarHandleMouse(
+					scroll_handle_mouse_code ScrollResult = ScrollHandleMouse(
 						UiContext,
 						&SceneState->DeckScrollBar,
 						&SceneState->DeckScrollBarRect,
+						&SceneState->DeckScrollBox,
 						MouseEvent,
 						MouseEventWorldPos,
-						0.0f,
+						MinY, 
 						SceneState->DeckScrollBarTop
 					);
-					if(ScrollBarResult == ScrollBarHandleMouse_Moved)
+					if(ScrollResult == ScrollHandleMouse_Moved)
 					{
 						ScrollDeckCardPositions(SceneState, DeckCards);
 					}

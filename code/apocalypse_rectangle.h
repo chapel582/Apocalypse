@@ -87,5 +87,17 @@ bool PointInRectangle(vector2 Point, rectangle Rectangle)
 	);
 }
 
+inline void ClampRectY(rectangle* Rectangle, float MinY, float MaxY)
+{
+	if(GetBottom(*Rectangle) < MinY)
+	{
+		SetBottom(Rectangle, MinY);
+	}
+	if(GetTop(*Rectangle) > MaxY)
+	{
+		SetTop(Rectangle, MaxY);				
+	}
+}
+
 #define APOCALYPSE_RECTANGLE_H
 #endif

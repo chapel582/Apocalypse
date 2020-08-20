@@ -9,9 +9,9 @@
 
 typedef enum
 {
-	ScrollBarHandleMouse_NoAction,
-	ScrollBarHandleMouse_Moved
-} scroll_bar_handle_mouse_code;
+	ScrollHandleMouse_NoAction,
+	ScrollHandleMouse_Moved
+} scroll_handle_mouse_code;
 
 struct scroll_bar
 {
@@ -25,7 +25,7 @@ inline void InitScrollBar(ui_context* UiContext, scroll_bar* ScrollBar)
 	ScrollBar->LastY = 0.0f;
 }
 
-scroll_bar_handle_mouse_code ScrollBoxHandleMouse(
+scroll_handle_mouse_code ScrollBoxHandleMouse(
 	rectangle* ScrollBarRect,
 	rectangle* ScrollBox,
 	game_mouse_event* MouseEvent,
@@ -33,7 +33,7 @@ scroll_bar_handle_mouse_code ScrollBoxHandleMouse(
 	float MinY, 
 	float MaxY
 );
-scroll_bar_handle_mouse_code ScrollBarHandleMouse(
+scroll_handle_mouse_code ScrollBarHandleMouse(
 	ui_context* UiContext,
 	scroll_bar* ScrollBar,
 	rectangle* Rectangle,
@@ -50,6 +50,16 @@ void PushScrollBarToRenderGroup(
 	bitmap_handle ScrollBarBitmap,
 	render_group* Group,
 	assets* Assets
+);
+scroll_handle_mouse_code ScrollHandleMouse(
+	ui_context* UiContext,
+	scroll_bar* ScrollBar,
+	rectangle* ScrollBarRect,
+	rectangle* ScrollBox,
+	game_mouse_event* MouseEvent,
+	vector2 MouseEventWorldPos,
+	float MinY, 
+	float MaxY
 );
 
 #define APOCALYPSE_SCROLL_H

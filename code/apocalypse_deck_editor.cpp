@@ -147,6 +147,7 @@ float GetAllDeckCardsHeight(deck_editor_cards* DeckCards)
 
 bool IsScrollBarInteractable(deck_editor_state* SceneState)
 {
+	// TODO: this can probably be pulled out into the scroll bar tools
 	return SceneState->DeckScrollBarRect.Dim.Y < SceneState->MaxDeckScrollBarY;
 }
 
@@ -304,6 +305,37 @@ void ScrollDeckCardPositions(
 		SceneState->DeckScrollBarTop - 
 		(FractionSeenStartFromTop * AllDeckCardsHeight)
 	);
+}
+
+void LoadDeckForEditing(
+	game_state* GameState, deck_editor_state* SceneState
+)
+{
+	loaded_deck LoadedDeck = {};
+	char DeckPath[PLATFORM_MAX_PATH];
+	FormatDeckPath(
+		DeckPath,
+		ARRAY_COUNT(DeckPath),
+		SceneState->DeckName
+	);
+	LoadedDeck = LoadDeck(DeckPath);
+	for(
+		uint32_t CardIndex = 0;
+		CardIndex < LoadedDeck.Header.CardCount;
+		CardIndex++
+	)
+	{
+		card_definition* Definition = (
+			SceneState->Definitions->Array + 
+			LoadedDeck.Ids[CardIndex]
+		);
+		AddCardToDeck(
+			GameState,
+			SceneState,
+			&SceneState->DeckCards,
+			Definition
+		);
+	}
 }
 
 void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
@@ -583,32 +615,8 @@ void UpdateAndRenderDeckEditor(
 						);
 						SceneState->DeckName[DotIndex] = 0;
 						SceneState->DeckNameSet = true;
-						// TODO: add the deck's cards to the editor
-						loaded_deck LoadedDeck = {};
-						char DeckPath[PLATFORM_MAX_PATH];
-						FormatDeckPath(
-							DeckPath,
-							ARRAY_COUNT(DeckPath),
-							SceneState->DeckName
-						);
-						LoadedDeck = LoadDeck(DeckPath);
-						for(
-							uint32_t CardIndex = 0;
-							CardIndex < LoadedDeck.Header.CardCount;
-							CardIndex++
-						)
-						{
-							card_definition* Definition = (
-								SceneState->Definitions->Array + 
-								LoadedDeck.Ids[CardIndex]
-							);
-							AddCardToDeck(
-								GameState,
-								SceneState,
-								&SceneState->DeckCards,
-								Definition
-							);
-						}
+						LoadDeckForEditing(GameState, SceneState);
+						
 						break;
 					}
 					else
@@ -767,6 +775,43 @@ void UpdateAndRenderDeckEditor(
 				if(KeyboardResult == TextInputKbResult_Submit)
 				{
 					SceneState->DeckNameSet = true;
+
+					char* CurrentDeckName = SceneState->DeckNames;
+					flat_string_array_reader FlatArrayReader;
+					InitFlatStringArrayReader(
+						&FlatArrayReader,
+						CurrentDeckName,
+						SceneState->DeckNamesSize
+					);
+					for(
+						uint32_t ButtonIndex = 0;
+						ButtonIndex < ARRAY_COUNT(SceneState->LoadDeckButtons);
+						ButtonIndex++
+					)
+					{
+						if(CurrentDeckName == NULL)
+						{
+							break;
+						}
+
+						uint32_t StopAt = FindIndex(
+							CurrentDeckName, '.', FlatArrayReader.BytesRemaining
+						);
+
+						if(
+							StartsWith(
+								SceneState->DeckName, CurrentDeckName, StopAt
+							)
+						)
+						{
+							// NOTE: the name the user typed in is already a 
+							// CONT: deck. load that deck
+							LoadDeckForEditing(GameState, SceneState);
+							break;
+						}
+
+						CurrentDeckName = GetNextString(&FlatArrayReader);
+					}
 				}
 			}
 

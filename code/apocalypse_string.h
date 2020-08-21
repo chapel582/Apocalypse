@@ -161,6 +161,23 @@ uint32_t FindIndex(char* String, char Character, uint32_t BufferSize)
 	return Index;
 }
 
+bool StartsWith(char* String, char* Starter, uint32_t MaxSize)
+{
+	for(uint32_t Index = 0; Index < MaxSize; Index++)
+	{
+		if(*String != *Starter)
+		{
+			return false;
+		}
+		else if(*String == 0)
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
 #define APOCALYPSE_STRING_H
 
 #endif

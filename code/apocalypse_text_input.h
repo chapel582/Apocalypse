@@ -9,8 +9,15 @@
 typedef enum
 {
 	TextInputKbResult_NoAction,
+	TextInputKbResult_TextChanged,
 	TextInputKbResult_Submit	
 } text_input_kb_result;
+
+typedef enum
+{
+	TextInputUpdate_NoAction,
+	TextInputUpdate_TextChanged
+} text_input_update_result;
 
 typedef enum 
 {
@@ -75,6 +82,13 @@ inline void ClearAllFlags(text_input* TextInput)
 	TextInput->Flags = 0;
 }
 
+void InitTextInput(
+	ui_context* UiContext,
+	text_input* TextInput,
+	float FontHeight,
+	char* Buffer,
+	uint32_t BufferSize
+);
 text_input_kb_result TextInputHandleKeyboard(
 	ui_context* UiContext,
 	text_input* TextInput,
@@ -87,7 +101,7 @@ void TextInputHandleMouse(
 	game_mouse_event* MouseEvent,
 	vector2 MouseEventWorldPos
 );
-void UpdateTextInput(
+text_input_update_result UpdateTextInput(
 	ui_context* UiContext, text_input* TextInput, float DtForFrame
 );
 void PushTextInput(

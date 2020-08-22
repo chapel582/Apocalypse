@@ -1,5 +1,26 @@
 #include "apocalypse_text_input.h"
 
+void InitTextInput(
+	ui_context* UiContext,
+	text_input* TextInput,
+	float FontHeight,
+	char* Buffer,
+	uint32_t BufferSize
+)
+{
+	*TextInput = {};
+	ClearAllFlags(TextInput);
+	TextInput->UiId = GetId(UiContext);
+	TextInput->CursorPos = 0;
+	TextInput->FontHeight = FontHeight;
+	TextInput->BufferSize = BufferSize;
+	TextInput->Buffer = Buffer;
+	TextInput->RepeatDelay = 1.0f;
+	TextInput->RepeatPeriod = 0.05f;
+	TextInput->CursorColor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	TextInput->CursorAlphaState = CursorAlphaState_Decreasing;
+}
+
 void AddLetterToTextInput(text_input* TextInput)
 {
 	TextInput->Buffer[TextInput->CursorPos] = TextInput->CharDown;
@@ -113,6 +134,7 @@ text_input_kb_result TextInputHandleKeyboard(
 			PressAndHoldKeyboardEvent(
 				TextInput, Backspace, KeyboardEvent, KeyboardEvent->Code
 			);
+			Result = TextInputKbResult_TextChanged;
 			break;
 		}
 		case(0x09):
@@ -152,6 +174,7 @@ text_input_kb_result TextInputHandleKeyboard(
 				KeyboardEvent,
 				KeyboardEvent->Code
 			);
+			Result = TextInputKbResult_TextChanged;
 			break;
 		}
 		case(0x25):
@@ -196,6 +219,7 @@ text_input_kb_result TextInputHandleKeyboard(
 				KeyboardEvent,
 				KeyboardEvent->Code
 			);
+			Result = TextInputKbResult_TextChanged;
 			break;
 		}
 		case(0x41):
@@ -239,6 +263,7 @@ text_input_kb_result TextInputHandleKeyboard(
 			PressAndHoldKeyboardEvent(
 				TextInput, AddLetterToTextInput, KeyboardEvent, Letter
 			);
+			Result = TextInputKbResult_TextChanged;
 			break;
 		}
 		case(0x7F):
@@ -254,13 +279,14 @@ end:
 	return Result;
 }
 
-void UpdateTextInput(
+text_input_update_result UpdateTextInput(
 	ui_context* UiContext, text_input* TextInput, float DtForFrame
 )
 {
+	text_input_update_result Result = TextInputUpdate_NoAction;
 	if(!IsActive(UiContext, TextInput->UiId))
 	{
-		return;
+		return Result;
 	}
 
 	float Period = 1.0f;
@@ -291,6 +317,7 @@ void UpdateTextInput(
 			TextInput->RepeatCallback(TextInput);
 			ClearFlag(TextInput, TextInput_CharDownDelay);
 			SetFlag(TextInput, TextInput_CharDown);
+			Result = TextInputUpdate_TextChanged;
 		}
 	}
 	else if(CheckFlag(TextInput, TextInput_CharDown))
@@ -299,9 +326,12 @@ void UpdateTextInput(
 		{
 			TextInput->RepeatTimer = 0.0f;
 			TextInput->RepeatCallback(TextInput);
+			Result = TextInputUpdate_TextChanged;			
 		}
 	}
 	TextInput->RepeatTimer += DtForFrame;
+
+	return Result;
 }
 
 void PushCursor(

@@ -44,10 +44,12 @@ struct load_deck_button
 struct deck_editor_state
 {
 	card_definitions* Definitions;
+	card_definition** SortedDefinitions;
 
-	// NOTE: collection card stuff
+	// NOTE: collection card stuff	
 	collection_card CollectionCards[COLLECTION_CARDS_DISPLAYED];
 	int32_t CollectionStartIndex;
+	int32_t BrowseStartIndex;
 	uint32_t NumRows;
 	uint32_t NumCols;
 	vector2 CollectionCardDim;
@@ -56,6 +58,11 @@ struct deck_editor_state
 	float XMargin;
 	float YMargin;
 
+	char* SearchingFor;
+	text_input SearchCollection;
+	rectangle SearchCollectionRectangle;
+	bool CollectionSorted;
+	
 	deck_editor_cards DeckCards;
 	
 	text_input DeckNameInput;

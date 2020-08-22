@@ -32,6 +32,7 @@
 #include "apocalypse_info_card.cpp"
 #include "apocalypse_alert.cpp"
 #include "apocalypse_scroll.cpp"
+#include "apocalypse_sequence_alignment.cpp"
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"

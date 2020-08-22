@@ -5,6 +5,7 @@
 #include "apocalypse_card_definitions.h"
 #include "apocalypse_deck_storage.h"
 #include "apocalypse_render_group.h"
+#include "apocalypse_sequence_alignment.h"
 
 void SaveEditableDeck(
 	game_state* GameState,
@@ -338,6 +339,98 @@ void LoadDeckForEditing(
 	}
 }
 
+void SortCollection(
+	deck_editor_state* SceneState,
+	char* SearchingFor,
+	card_definitions* Definitions,
+	card_definition** SortedDefinitions,
+	memory_arena* FrameArena
+)
+{
+	if(!SceneState->CollectionSorted)
+	{
+		SceneState->BrowseStartIndex = SceneState->CollectionStartIndex;
+	}
+	SceneState->CollectionStartIndex = 0;
+
+	float* DefinitionSortKeys = PushArray(
+		FrameArena, Definitions->NumCards, float
+	);
+	float* ScoreMemory = AllocScoreMemory(
+		FrameArena, CARD_NAME_SIZE, CARD_NAME_SIZE
+	);
+	float MaxScore = 0.0f;
+	for(uint32_t CardIndex = 0; CardIndex < Definitions->NumCards; CardIndex++)
+	{
+		card_definition* Definition = Definitions->Array + CardIndex;
+		SortedDefinitions[CardIndex] = Definition;
+		float AlignmentScore = SequenceAlignmentScore(
+			SearchingFor,
+			CARD_NAME_SIZE,
+			Definition->Name,
+			CARD_NAME_SIZE,
+			ScoreMemory
+		);
+		if(AlignmentScore > MaxScore)
+		{
+			MaxScore = AlignmentScore;
+		}
+		DefinitionSortKeys[CardIndex] = AlignmentScore;
+	}
+	// NOTE: subtract off MaxScore if the first character we're searching for 
+	// CONT: matches the first character in the name. we basically assume the 
+	// CONT: user gets the first character correct 
+	for(uint32_t CardIndex = 0; CardIndex < Definitions->NumCards; CardIndex++)
+	{
+		card_definition* Definition = Definitions->Array + CardIndex;
+		SortedDefinitions[CardIndex] = Definition;
+		if(Lower(SearchingFor[0]) == Lower(Definition->Name[0]))
+		{
+			DefinitionSortKeys[CardIndex] -= MaxScore;
+		}
+	}
+
+	bool Sorted;
+	do
+	{
+		Sorted = true;
+		for(
+			uint32_t CardIndex = 0;
+			CardIndex < Definitions->NumCards - 1;
+			CardIndex++
+		)
+		{
+			float OldFirst = DefinitionSortKeys[CardIndex];
+			float OldSecond = DefinitionSortKeys[CardIndex + 1];
+
+			if(OldFirst > OldSecond)
+			{
+				DefinitionSortKeys[CardIndex] = OldSecond;
+				DefinitionSortKeys[CardIndex + 1] = OldFirst;
+				
+				card_definition* OldFirstDefinition = (
+					SortedDefinitions[CardIndex]
+				);
+				card_definition* OldSecondDefintion = (
+					SortedDefinitions[CardIndex + 1]
+				);
+
+				SortedDefinitions[CardIndex] = OldSecondDefintion;
+				SortedDefinitions[CardIndex + 1] = OldFirstDefinition;
+				Sorted = false;
+			}
+		}
+	} while(!Sorted);
+
+	SceneState->CollectionSorted = true;
+}
+
+void RestoreBrowsing(deck_editor_state* SceneState)
+{
+	SceneState->CollectionStartIndex = SceneState->BrowseStartIndex;
+	SceneState->CollectionSorted = false;
+}
+
 void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 {
 	ResetMemArena(&GameState->TransientArena);
@@ -418,6 +511,31 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	}
 	SceneState->CollectionStartIndex = 0;
 
+	SceneState->SortedDefinitions = PushArray(
+		&GameState->TransientArena,
+		SceneState->Definitions->NumCards,
+		card_definition* 
+	);
+	SceneState->SearchingFor = PushArray(
+		&GameState->TransientArena, CARD_NAME_SIZE, char
+	);
+	memset(SceneState->SearchingFor, 0, CARD_NAME_SIZE * sizeof(char));
+	InitTextInput(
+		UiContext,
+		&SceneState->SearchCollection,
+		20.0f,
+		SceneState->SearchingFor,
+		CARD_NAME_SIZE
+	);
+	vector2 TempDim = Vector2(
+		BackBuffer->Width / 5.0f, SceneState->SearchCollection.FontHeight
+	);
+	SceneState->SearchCollectionRectangle = MakeRectangleCentered(
+		Vector2(TempDim.X / 2.0f, BackBuffer->Height / 2.0f),
+		TempDim	
+	);
+	SceneState->CollectionSorted = false;
+
 	vector2 BrowseCollectionButtonDim = Vector2(
 		XOffset - 2 * XMargin, NumRows * (YMargin + Dim.Y)
 	);
@@ -445,27 +563,23 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	SceneState->DeckName = PushArray(
 		&GameState->TransientArena, SceneState->DeckNameBufferSize, char
 	);
+	memset(
+		SceneState->DeckName, 0, SceneState->DeckNameBufferSize * sizeof(char)
+	);
 	SceneState->DeckNameSet = false;
 
-	text_input* TextInput = &SceneState->DeckNameInput;
-	{
-		*TextInput = {};
-		ClearAllFlags(TextInput);
-		TextInput->UiId = GetId(UiContext);
-		TextInput->CursorPos = 0;
-		TextInput->FontHeight = 20.0f;
-		TextInput->BufferSize = SceneState->DeckNameBufferSize;
-		TextInput->Buffer = SceneState->DeckName;
-		TextInput->RepeatDelay = 1.0f;
-		TextInput->RepeatPeriod = 0.05f;
-		TextInput->CursorColor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-		TextInput->CursorAlphaState = CursorAlphaState_Decreasing;
-	}
+	InitTextInput(
+		UiContext,
+		&SceneState->DeckNameInput,
+		20.0f,
+		SceneState->DeckName,
+		SceneState->DeckNameBufferSize
+	);
 	SceneState->DeckNameInputRectangle = MakeRectangleCentered(
 		Vector2(BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f),
-		Vector2(BackBuffer->Width / 5.0f, TextInput->FontHeight)
+		Vector2(BackBuffer->Width / 5.0f, SceneState->DeckNameInput.FontHeight)
 	);
-	SetActive(UiContext, TextInput->UiId);
+	SetActive(UiContext, SceneState->DeckNameInput.UiId);
 
 	SceneState->DeckNamesSize = PLATFORM_MAX_PATH * MAX_DECKS_SAVED;
 	SceneState->DeckNames = PushArray(
@@ -751,7 +865,15 @@ void UpdateAndRenderDeckEditor(
 					{
 						ScrollDeckCardPositions(SceneState, DeckCards);
 					}
-				}				
+				}
+
+				TextInputHandleMouse(
+					UiContext,
+					&SceneState->SearchCollection,
+					SceneState->SearchCollectionRectangle,
+					MouseEvent,
+					MouseEventWorldPos
+				);
 			}
 
 			UserEventIndex++;
@@ -769,48 +891,87 @@ void UpdateAndRenderDeckEditor(
 
 			if(KeyboardEvent->IsDown != KeyboardEvent->WasDown)
 			{
-				text_input_kb_result KeyboardResult = TextInputHandleKeyboard(
-					UiContext, &SceneState->DeckNameInput, KeyboardEvent
-				);
-				if(KeyboardResult == TextInputKbResult_Submit)
-				{
-					SceneState->DeckNameSet = true;
-
-					char* CurrentDeckName = SceneState->DeckNames;
-					flat_string_array_reader FlatArrayReader;
-					InitFlatStringArrayReader(
-						&FlatArrayReader,
-						CurrentDeckName,
-						SceneState->DeckNamesSize
+				if(!SceneState->DeckNameSet)
+				{		
+					text_input_kb_result KeyboardResult = (
+						TextInputHandleKeyboard(
+							UiContext, &SceneState->DeckNameInput, KeyboardEvent
+						)
 					);
-					for(
-						uint32_t ButtonIndex = 0;
-						ButtonIndex < ARRAY_COUNT(SceneState->LoadDeckButtons);
-						ButtonIndex++
-					)
+					if(KeyboardResult == TextInputKbResult_Submit)
 					{
-						if(CurrentDeckName == NULL)
-						{
-							break;
-						}
+						SceneState->DeckNameSet = true;
 
-						uint32_t StopAt = FindIndex(
-							CurrentDeckName, '.', FlatArrayReader.BytesRemaining
+						char* CurrentDeckName = SceneState->DeckNames;
+						flat_string_array_reader FlatArrayReader;
+						InitFlatStringArrayReader(
+							&FlatArrayReader,
+							CurrentDeckName,
+							SceneState->DeckNamesSize
 						);
-
-						if(
-							StartsWith(
-								SceneState->DeckName, CurrentDeckName, StopAt
-							)
+						for(
+							uint32_t ButtonIndex = 0;
+							(
+								ButtonIndex < 
+								ARRAY_COUNT(SceneState->LoadDeckButtons)
+							);
+							ButtonIndex++
 						)
 						{
-							// NOTE: the name the user typed in is already a 
-							// CONT: deck. load that deck
-							LoadDeckForEditing(GameState, SceneState);
-							break;
-						}
+							if(CurrentDeckName == NULL)
+							{
+								break;
+							}
 
-						CurrentDeckName = GetNextString(&FlatArrayReader);
+							uint32_t StopAt = FindIndex(
+								CurrentDeckName, 
+								'.', 
+								FlatArrayReader.BytesRemaining
+							);
+
+							if(
+								StartsWith(
+									SceneState->DeckName,
+									CurrentDeckName,
+									StopAt
+								)
+							)
+							{
+								// NOTE: the name the user typed in is already 
+								// CONT: a deck. load that deck
+								LoadDeckForEditing(GameState, SceneState);
+								break;
+							}
+
+							CurrentDeckName = GetNextString(&FlatArrayReader);
+						}
+					}
+				}
+				else
+				{
+					text_input_kb_result KeyboardResult = (
+						TextInputHandleKeyboard(
+							UiContext,
+							&SceneState->SearchCollection,
+							KeyboardEvent
+						)
+					);
+					if(KeyboardResult == TextInputKbResult_TextChanged)
+					{
+						if(strlen(SceneState->SearchingFor) > 0)
+						{
+							SortCollection(
+								SceneState,
+								SceneState->SearchingFor,
+								SceneState->Definitions,
+								SceneState->SortedDefinitions,
+								&GameState->FrameArena
+							);
+						}
+						else
+						{
+							RestoreBrowsing(SceneState);
+						}
 					}
 				}
 			}
@@ -819,7 +980,34 @@ void UpdateAndRenderDeckEditor(
 		}
 	}
 
-	UpdateTextInput(UiContext, &SceneState->DeckNameInput, DtForFrame);
+	if(!SceneState->DeckNameSet)
+	{
+		UpdateTextInput(UiContext, &SceneState->DeckNameInput, DtForFrame);
+	}
+	else
+	{
+		text_input_update_result UpdateResult = UpdateTextInput(
+			UiContext, &SceneState->SearchCollection, DtForFrame
+		);
+
+		if(UpdateResult == TextInputUpdate_TextChanged)
+		{
+			if(strlen(SceneState->SearchingFor) > 0)
+			{
+				SortCollection(
+					SceneState,
+					SceneState->SearchingFor,
+					SceneState->Definitions,
+					SceneState->SortedDefinitions,
+					&GameState->FrameArena
+				);
+			}
+			else
+			{
+				RestoreBrowsing(SceneState);
+			}
+		}
+	}
 
 	render_group* DefaultRenderGroup = &GameState->RenderGroup;
 	assets* Assets = &GameState->Assets;
@@ -907,52 +1095,105 @@ void UpdateAndRenderDeckEditor(
 		);
 
 		// NOTE: push collection cards
-		collection_card* CollectionCards = SceneState->CollectionCards;
-		uint32_t CollectionStartIndex = SceneState->CollectionStartIndex;
-		card_definitions* Definitions = SceneState->Definitions;
-		for(
-			uint32_t Index = 0;
-			Index < ARRAY_COUNT(SceneState->CollectionCards);
-			Index++
-		)
+		if(!SceneState->CollectionSorted)
 		{
-			collection_card* CollectionCard = CollectionCards + Index;
-			uint32_t CollectionIndex = CollectionStartIndex + Index;
-			if(CollectionIndex < Definitions->NumCards)
+			collection_card* CollectionCards = SceneState->CollectionCards;
+			uint32_t CollectionStartIndex = SceneState->CollectionStartIndex;
+			card_definitions* Definitions = SceneState->Definitions;
+			for(
+				uint32_t Index = 0;
+				Index < ARRAY_COUNT(SceneState->CollectionCards);
+				Index++
+			)
 			{
-				card_definition* Definition = (
-					Definitions->Array + CollectionIndex
-				);
-				PushButtonToRenderGroup(
-					CollectionCard->Button.Rectangle,
-					BitmapHandle_TestCard2,
-					DefaultRenderGroup,
-					Assets, 
-					Definition->Name,
-					sizeof(Definition->Name),
-					FontHandle_TestFont,
-					12.0f,
-					Black,
-					&GameState->FrameArena
-				);
-
-				if(IsHot(UiContext, CollectionCard->Button.Id))
+				collection_card* CollectionCard = CollectionCards + Index;
+				uint32_t CollectionIndex = CollectionStartIndex + Index;
+				if(CollectionIndex < Definitions->NumCards)
 				{
-					PushInfoCard(
-						DefaultRenderGroup,
-						Assets,
-						SceneState->InfoCardCenter,
-						SceneState->InfoCardXBound,
-						SceneState->InfoCardYBound,
-						White,
-						&GameState->FrameArena,
-						Definition,
-						-1
+					card_definition* Definition = (
+						Definitions->Array + CollectionIndex
 					);
+					PushButtonToRenderGroup(
+						CollectionCard->Button.Rectangle,
+						BitmapHandle_TestCard2,
+						DefaultRenderGroup,
+						Assets, 
+						Definition->Name,
+						sizeof(Definition->Name),
+						FontHandle_TestFont,
+						12.0f,
+						Black,
+						&GameState->FrameArena
+					);
+
+					if(IsHot(UiContext, CollectionCard->Button.Id))
+					{
+						PushInfoCard(
+							DefaultRenderGroup,
+							Assets,
+							SceneState->InfoCardCenter,
+							SceneState->InfoCardXBound,
+							SceneState->InfoCardYBound,
+							White,
+							&GameState->FrameArena,
+							Definition,
+							-1
+						);
+					}
 				}
 			}
 		}
+		else
+		{
+			uint32_t TotalDefined = SceneState->Definitions->NumCards;
+			collection_card* CollectionCards = SceneState->CollectionCards;
+			uint32_t CollectionStartIndex = SceneState->CollectionStartIndex;
+			card_definition** Definitions = SceneState->SortedDefinitions;
+			for(
+				uint32_t Index = 0;
+				Index < ARRAY_COUNT(SceneState->CollectionCards);
+				Index++
+			)
+			{
+				collection_card* CollectionCard = CollectionCards + Index;
+				uint32_t CollectionIndex = CollectionStartIndex + Index;
+				if(CollectionIndex < TotalDefined)
+				{
+					card_definition* Definition = *(
+						Definitions + CollectionIndex
+					);
 
+					PushButtonToRenderGroup(
+						CollectionCard->Button.Rectangle,
+						BitmapHandle_TestCard2,
+						DefaultRenderGroup,
+						Assets, 
+						Definition->Name,
+						sizeof(Definition->Name),
+						FontHandle_TestFont,
+						12.0f,
+						Black,
+						&GameState->FrameArena
+					);
+
+					if(IsHot(UiContext, CollectionCard->Button.Id))
+					{
+						PushInfoCard(
+							DefaultRenderGroup,
+							Assets,
+							SceneState->InfoCardCenter,
+							SceneState->InfoCardXBound,
+							SceneState->InfoCardYBound,
+							White,
+							&GameState->FrameArena,
+							Definition,
+							-1
+						);
+					}
+				}
+			}	
+		}
+		
 		// NOTE: push deck cards
 		{
 			char Buffer[128];
@@ -1068,6 +1309,18 @@ void UpdateAndRenderDeckEditor(
 				Assets
 			);
 		}
+
+		PushTextInput(
+			UiContext,
+			&SceneState->SearchCollection,
+			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+			SceneState->SearchCollectionRectangle,
+			BitmapHandle_TestCard2,
+			Vector4(0.0f, 0.0f, 0.0f, 1.0f),
+			Assets,
+			DefaultRenderGroup,
+			&GameState->FrameArena
+		);
 	}
 
 	PushCenteredAlert(&SceneState->Alert, GameState, BackBuffer);

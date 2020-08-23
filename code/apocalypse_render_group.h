@@ -116,7 +116,10 @@ typedef enum
 struct push_text_result
 {
 	push_text_result_code Code;
-	vector2 Offset;
+	vector2 Offset; 
+	// NOTE: a vector to the screen offset just past the last character
+	// CONT: this could be used for something like the blinking cursor for text
+	// CONT: editors
 };
 
 #define APOCALYPSE_RENDER_GROUP_H

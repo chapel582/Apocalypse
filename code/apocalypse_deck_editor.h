@@ -96,6 +96,8 @@ struct deck_editor_state
 	rectangle DeckScrollBox;
 	float DeckScrollBarTop;
 	float MaxDeckScrollBarY;
+
+	vector2 CardCountPos;
 };
 
 void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer);

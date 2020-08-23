@@ -41,7 +41,7 @@ void SaveEditableDeck(
 	DisplayMessageFor(GameState, Alert, "Saved Deck", 1.0f);
 }
 
-uint32_t GetCardsInDeck(deck_editor_cards* DeckCards)
+uint32_t GetNumCardsInDeck(deck_editor_cards* DeckCards)
 {
 	uint32_t CardsInDeck = 0;
 	for(int Index = 0; Index < MAX_CARDS_IN_DECK; Index++)
@@ -201,7 +201,7 @@ void AddCardToDeck(
 	card_definition* Definition
 )
 {
-	if(GetCardsInDeck(DeckCards) >= MAX_CARDS_IN_DECK)
+	if(GetNumCardsInDeck(DeckCards) >= MAX_CARDS_IN_DECK)
 	{
 		DisplayMessageFor(
 			GameState,
@@ -608,18 +608,18 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	vector2 SaveButtonDim = Vector2(
 		1.5f * SceneState->DeckCards.Dim.X, SceneState->DeckCards.Dim.Y
 	);
-	rectangle SaveButtonRectangle = MakeRectangle(
-		Vector2(SceneState->DeckCards.XPos - SaveButtonDim.X, 0.0f),
-		SaveButtonDim
+	vector2 SaveButtonPos = Vector2(
+		SceneState->DeckCards.XPos - SaveButtonDim.X, 0.0f
 	);
-	InitButton(
-		UiContext,
-		&SceneState->SaveButton, 
-		SaveButtonRectangle
+	rectangle SaveButtonRect = MakeRectangle(SaveButtonPos, SaveButtonDim);
+	InitButton(UiContext, &SceneState->SaveButton, SaveButtonRect);
+
+	SceneState->CardCountPos = Vector2(
+		GetCenter(SaveButtonRect).X, (float) BackBuffer->Height - 30.0f
 	);
 
 	SceneState->DeckNamePos = (
-		GetTopLeft(SaveButtonRectangle) + Vector2(0.0f, 3.0f)
+		GetTopLeft(SaveButtonRect) + Vector2(0.0f, 3.0f)
 	); 
 
 	SceneState->InfoCardCenter = Vector2(
@@ -900,7 +900,7 @@ void UpdateAndRenderDeckEditor(
 						break;
 					}
 				}
-				
+
 				if(!SceneState->DeckNameSet)
 				{		
 					text_input_kb_result KeyboardResult = (
@@ -1331,6 +1331,27 @@ void UpdateAndRenderDeckEditor(
 			DefaultRenderGroup,
 			&GameState->FrameArena
 		);
+
+		// NOTE: push the number of cards that are currently in the deck vs. the
+		// CONT: max number
+		{
+			uint32_t NumCards = GetNumCardsInDeck(&SceneState->DeckCards);
+			char Buffer[32];
+			snprintf(
+				Buffer, sizeof(Buffer), "%d / %d", NumCards, MAX_CARDS_IN_DECK
+			);
+			PushTextCentered(
+				DefaultRenderGroup,
+				Assets,
+				FontHandle_TestFont,
+				Buffer,
+				sizeof(Buffer),
+				30.0f, 
+				SceneState->CardCountPos,
+				Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+				&GameState->FrameArena 
+			);
+		}
 	}
 
 	PushCenteredAlert(&SceneState->Alert, GameState, BackBuffer);

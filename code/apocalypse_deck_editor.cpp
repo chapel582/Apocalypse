@@ -891,6 +891,16 @@ void UpdateAndRenderDeckEditor(
 
 			if(KeyboardEvent->IsDown != KeyboardEvent->WasDown)
 			{
+				// NOTE: :common keyboard actions across all states
+				switch(KeyboardEvent->Code)
+				{
+					case(0x1B): // NOTE: Escape V-code
+					{
+						GameState->Scene = SceneType_MainMenu; 
+						break;
+					}
+				}
+				
 				if(!SceneState->DeckNameSet)
 				{		
 					text_input_kb_result KeyboardResult = (

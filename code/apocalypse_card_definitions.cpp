@@ -261,6 +261,55 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 1, 0);
 	SetName(Definition, "Test17", sizeof("Test17"));
 
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 1, 1);
+	InitPlayerResource(&Definition->PlayDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 1, 0);
+	SetName(Definition, "Description Test", sizeof("Description Test"));
+	SetDescription(Definition, "Hit 'em hard", sizeof("Hit 'em hard"));
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 0, 1);
+	InitPlayerResource(&Definition->PlayDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_One], 1, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_Two], 1, 0, 0, 0, 0);
+	SetName(Definition, "Red Land", sizeof("Red Land"));
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 0, 1);
+	InitPlayerResource(&Definition->PlayDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 1, 0, 0, 0);
+	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 1, 0, 0, 0);
+	SetName(Definition, "Green Land", sizeof("Green Land"));
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 0, 1);
+	InitPlayerResource(&Definition->PlayDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 1, 0, 0);
+	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 1, 0, 0);
+	SetName(Definition, "Blue Land", sizeof("Blue Land"));
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 0, 1);
+	InitPlayerResource(&Definition->PlayDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 1, 0);
+	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 1, 0);
+	SetName(Definition, "White Land", sizeof("White Land"));
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 0, 1);
+	InitPlayerResource(&Definition->PlayDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 1);
+	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 0, 1);
+	SetName(Definition, "Black Land", sizeof("Black Land"));
+
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;
 	

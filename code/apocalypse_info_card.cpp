@@ -52,6 +52,7 @@ void PushInfoCard(
 	int16_t Health,
 	player_resources* PlayDelta,
 	player_resources* TapDelta,
+	char* Description,
 	int32_t TapsRemaining
 )
 {
@@ -97,6 +98,8 @@ void PushInfoCard(
 		AppendToString(&StringAppender, "TapsLeft: %d\n", TapsRemaining);
 	}
 
+	AppendToString(&StringAppender, "%s\n", Description);
+
 	vector2 TopLeft = (
 		InfoCardCenter - 0.5f * InfoCardXBound + 0.5f * InfoCardYBound
 	);
@@ -138,6 +141,7 @@ inline void PushInfoCard(
 		Definition->Health,
 		Definition->PlayDelta,
 		Definition->TapDelta,
+		Definition->Description,
 		TapsRemaining
 	);
 }

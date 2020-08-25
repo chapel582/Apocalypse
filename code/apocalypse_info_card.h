@@ -19,9 +19,9 @@ void PushInfoCard(
 	int16_t Health,
 	player_resources* PlayDelta,
 	player_resources* TapDelta,
+	char* Description,
 	int32_t TapsRemaining
 );
-
 void PushInfoCard(
 	render_group* RenderGroup,
 	assets* Assets,

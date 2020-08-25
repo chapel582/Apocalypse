@@ -7,6 +7,7 @@
 #include <string.h>
 
 #define CARD_NAME_SIZE 64
+#define CARD_DESCRIPTION_SIZE 128
 struct card_definition
 {
 	uint32_t Id;
@@ -16,6 +17,7 @@ struct card_definition
 	int16_t Attack;
 	int16_t Health;
 	char Name[CARD_NAME_SIZE];
+	char Description[CARD_DESCRIPTION_SIZE];
 };
 
 struct card_definitions
@@ -32,6 +34,7 @@ inline void InitCard(
 	int16_t Health
 )
 {
+	*Card = {};
 	Card->Id = Id;
 	Card->TapsAvailable = TapsAvailable;
 	Card->Attack = Attack;
@@ -40,8 +43,21 @@ inline void InitCard(
 
 inline void SetName(card_definition* Definition, char* Name, uint32_t NameSize)
 {
-	memset(Definition->Name, 0, NameSize);
-	memcpy(Definition->Name, Name, NameSize);
+	// TODO: replace with memcpy_s
+	memcpy_s(Definition->Name, CARD_NAME_SIZE, Name, NameSize);
+}
+
+inline void SetDescription(
+	card_definition* Definition, char* Description, uint32_t DescriptionSize
+)
+{
+	// TODO: replace with memcpy_s
+	memcpy_s(
+		Definition->Description,
+		CARD_DESCRIPTION_SIZE,
+		Description,
+		DescriptionSize
+	);
 }
 
 card_definitions* DefineCards(memory_arena* MemoryArena);

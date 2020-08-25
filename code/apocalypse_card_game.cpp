@@ -572,6 +572,8 @@ void UpdateAndRenderCardGame(
 						PointInRectangle(MouseEventWorldPos, Card->Rectangle)
 					)
 					{
+						card* SelectedCard = SceneState->SelectedCard;
+
 						// NOTE: player clicked their own card on their turn 
 						if(Card->Owner == SceneState->CurrentTurn)
 						{
@@ -600,7 +602,7 @@ void UpdateAndRenderCardGame(
 							}
 							else if(Card->SetType == CardSet_Tableau)
 							{
-								if(SceneState->SelectedCard == NULL)
+								if(SelectedCard == NULL)
 								{
 									if(Card->TimesTapped < Card->TapsAvailable)
 									{
@@ -627,9 +629,21 @@ void UpdateAndRenderCardGame(
 								}
 								else
 								{
-									if(SceneState->SelectedCard == Card)
+									if(SelectedCard == Card)
 									{
-										DeselectCard(SceneState);
+										// NOTE: We may want to have a more 
+										// CONT: specific check than this
+										if(SelectedCard->Attack == 0)
+										{
+											player_id Owner = SelectedCard->Owner;
+											DeselectCard(SceneState);
+											CheckAndActivate(
+												&SceneState->PlayerResources[Owner], 
+												&SelectedCard->TapDelta[Owner],
+												SelectedCard
+											);
+											SelectedCard->TimesTapped++;
+										}
 									}
 									else
 									{
@@ -648,16 +662,15 @@ void UpdateAndRenderCardGame(
 						else
 						{
 							if(
-								SceneState->SelectedCard && 
+								SelectedCard != NULL && 
 								Card->SetType == CardSet_Tableau
 							)
 							{
-								card* SelectedCard = SceneState->SelectedCard;
 								player_id Owner = SelectedCard->Owner;
 								CheckAndActivate(
 									&SceneState->PlayerResources[Owner], 
 									&SelectedCard->TapDelta[Owner],
-									SceneState->SelectedCard
+									SelectedCard
 								);
 								SelectedCard->TimesTapped++;
 								DeselectCard(SceneState);
@@ -667,6 +680,13 @@ void UpdateAndRenderCardGame(
 						}
 					}
 					Card++;
+				}
+			}
+			else if(MouseEvent->Type == SecondaryUp)
+			{
+				if(SceneState->SelectedCard != NULL)
+				{
+					DeselectCard(SceneState);
 				}
 			}
 			else if(MouseEvent->Type == MouseMove)
@@ -886,6 +906,7 @@ void UpdateAndRenderCardGame(
 						Card->Health,
 						Card->PlayDelta,
 						Card->TapDelta,
+						Card->Definition->Name,
 						Card->TapsAvailable - Card->TimesTapped
 					);
 				}

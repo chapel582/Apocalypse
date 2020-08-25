@@ -742,6 +742,10 @@ void UpdateAndRenderDeckEditor(
 			else
 			{
 				button_handle_event_result Result;
+				card_definitions* Definitions = SceneState->Definitions;
+				card_definition** SortedDefinitions = (
+					SceneState->SortedDefinitions
+				);
 				for(
 					uint32_t Index = 0;
 					Index < ARRAY_COUNT(SceneState->CollectionCards);
@@ -755,7 +759,7 @@ void UpdateAndRenderDeckEditor(
 					uint32_t CollectionIndex = (
 						SceneState->CollectionStartIndex + Index
 					);
-					if(CollectionIndex < SceneState->Definitions->NumCards)
+					if(CollectionIndex < Definitions->NumCards)
 					{
 						Result = ButtonHandleEvent(
 							UiContext,
@@ -765,9 +769,19 @@ void UpdateAndRenderDeckEditor(
 						);
 						if(Result == ButtonHandleEvent_TakeAction)
 						{
-							card_definition* Definition = (
-								SceneState->Definitions->Array + CollectionIndex
-							);
+							card_definition* Definition;
+							if(!SceneState->CollectionSorted)
+							{
+								Definition = (
+									Definitions->Array + CollectionIndex
+								);
+							}
+							else
+							{
+								Definition = *(
+									SortedDefinitions + CollectionIndex
+								);
+							}
 							AddCardToDeck(
 								GameState,
 								SceneState,

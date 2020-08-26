@@ -162,15 +162,17 @@ struct card_game_state
 	alert Alert;
 	card_definitions* Definitions;
 	float CardWidth;
-	float CardHeight;	
+	float CardHeight;
 };
 
-struct start_game_args
+struct start_card_game_args
 {
-	game_state* GameState;
-	game_offscreen_buffer* BackBuffer;
+	loaded_deck P1Deck;
+	loaded_deck P2Deck;
 };
-void StartCardGameCallback(void* Data);
+void StartCardGamePrep(
+	game_state* GameState, char* P1DeckName, char* P2DeckName
+);
 
 #define APOCALYPSE_CARD_GAME_H
 #endif

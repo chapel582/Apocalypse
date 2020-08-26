@@ -35,16 +35,14 @@ struct deck_editor_cards
 	uint32_t ActiveButtons;
 };
 
-struct load_deck_button
-{
-	ui_id UiId;
-};
-
 #define COLLECTION_CARDS_DISPLAYED 8
 struct deck_editor_state
 {
 	card_definitions* Definitions;
 	card_definition** SortedDefinitions;
+
+	char* DeckName;
+	uint32_t DeckNameBufferSize;
 
 	// NOTE: collection card stuff	
 	collection_card CollectionCards[COLLECTION_CARDS_DISPLAYED];
@@ -64,21 +62,8 @@ struct deck_editor_state
 	bool CollectionSorted;
 	
 	deck_editor_cards DeckCards;
-	
-	text_input DeckNameInput;
-	rectangle DeckNameInputRectangle;
-	char* DeckName;
-	uint32_t DeckNameBufferSize;
-
-	load_deck_button LoadDeckButtons[MAX_DECKS_SAVED];
-	char* DeckNames;
-	uint32_t DeckNamesSize;
-	vector2 LoadDeckButtonDim;
-	float LoadDeckButtonsYStart;
-	float LoadDeckButtonsYMargin;
 
 	vector2 DeckNamePos;
-	bool DeckNameSet;
 
 	vector2 InfoCardCenter;
 	vector2 InfoCardXBound;
@@ -100,6 +85,9 @@ struct deck_editor_state
 	vector2 CardCountPos;
 };
 
+void StartDeckEditorPrep(
+	game_state* GameState, char* DeckName, bool AlreadyExists
+);
 void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer);
 void UpdateAndRenderDeckEditor(
 	game_state* GameState,

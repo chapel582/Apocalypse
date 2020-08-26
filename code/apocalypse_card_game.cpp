@@ -319,8 +319,32 @@ void AttackCard(
 	}
 }
 
+void StartCardGamePrep(
+	game_state* GameState, char* P1DeckName, char* P2DeckName
+)
+{
+	start_card_game_args* SceneArgs = PushStruct(
+		&GameState->SceneArgsArena, start_card_game_args
+	);
+
+	char Buffer[PLATFORM_MAX_PATH];
+	FormatDeckPath(Buffer, sizeof(Buffer), P1DeckName);
+	SceneArgs->P1Deck = LoadDeck(Buffer);
+	FormatDeckPath(Buffer, sizeof(Buffer), P2DeckName);
+	SceneArgs->P2Deck = LoadDeck(Buffer);
+
+	GameState->SceneArgs = SceneArgs;
+	GameState->Scene = SceneType_CardGame; 
+}
+
 void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 {
+	start_card_game_args* SceneArgs = (start_card_game_args*) (
+		GameState->SceneArgs
+	);
+	loaded_deck P1Deck = SceneArgs->P1Deck;
+	loaded_deck P2Deck = SceneArgs->P2Deck;
+
 	ResetMemArena(&GameState->TransientArena);
 	GameState->SceneState = PushStruct(
 		&GameState->TransientArena, card_game_state
@@ -329,18 +353,6 @@ void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 
 	card_game_state* SceneState = (card_game_state*) GameState->SceneState;
 	*SceneState = {};
-
-	loaded_deck P1Deck;
-	loaded_deck P2Deck;
-
-	// TODO: load decks based on interaction at start of new card game
-	{
-		char Buffer[256];
-		FormatDeckPath(Buffer, sizeof(Buffer), "P1Deck");
-		P1Deck = LoadDeck(Buffer);
-		FormatDeckPath(Buffer, sizeof(Buffer), "P2Deck");
-		P2Deck = LoadDeck(Buffer);
-	}
 
 	SceneState->MaxCards = Player_Count * CardSet_Count * MAX_CARDS_PER_SET;
 	SceneState->Cards = PushArray(

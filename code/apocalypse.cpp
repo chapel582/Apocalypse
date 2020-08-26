@@ -3,25 +3,20 @@
 #include "apocalypse_intrinsics.h"
 #include "apocalypse_debug.h"
 #include "apocalypse_string.h"
-
 #include "apocalypse_render_group.h"
-#include "apocalypse_render_group.cpp"
-
 #include "apocalypse_bitmap.h"
-#include "apocalypse_bitmap.cpp"
-
 #include "apocalypse_wav.h"
-#include "apocalypse_wav.cpp"
-
 #include "apocalypse_assets.h"
-#include "apocalypse_assets.cpp"
-
 #include "apocalypse_audio.h"
-#include "apocalypse_audio.cpp"
-
 #include "apocalypse_particles.h"
-#include "apocalypse_particles.cpp"
 
+#include "apocalypse_deck_selector.cpp"
+#include "apocalypse_render_group.cpp"
+#include "apocalypse_bitmap.cpp"
+#include "apocalypse_wav.cpp"
+#include "apocalypse_assets.cpp"
+#include "apocalypse_audio.cpp"
+#include "apocalypse_particles.cpp"
 #include "apocalypse_card_game.cpp"
 #include "apocalypse_main_menu.cpp"
 #include "apocalypse_button.cpp"
@@ -90,7 +85,7 @@ void GameUpdateAndRender(
 
 		// TODO: do we want to be extra and make sure we pick up that last byte?
 		memory_arena AssetArena;
-		size_t TransientStorageDivision = Memory->TransientStorageSize / 4;
+		size_t TransientStorageDivision = Memory->TransientStorageSize / 5;
 		InitMemArena(
 			&GameState->TransientArena,
 			TransientStorageDivision,
@@ -106,6 +101,12 @@ void GameUpdateAndRender(
 			TransientStorageDivision,
 			GetEndOfArena(&GameState->RenderArena)
 		);
+		InitMemArena(
+			&GameState->SceneArgsArena,
+			TransientStorageDivision,
+			GetEndOfArena(&GameState->FrameArena)
+		);
+		// TODO: Asset arena probably needs to be bigger than most arenas
 		InitMemArena(
 			&AssetArena,
 			TransientStorageDivision,
@@ -144,21 +145,49 @@ void GameUpdateAndRender(
 
 		Memory->IsInitialized = true;
 
-		StartCardGame(GameState, BackBuffer);
-		GameState->Scene = SceneType_CardGame;
+		StartMainMenu(GameState, BackBuffer);
+		GameState->Scene = SceneType_MainMenu;
 		GameState->LastFrameScene = GameState->Scene;
 	}
 
 	GameState->Time += DtForFrame;
 
+	if(GameState->LastFrameScene != GameState->Scene)
+	{
+		switch(GameState->Scene)
+		{
+			case(SceneType_CardGame):
+			{
+				StartCardGame(GameState, BackBuffer);
+				break;
+			}
+			case(SceneType_MainMenu):
+			{
+				StartMainMenu(GameState, BackBuffer);
+				break;
+			}
+			case(SceneType_DeckEditor):
+			{
+				StartDeckEditor(GameState, BackBuffer);
+				break;
+			}
+			case(SceneType_DeckSelector):
+			{
+				StartDeckSelector(GameState, BackBuffer);
+				break;
+			}
+			default:
+			{
+				ASSERT(false);
+			}
+		}
+		ResetMemArena(&GameState->SceneArgsArena);	
+	}
+
 	switch(GameState->Scene)
 	{
 		case(SceneType_CardGame):
 		{
-			if(GameState->LastFrameScene != GameState->Scene)
-			{
-				StartCardGame(GameState, BackBuffer);
-			}
 			UpdateAndRenderCardGame(
 				GameState,
 				(card_game_state*) GameState->SceneState,
@@ -172,10 +201,6 @@ void GameUpdateAndRender(
 		}
 		case(SceneType_MainMenu):
 		{
-			if(GameState->LastFrameScene != GameState->Scene)
-			{
-				StartMainMenu(GameState, BackBuffer);
-			}
 			UpdateAndRenderMainMenu(
 				GameState,
 				(main_menu_state*) GameState->SceneState,
@@ -189,10 +214,6 @@ void GameUpdateAndRender(
 		}
 		case(SceneType_DeckEditor):
 		{
-			if(GameState->LastFrameScene != GameState->Scene)
-			{
-				StartDeckEditor(GameState, BackBuffer);
-			}
 			UpdateAndRenderDeckEditor(
 				GameState,
 				(deck_editor_state*) GameState->SceneState,
@@ -202,6 +223,19 @@ void GameUpdateAndRender(
 				DtForFrame
 			);
 			GameState->LastFrameScene = SceneType_DeckEditor;
+			break;
+		}
+		case(SceneType_DeckSelector):
+		{
+			UpdateAndRenderDeckSelector(
+				GameState,
+				(deck_selector_state*) GameState->SceneState,
+				BackBuffer,
+				MouseEvents,
+				KeyboardEvents,
+				DtForFrame
+			);
+			GameState->LastFrameScene = SceneType_DeckSelector;
 			break;
 		}
 		default:

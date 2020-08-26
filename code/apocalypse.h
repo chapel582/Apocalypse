@@ -14,7 +14,8 @@ typedef enum
 {
 	SceneType_CardGame,
 	SceneType_MainMenu,
-	SceneType_DeckEditor
+	SceneType_DeckEditor,
+	SceneType_DeckSelector
 } scene_type;
 
 struct game_state
@@ -30,6 +31,8 @@ struct game_state
 	memory_arena FrameArena;
 	// NOTE: render arena is just for the renderer
 	memory_arena RenderArena;
+	// NOTE: an arena for scene args
+	memory_arena SceneArgsArena;
 
 	assets Assets;
 
@@ -44,6 +47,7 @@ struct game_state
 	scene_type Scene;
 	scene_type LastFrameScene;
 	void* SceneState;
+	void* SceneArgs;
 
 	bool OverlayDebugInfo;
 };

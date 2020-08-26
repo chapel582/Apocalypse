@@ -4,6 +4,7 @@
 #include "apocalypse_card_game.h"
 #include "apocalypse_deck_editor.h"
 #include "apocalypse_button.h"
+#include "apocalypse_deck_selector.h"
 
 void StartMainMenu(game_state* GameState, game_offscreen_buffer* BackBuffer)
 {
@@ -75,7 +76,7 @@ void UpdateAndRenderMainMenu(
 			);
 			if(Result == ButtonHandleEvent_TakeAction)
 			{
-				GameState->Scene = SceneType_CardGame;
+				StartDeckSelectorPrep(GameState, SceneType_CardGame);				
 			}
 			Result = ButtonHandleEvent(
 				&SceneState->UiContext,
@@ -85,7 +86,7 @@ void UpdateAndRenderMainMenu(
 			);
 			if(Result == ButtonHandleEvent_TakeAction)
 			{
-				GameState->Scene = SceneType_DeckEditor;
+				StartDeckSelectorPrep(GameState, SceneType_DeckEditor);
 			}
 			
 			UserEventIndex++;

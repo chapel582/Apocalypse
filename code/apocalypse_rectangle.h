@@ -99,5 +99,16 @@ inline void ClampRectY(rectangle* Rectangle, float MinY, float MaxY)
 	}
 }
 
+rectangle MakeNextRectangle(
+	float XPos, float YStart, float YMargin, vector2 Dim, uint32_t Index
+)
+{
+	// NOTE: Makes the next vertical rectangle in a vertical stack of 
+	// CONT: rectangles
+	return MakeRectangle(
+		Vector2(XPos, YStart - (Dim.Y + YMargin) * (Index + 1)), Dim
+	);
+}
+
 #define APOCALYPSE_RECTANGLE_H
 #endif

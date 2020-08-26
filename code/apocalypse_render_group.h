@@ -122,5 +122,8 @@ struct push_text_result
 	// CONT: editors
 };
 
+void PushClear(render_group* Group, vector4 Color);
+vector2 TransformPosFromBasis(basis* Basis, vector2 Vector);
+
 #define APOCALYPSE_RENDER_GROUP_H
 #endif

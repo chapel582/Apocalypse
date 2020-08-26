@@ -128,6 +128,7 @@ loaded_glyph* GetGlyph(
 	assets* Assets, font_handle FontHandle, uint32_t CodePoint
 );
 loaded_font* GetFont(assets* Assets, font_handle FontHandle);
+void ResetAssets(assets* Assets);
 
 #define APOCALYPSE_ASSETS_H
 #endif 

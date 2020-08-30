@@ -48,6 +48,16 @@ inline void SetResource(
 	Resources->Resources[Type] = SetTo;
 }
 
+inline int32_t SumResources(player_resources* Resources)
+{
+	int32_t Result = 0;
+	for(int Index = 0; Index < PlayerResource_Count; Index++)
+	{
+		Result += Resources->Resources[Index];
+	}
+	return Result;
+}
+
 inline void InitPlayerResource(
 	player_resources* Resources,
 	int32_t Red,

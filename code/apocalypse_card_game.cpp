@@ -259,23 +259,105 @@ void InitDeckCard(
 	DeckCard->Definition = Definitions->Array + CardId;
 }
 
-bool CheckAndActivate(
-	player_resources* PlayerResources, player_resources* Deltas, card* Card
+bool CheckAndTapLand(
+	game_state* GameState, card_game_state* SceneState, card* Card
 )
 {
+	bool Tapped = false;
+	int32_t SelfResourceDelta = SumResources(
+		&Card->TapDelta[Player_One]
+	);
+	int32_t OppResourceDelta = SumResources(
+		&Card->TapDelta[Player_Two]
+	);
+	float TimeChange = 5.0f * (SelfResourceDelta - OppResourceDelta);
+	if(TimeChange <= GameState->Time)
+	{
+		SceneState->TurnTimer -= TimeChange;
+		Tapped = true;
+	}
+	return Tapped;
+}
+
+bool CheckAndTap(
+	game_state* GameState, card_game_state* SceneState, card* Card
+)
+{
+	player_resources* PlayerResources = (
+		&SceneState->PlayerResources[Card->Owner]
+	);
+	player_resources* Deltas = &Card->TapDelta[Card->Owner];
+	
 	// NOTE: only activate card if you have the resources for it
 	player_resources* ChangeTarget = &PlayerResources[Card->Owner];
 	player_resources* Delta = &Deltas[Card->Owner];
-	bool Result = CanChangeResources(ChangeTarget, Delta);
-	if(Result)
+	bool Tapped = CanChangeResources(ChangeTarget, Delta);
+	if(Tapped)
 	{
-		ChangeResources(ChangeTarget, Delta);
-		player_id Opp = GetOpponent(Card->Owner);
-		ChangeTarget = &PlayerResources[Opp];
-		Delta = &Deltas[Opp];
-		ChangeResources(ChangeTarget, Delta);
+		// TODO: may need a faster card lookup
+		char* CardName = Card->Definition->Name;
+		if(strcmp(CardName, "Red Land") == 0)
+		{
+			Tapped = CheckAndTapLand(GameState, SceneState, Card);
+		}
+		else if(strcmp(CardName, "Green Land") == 0)
+		{
+			Tapped = CheckAndTapLand(GameState, SceneState, Card);
+		}
+		else if(strcmp(CardName, "Blue Land") == 0)
+		{
+			Tapped = CheckAndTapLand(GameState, SceneState, Card);
+		}
+		else if(strcmp(CardName, "White Land") == 0)
+		{
+			Tapped = CheckAndTapLand(GameState, SceneState, Card);
+		}
+		else if(strcmp(CardName, "Black Land") == 0)
+		{
+			Tapped = CheckAndTapLand(GameState, SceneState, Card);
+		}
+
+		if(Tapped)
+		{
+			ChangeResources(ChangeTarget, Delta);
+			player_id Opp = GetOpponent(Card->Owner);
+			ChangeTarget = &PlayerResources[Opp];
+			Delta = &Deltas[Opp];
+			ChangeResources(ChangeTarget, Delta);
+		}
 	}
-	return Result;
+	return Tapped;
+}
+
+bool CheckAndPlay(
+	game_state* GameState, card_game_state* SceneState, card* Card
+)
+{
+	// NOTE: only activate card if you have the resources for it
+	player_resources* PlayerResources = SceneState->PlayerResources;
+	player_resources* Deltas = Card->PlayDelta;
+
+	player_resources* ChangeTarget = &PlayerResources[Card->Owner];
+	player_resources* Delta = &Deltas[Card->Owner];
+	bool Played = CanChangeResources(ChangeTarget, Delta);
+	if(Played)
+	{
+		// TODO: may need a faster card lookup
+		char* CardName = Card->Definition->Name;
+		
+		// NOTE: card effects on activation can be added here
+		// TODO: may need a faster card lookup
+		
+		if(Played)
+		{
+			ChangeResources(ChangeTarget, Delta);
+			player_id Opp = GetOpponent(Card->Owner);
+			ChangeTarget = &PlayerResources[Opp];
+			Delta = &Deltas[Opp];
+			ChangeResources(ChangeTarget, Delta);
+		}
+	}
+	return Played;
 }
 
 void SelectCard(card_game_state* SceneState, card* Card)
@@ -591,12 +673,10 @@ void UpdateAndRenderCardGame(
 						{
 							if(Card->SetType == CardSet_Hand)
 							{
-								bool WasActivated = CheckAndActivate(
-									SceneState->PlayerResources,
-									Card->PlayDelta,
-									Card
+								bool WasPlayed = CheckAndPlay(
+									GameState, SceneState, Card
 								);
-								if(WasActivated)
+								if(WasPlayed)
 								{
 									RemoveCardAndAlign(
 										&SceneState->Hands[Card->Owner], Card
@@ -649,9 +729,9 @@ void UpdateAndRenderCardGame(
 										{
 											player_id Owner = SelectedCard->Owner;
 											DeselectCard(SceneState);
-											CheckAndActivate(
-												&SceneState->PlayerResources[Owner], 
-												&SelectedCard->TapDelta[Owner],
+											CheckAndTap(
+												GameState,
+												SceneState,
 												SelectedCard
 											);
 											SelectedCard->TimesTapped++;
@@ -679,9 +759,9 @@ void UpdateAndRenderCardGame(
 							)
 							{
 								player_id Owner = SelectedCard->Owner;
-								CheckAndActivate(
-									&SceneState->PlayerResources[Owner], 
-									&SelectedCard->TapDelta[Owner],
+								CheckAndTap(
+									GameState,
+									SceneState,
 									SelectedCard
 								);
 								SelectedCard->TimesTapped++;

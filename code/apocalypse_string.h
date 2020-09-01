@@ -165,14 +165,39 @@ bool StartsWith(char* String, char* Starter, uint32_t MaxSize)
 {
 	for(uint32_t Index = 0; Index < MaxSize; Index++)
 	{
-		if(*String != *Starter)
+		if(*Starter != *String)
 		{
 			return false;
 		}
-		else if(*String == 0)
+		else if(*Starter == 0 || *String == 0)
+		{
+			break;
+		}
+		Starter++;
+		String++;
+	}
+
+	return true;
+}
+
+bool StrCmp(char* String1, char* String2, uint32_t StopAt)
+{
+	for(uint32_t Index = 0; Index < StopAt; Index++)
+	{
+		if(*String1 != *String2)
 		{
 			return false;
 		}
+		else if(*String1 == 0 && *String2 == 0)
+		{
+			return true;
+		}
+		else if(*String1 == 0 || *String2 == 0)
+		{
+			return false;
+		}
+		String1++;
+		String2++;
 	}
 
 	return true;

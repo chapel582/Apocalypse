@@ -17,7 +17,7 @@ void DeckSelectorPrepNextScene(
 		{
 			if(AlreadyExists)
 			{
-				StartCardGamePrep(GameState, SceneState->DeckName, "P2Deck");				
+				StartCardGamePrep(GameState, SceneState->DeckName, "P2Deck");
 			}
 			else
 			{
@@ -290,9 +290,9 @@ void UpdateAndRenderDeckSelector(
 						);
 
 						if(
-							StartsWith(
-								SceneState->DeckName,
+							StrCmp(								
 								CurrentDeckName,
+								SceneState->DeckName,
 								StopAt
 							)
 						)

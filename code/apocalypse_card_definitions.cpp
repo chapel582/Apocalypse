@@ -310,6 +310,14 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 0, 1);
 	SetName(Definition, "Black Land", sizeof("Black Land"));
 
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 10, 1);
+	InitPlayerResource(&Definition->PlayDelta[Player_One], 0, -1, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 1, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 0, 0);
+	SetName(Definition, "Self Weaker", sizeof("Self Weaker"));
+
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;
 	

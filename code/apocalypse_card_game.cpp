@@ -401,6 +401,13 @@ void AttackCard(
 	}
 }
 
+void SetTurnTimer(card_game_state* SceneState, float Value)
+{
+	SceneState->TurnTimer = Value;
+	uint16_t IntTurnTimer = (uint16_t) SceneState->TurnTimer;
+	SceneState->LastWholeSecond = IntTurnTimer;
+}
+
 void StartCardGamePrep(
 	game_state* GameState, char* P1DeckName, char* P2DeckName
 )
@@ -583,7 +590,7 @@ void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	DrawFullHand(SceneState, Player_One);
 	DrawFullHand(SceneState, Player_Two);
 
-	SceneState->TurnTimer = 20.0f;
+	SetTurnTimer(SceneState, 20.0f);
 
 	for(int PlayerIndex = 0; PlayerIndex < Player_Count; PlayerIndex++)
 	{
@@ -868,14 +875,8 @@ void UpdateAndRenderCardGame(
 	// SECTION START: Updating game state
 	// NOTE: not sure if we should finish all updates and then push to the 
 	// CONT: render group
-	// TODO: remove scaling test code
-	// float ScaleValue = cosf((2 * PI32 / 5.0f) * GameState->Time);
-	// GameState->WorldToCamera = MakeBasis(
-	// 	Vector2(BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f),
-	// 	ScaleValue * Vector2(1.0f, 0.0f),
-	// 	ScaleValue * Vector2(0.0f, 1.0f)
-	// );
 	// SECTION START: Turn timer update
+	bool WholeSecondPassed = false;
 	if(!EndTurn)
 	{
 		SceneState->TurnTimer -= DtForFrame;
@@ -884,10 +885,21 @@ void UpdateAndRenderCardGame(
 		{
 			EndTurn = true;
 		}
+		else
+		{
+			uint16_t IntTurnTimer = (uint16_t) SceneState->TurnTimer;
+			WholeSecondPassed = (
+				(SceneState->LastWholeSecond - IntTurnTimer) >= 1
+			);
+			if(WholeSecondPassed)
+			{
+				SceneState->LastWholeSecond = IntTurnTimer;
+			}
+		}
 	}
 	if(EndTurn)
 	{
-		SceneState->TurnTimer = 20.0f;
+		SetTurnTimer(SceneState, 20.0f);
 		SceneState->CurrentTurn = (
 			(SceneState->CurrentTurn == Player_Two) ? Player_One : Player_Two
 		);
@@ -914,11 +926,27 @@ void UpdateAndRenderCardGame(
 			if(Card->Active)
 			{
 				Card->TimeLeft -= DtForFrame;
+
+				char* CardName = Card->Definition->Name;
+				if(strcmp(CardName, "Self Weaker") == 0)
+				{
+					if(
+						Card->Owner == SceneState->CurrentTurn && 
+						Card->SetType == CardSet_Tableau
+					)
+					{
+						if(WholeSecondPassed)
+						{
+							Card->Attack -= 1;
+						}
+					}
+				}
 			}
 			Card++;
 		}
 	}
 	// SECTION STOP: Card update
+	// SECTION STOP: Updating game state
 
 	// SECTION START: Push render entries
 	PushClear(&GameState->RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
@@ -1052,68 +1080,4 @@ void UpdateAndRenderCardGame(
 	// SECTION STOP: Push resources
 
 	PushCenteredAlert(&SceneState->Alert, GameState, BackBuffer);
-
-#if 0 // NOTE: tests for bitmaps
-	PushSizedBitmap(
-		&GameState->RenderGroup,
-		&GameState->Assets,
-		BitmapHandle_TestBackground,
-		Vector2((BackBuffer->Width / 2.0f), (BackBuffer->Height / 2.0f)),
-		Vector2(BackBuffer->Width, 0),
-		Vector2(0, BackBuffer->Height),
-		Vector4(1.0f, 1.0f, 1.0f, 1.0f)		
-	);
-
-	float RotationalPeriod = 2.0f;
-	float Radians = (2 * PI32 * GameState->Time) / RotationalPeriod;
-	float CosVal = cosf(Radians);
-	float SinVal = sinf(Radians);
-	vector2 Origin = Vector2(0.0f, BackBuffer->Height / 2.0f);
-	vector2 Center = Vector2(
-		(BackBuffer->Width / 2.0f), (BackBuffer->Height / 2.0f)
-	);
-	vector2 XAxis = Vector2(CosVal, SinVal);
-	vector2 YAxis = Perpendicular(XAxis);
-
-	PushCenteredBitmap(
-		&GameState->RenderGroup,
-		&GameState->Assets,
-		BitmapHandle_TestBitmap,
-		Center,
-		XAxis,
-		YAxis,
-		Vector4(1.0f, 1.0f, 1.0f, 1.0f)
-	);
-
-	PushText(
-		&GameState->RenderGroup,
-		&GameState->Assets,
-		FontHandle_TestFont,
-		"A hello world\nA test is here\nAnother line\nA\nA\nA\nA\nA",
-		256,
-		50.0f,
-		Center + Vector2(0.0f, (BackBuffer->Height / 4.0f)),
-		Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-		&GameState->FrameArena
-	);
-
-	basis RectBasis = MakeBasis(Vector2(0, 0), Vector2(1, 0), Vector2(0, 1));
-	PushRect(
-		&GameState->RenderGroup,
-		&RectBasis,
-		MakeRectangle(Vector2(0, 0), Vector2(25, 25)),
-		Vector4(1.0f, 1.0f, 1.0f, 1.0f)
-	);
-#endif
-
-#if 0 // NOTE: tests for particle systems
-	UpdateParticleSystem(&GameState->TestParticleSystem);
-	PushParticles(
-		&GameState->RenderGroup,
-		&GameState->Assets,
-		&GameState->TestParticleSystem
-	);
-#endif
-
-	// SECTION STOP: Updating game state
 }

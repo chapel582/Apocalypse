@@ -148,6 +148,7 @@ struct card_set
 struct card_game_state
 {
 	player_id CurrentTurn;
+	int16_t LastWholeSecond;
 	float TurnTimer;
 	player_resources* PlayerResources;
 	card* Cards;

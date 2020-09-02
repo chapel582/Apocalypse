@@ -133,6 +133,7 @@ struct card
 	int32_t TimesTapped;
 	int16_t Attack;
 	int16_t Health;
+	card_effect_tags EffectTags;
 };
 
 struct card_set

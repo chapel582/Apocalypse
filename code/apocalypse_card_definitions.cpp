@@ -277,6 +277,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 1, 0, 0, 0, 0);
 	SetName(Definition, "Red Land", sizeof("Red Land"));
+	SetTag(&Definition->Tags, CardEffect_Land);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 0, 1);
@@ -285,6 +286,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 1, 0, 0, 0);
 	SetName(Definition, "Green Land", sizeof("Green Land"));
+	SetTag(&Definition->Tags, CardEffect_Land);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 0, 1);
@@ -293,6 +295,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 1, 0, 0);
 	SetName(Definition, "Blue Land", sizeof("Blue Land"));
+	SetTag(&Definition->Tags, CardEffect_Land);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 0, 1);
@@ -301,6 +304,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 1, 0);
 	SetName(Definition, "White Land", sizeof("White Land"));
+	SetTag(&Definition->Tags, CardEffect_Land);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 0, 1);
@@ -309,6 +313,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 0);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 0, 1);
 	SetName(Definition, "Black Land", sizeof("Black Land"));
+	SetTag(&Definition->Tags, CardEffect_Land);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 10, 1);
@@ -317,6 +322,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 1, 0, 0, 0);
 	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 0, 0);
 	SetName(Definition, "Self Weaker", sizeof("Self Weaker"));
+	SetTag(&Definition->Tags, CardEffect_SelfWeaken);
 
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;

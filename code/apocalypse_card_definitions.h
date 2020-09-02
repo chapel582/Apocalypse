@@ -6,6 +6,29 @@
 #include <stdint.h>
 #include <string.h>
 
+typedef enum
+{
+	CardEffect_Land,
+	CardEffect_SelfWeaken
+} card_effect;
+
+struct card_effect_tags
+{
+	// NOTE: wrapped in a struct for easy transtion to having even more tags
+	uint64_t Tags;
+};
+
+inline void SetTag(card_effect_tags* Tags, card_effect ToAdd)
+{
+	ASSERT(ToAdd < ((8 * sizeof(card_effect_tags)) - 1));
+	Tags->Tags |= (1LL << ToAdd);
+}
+
+inline bool HasTag(card_effect_tags* Tags, card_effect Check)
+{
+	return (Tags->Tags & (1LL << Check)) > 0;
+}
+
 #define CARD_NAME_SIZE 64
 #define CARD_DESCRIPTION_SIZE 128
 struct card_definition
@@ -18,6 +41,7 @@ struct card_definition
 	int16_t Health;
 	char Name[CARD_NAME_SIZE];
 	char Description[CARD_DESCRIPTION_SIZE];
+	card_effect_tags Tags;
 };
 
 struct card_definitions

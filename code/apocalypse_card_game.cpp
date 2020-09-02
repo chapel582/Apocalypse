@@ -208,6 +208,7 @@ void InitCardWithDeckCard(deck* Deck, card* Card, player_id Owner)
 		Card->TapsAvailable = Definition->TapsAvailable;
 		Card->Attack = Definition->Attack;
 		Card->Health = Definition->Health;
+		Card->EffectTags = Definition->Tags;
 	}
 	Card->Owner = Owner;
 	InDeckToOutDeck(Deck, CardToDraw);
@@ -294,25 +295,7 @@ bool CheckAndTap(
 	bool Tapped = CanChangeResources(ChangeTarget, Delta);
 	if(Tapped)
 	{
-		// TODO: may need a faster card lookup
-		char* CardName = Card->Definition->Name;
-		if(strcmp(CardName, "Red Land") == 0)
-		{
-			Tapped = CheckAndTapLand(GameState, SceneState, Card);
-		}
-		else if(strcmp(CardName, "Green Land") == 0)
-		{
-			Tapped = CheckAndTapLand(GameState, SceneState, Card);
-		}
-		else if(strcmp(CardName, "Blue Land") == 0)
-		{
-			Tapped = CheckAndTapLand(GameState, SceneState, Card);
-		}
-		else if(strcmp(CardName, "White Land") == 0)
-		{
-			Tapped = CheckAndTapLand(GameState, SceneState, Card);
-		}
-		else if(strcmp(CardName, "Black Land") == 0)
+		if(HasTag(&Card->EffectTags, CardEffect_Land))
 		{
 			Tapped = CheckAndTapLand(GameState, SceneState, Card);
 		}
@@ -927,8 +910,7 @@ void UpdateAndRenderCardGame(
 			{
 				Card->TimeLeft -= DtForFrame;
 
-				char* CardName = Card->Definition->Name;
-				if(strcmp(CardName, "Self Weaker") == 0)
+				if(HasTag(&Card->EffectTags, CardEffect_SelfWeaken))
 				{
 					if(
 						Card->Owner == SceneState->CurrentTurn && 

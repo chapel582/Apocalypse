@@ -324,6 +324,15 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	SetName(Definition, "Self Weaker", sizeof("Self Weaker"));
 	SetTag(&Definition->Tags, CardEffect_SelfWeaken);
 
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 10, 1);
+	InitPlayerResource(&Definition->PlayDelta[Player_One], 0, -1, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 1, 0, 0, 0);
+	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 0, 0);
+	SetName(Definition, "Opp Strengthen", sizeof("Opp Strengthen"));
+	SetTag(&Definition->Tags, CardEffect_OppStrengthen);
+
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;
 	

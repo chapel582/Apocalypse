@@ -923,6 +923,19 @@ void UpdateAndRenderCardGame(
 						}
 					}
 				}
+				else if(HasTag(&Card->EffectTags, CardEffect_OppStrengthen))
+				{
+					if(
+						Card->Owner != SceneState->CurrentTurn && 
+						Card->SetType == CardSet_Tableau
+					)
+					{
+						if(WholeSecondPassed)
+						{
+							Card->Attack += 1;
+						}
+					}
+				}
 			}
 			Card++;
 		}

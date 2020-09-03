@@ -910,7 +910,8 @@ void UpdateAndRenderCardGame(
 			{
 				Card->TimeLeft -= DtForFrame;
 
-				if(HasTag(&Card->EffectTags, CardEffect_SelfWeaken))
+				card_effect_tags* EffectTags = &Card->EffectTags;
+				if(HasTag(EffectTags, CardEffect_SelfWeaken))
 				{
 					if(
 						Card->Owner == SceneState->CurrentTurn && 
@@ -923,7 +924,7 @@ void UpdateAndRenderCardGame(
 						}
 					}
 				}
-				else if(HasTag(&Card->EffectTags, CardEffect_OppStrengthen))
+				else if(HasTag(EffectTags, CardEffect_OppStrengthen))
 				{
 					if(
 						Card->Owner != SceneState->CurrentTurn && 
@@ -935,6 +936,26 @@ void UpdateAndRenderCardGame(
 							Card->Attack += 1;
 						}
 					}
+				}
+				else if(HasTag(EffectTags, CardEffect_SelfLifeLoss))
+				{
+					if(
+						Card->Owner == SceneState->CurrentTurn && 
+						Card->SetType == CardSet_Tableau
+					)
+					{
+						if(WholeSecondPassed)
+						{
+							Card->Health -= 1;
+						}
+						if(Card->Health <= 0)
+						{
+							RemoveCardAndAlign(
+								&SceneState->Tableaus[Card->Owner], Card
+							);
+							Card->Active = false;
+						}
+					}	
 				}
 			}
 			Card++;

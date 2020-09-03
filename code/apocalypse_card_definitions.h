@@ -10,7 +10,8 @@ typedef enum
 {
 	CardEffect_Land,
 	CardEffect_SelfWeaken,
-	CardEffect_OppStrengthen
+	CardEffect_OppStrengthen,
+	CardEffect_SelfLifeLoss
 } card_effect;
 
 struct card_effect_tags

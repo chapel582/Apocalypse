@@ -955,7 +955,20 @@ void UpdateAndRenderCardGame(
 							);
 							Card->Active = false;
 						}
-					}	
+					}
+				}
+				else if(HasTag(EffectTags, CardEffect_OppLifeGain))
+				{
+					if(
+						Card->Owner != SceneState->CurrentTurn && 
+						Card->SetType == CardSet_Tableau
+					)
+					{
+						if(WholeSecondPassed)
+						{
+							Card->Health += 1;
+						}						
+					}
 				}
 			}
 			Card++;

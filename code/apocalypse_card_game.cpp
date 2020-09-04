@@ -320,6 +320,7 @@ bool CheckAndPlay(
 	player_resources* PlayerResources = SceneState->PlayerResources;
 	player_resources* Deltas = Card->PlayDelta;
 
+	// TODO: are the look ups using Card->Owner correct???
 	player_resources* ChangeTarget = &PlayerResources[Card->Owner];
 	player_resources* Delta = &Deltas[Card->Owner];
 	bool Played = CanChangeResources(ChangeTarget, Delta);
@@ -968,6 +969,29 @@ void UpdateAndRenderCardGame(
 						{
 							Card->Health += 1;
 						}						
+					}
+				}
+				else if(HasTag(EffectTags, CardEffect_CostIncrease))
+				{
+					if(Card->SetType == CardSet_Hand)
+					{
+						if(WholeSecondPassed)
+						{
+							for(
+								int Index = 0;
+								Index < PlayerResource_Count;
+								Index++
+							)
+							{
+								int32_t* Resource = (
+									&Card->PlayDelta[RelativePlayer_Self].Resources[Index]
+								);
+								if(*Resource < 0)
+								{
+									*Resource -= 1;
+								}
+							}
+						}
 					}
 				}
 			}

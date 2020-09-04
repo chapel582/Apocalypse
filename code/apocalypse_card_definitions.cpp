@@ -351,6 +351,15 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	SetName(Definition, "Life Gain", sizeof("Life Gain"));
 	SetTag(&Definition->Tags, CardEffect_OppLifeGain);
 
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 10, 1);
+	InitPlayerResource(&Definition->PlayDelta[Player_One], 0, 0, 0, 0, -1);
+	InitPlayerResource(&Definition->TapDelta[Player_One], 0, 0, 0, 0, 0);
+	InitPlayerResource(&Definition->PlayDelta[Player_Two], 0, 0, 0, 0, 1);
+	InitPlayerResource(&Definition->TapDelta[Player_Two], 0, 0, 0, 0, 0);
+	SetName(Definition, "Cost Increase", sizeof("Cost Increase"));
+	SetTag(&Definition->Tags, CardEffect_CostIncrease);
+
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;
 	

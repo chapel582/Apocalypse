@@ -13,7 +13,8 @@ typedef enum
 	CardEffect_OppStrengthen,
 	CardEffect_SelfLifeLoss,
 	CardEffect_OppLifeGain,
-	CardEffect_CostIncrease
+	CardEffect_CostIncrease,
+	CardEffect_GiveIncrease
 } card_effect;
 
 struct card_effect_tags

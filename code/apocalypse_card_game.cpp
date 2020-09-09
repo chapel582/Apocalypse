@@ -925,7 +925,7 @@ void UpdateAndRenderCardGame(
 						}
 					}
 				}
-				else if(HasTag(EffectTags, CardEffect_OppStrengthen))
+				if(HasTag(EffectTags, CardEffect_OppStrengthen))
 				{
 					if(
 						Card->Owner != SceneState->CurrentTurn && 
@@ -938,7 +938,7 @@ void UpdateAndRenderCardGame(
 						}
 					}
 				}
-				else if(HasTag(EffectTags, CardEffect_SelfLifeLoss))
+				if(HasTag(EffectTags, CardEffect_SelfLifeLoss))
 				{
 					if(
 						Card->Owner == SceneState->CurrentTurn && 
@@ -958,7 +958,7 @@ void UpdateAndRenderCardGame(
 						}
 					}
 				}
-				else if(HasTag(EffectTags, CardEffect_OppLifeGain))
+				if(HasTag(EffectTags, CardEffect_OppLifeGain))
 				{
 					if(
 						Card->Owner != SceneState->CurrentTurn && 
@@ -971,7 +971,7 @@ void UpdateAndRenderCardGame(
 						}						
 					}
 				}
-				else if(HasTag(EffectTags, CardEffect_CostIncrease))
+				if(HasTag(EffectTags, CardEffect_CostIncrease))
 				{
 					if(Card->SetType == CardSet_Hand)
 					{
@@ -989,6 +989,29 @@ void UpdateAndRenderCardGame(
 								if(*Resource < 0)
 								{
 									*Resource -= 1;
+								}
+							}
+						}
+					}
+				}
+				if(HasTag(EffectTags, CardEffect_GiveIncrease))
+				{
+					if(Card->SetType == CardSet_Hand)
+					{
+						if(WholeSecondPassed)
+						{
+							for(
+								int Index = 0;
+								Index < PlayerResource_Count;
+								Index++
+							)
+							{
+								int32_t* Resource = (
+									&Card->PlayDelta[RelativePlayer_Opp].Resources[Index]
+								);
+								if(*Resource > 0)
+								{
+									*Resource += 1;
 								}
 							}
 						}

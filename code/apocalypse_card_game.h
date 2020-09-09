@@ -122,6 +122,10 @@ struct card
 	card_definition* Definition;
 	player_resources PlayDelta[Player_Count];
 	player_resources TapDelta[Player_Count];
+	
+	player_resources TurnStartPlayDelta[Player_Count];
+	player_resources TurnStartTapDelta[Player_Count];
+
 	rectangle Rectangle;
 	card_set_type SetType;
 	float TimeLeft;
@@ -132,7 +136,9 @@ struct card
 	int32_t TapsAvailable;
 	int32_t TimesTapped;
 	int16_t Attack;
+	int16_t TurnStartAttack;
 	int16_t Health;
+	int16_t TurnStartHealth;
 	card_effect_tags EffectTags;
 };
 

@@ -194,21 +194,26 @@ void InitCardWithDeckCard(deck* Deck, card* Card, player_id Owner)
 {
 	deck_card* CardToDraw = Deck->InDeck;
 	ASSERT(CardToDraw != NULL);	
+	card_definition* Definition = CardToDraw->Definition;
+	Card->Definition = Definition;
+
+	Card->TapsAvailable = Definition->TapsAvailable;
+	Card->Attack = Definition->Attack;
+	Card->TurnStartAttack = Definition->Attack;
+	Card->Health = Definition->Health;
+	Card->TurnStartHealth = Definition->Health;
+	Card->EffectTags = Definition->Tags;
+
 	for(
 		int PlayerIndex = 0;
 		PlayerIndex < Player_Count;
 		PlayerIndex++
 	)
 	{
-		card_definition* Definition = CardToDraw->Definition;
-		Card->Definition = Definition;
-	
 		Card->PlayDelta[PlayerIndex] = Definition->PlayDelta[PlayerIndex];
 		Card->TapDelta[PlayerIndex] = Definition->TapDelta[PlayerIndex];
-		Card->TapsAvailable = Definition->TapsAvailable;
-		Card->Attack = Definition->Attack;
-		Card->Health = Definition->Health;
-		Card->EffectTags = Definition->Tags;
+		Card->TurnStartPlayDelta[PlayerIndex] = Definition->PlayDelta[PlayerIndex];
+		Card->TurnStartTapDelta[PlayerIndex] = Definition->TapDelta[PlayerIndex];
 	}
 	Card->Owner = Owner;
 	InDeckToOutDeck(Deck, CardToDraw);
@@ -366,8 +371,10 @@ void AttackCard(
 )
 {
 	// NOTE: this currently assumes cards must attack from the tableau
-	AttackingCard->Health -= AttackedCard->Attack;
-	AttackedCard->Health -= AttackingCard->Attack;
+	int16_t AttackingCardHealthDelta = AttackedCard->Attack;
+	int16_t AttackedCardHealthDelta = AttackingCard->Attack;
+	AttackingCard->Health -= AttackingCardHealthDelta;
+	AttackedCard->Health -= AttackedCardHealthDelta;
 
 	if(AttackingCard->Health <= 0)
 	{
@@ -376,12 +383,20 @@ void AttackCard(
 		);
 		AttackingCard->Active = false;
 	}
+	else
+	{
+		AttackingCard->TurnStartHealth -= AttackingCardHealthDelta;
+	}
 	if(AttackedCard->Health <= 0)
 	{
 		RemoveCardAndAlign(
 			&SceneState->Tableaus[AttackedCard->Owner], AttackedCard
 		);
 		AttackedCard->Active = false;
+	}
+	else
+	{
+		AttackedCard->TurnStartHealth -= AttackedCardHealthDelta;
 	}
 }
 
@@ -893,8 +908,57 @@ void UpdateAndRenderCardGame(
 			if(Card->Active)
 			{
 				Card->TimesTapped = 0;
+
+				card_effect_tags* EffectTags = &Card->EffectTags;
+				if(HasTag(EffectTags, CardEffect_SelfWeaken))
+				{
+					if(Card->SetType == CardSet_Tableau)
+					{
+						Card->Attack = Card->TurnStartAttack;
+					}
+				}
+				if(HasTag(EffectTags, CardEffect_OppStrengthen))
+				{
+					if(Card->SetType == CardSet_Tableau)
+					{
+						Card->Attack = Card->TurnStartAttack;
+					}
+				}
+				if(HasTag(EffectTags, CardEffect_SelfLifeLoss))
+				{
+					if(Card->SetType == CardSet_Tableau)
+					{
+						Card->Health = Card->TurnStartHealth;
+					}
+				}
+				if(HasTag(EffectTags, CardEffect_OppLifeGain))
+				{
+					if(Card->SetType == CardSet_Tableau)
+					{
+						Card->Health = Card->TurnStartHealth;
+					}
+				}
+				if(HasTag(EffectTags, CardEffect_CostIncrease))
+				{
+					if(Card->SetType == CardSet_Hand)
+					{
+						Card->PlayDelta[RelativePlayer_Self] = (
+							Card->TurnStartPlayDelta[RelativePlayer_Self]
+						);
+					}
+				}
+				if(HasTag(EffectTags, CardEffect_GiveIncrease))
+				{
+					if(Card->SetType == CardSet_Hand)
+					{
+						Card->PlayDelta[RelativePlayer_Opp] = (
+							Card->TurnStartPlayDelta[RelativePlayer_Opp]
+						);
+					}
+				}
 			}
 		}
+
 		DrawCard(GameState, SceneState, SceneState->CurrentTurn);
 	}
 	// SECTION STOP: Turn timer update

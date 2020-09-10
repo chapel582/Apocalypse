@@ -271,10 +271,10 @@ bool CheckAndTapLand(
 {
 	bool Tapped = false;
 	int32_t SelfResourceDelta = SumResources(
-		&Card->TapDelta[Player_One]
+		&Card->TapDelta[RelativePlayer_Self]
 	);
 	int32_t OppResourceDelta = SumResources(
-		&Card->TapDelta[Player_Two]
+		&Card->TapDelta[RelativePlayer_Opp]
 	);
 	float TimeChange = 5.0f * (SelfResourceDelta - OppResourceDelta);
 	if(TimeChange <= GameState->Time)
@@ -289,14 +289,12 @@ bool CheckAndTap(
 	game_state* GameState, card_game_state* SceneState, card* Card
 )
 {
-	player_resources* PlayerResources = (
-		&SceneState->PlayerResources[Card->Owner]
-	);
-	player_resources* Deltas = &Card->TapDelta[Card->Owner];
+	player_resources* PlayerResources = SceneState->PlayerResources;
+	player_resources* Deltas = Card->TapDelta;
 	
 	// NOTE: only activate card if you have the resources for it
 	player_resources* ChangeTarget = &PlayerResources[Card->Owner];
-	player_resources* Delta = &Deltas[Card->Owner];
+	player_resources* Delta = &Deltas[RelativePlayer_Self];
 	bool Tapped = CanChangeResources(ChangeTarget, Delta);
 	if(Tapped)
 	{
@@ -310,7 +308,7 @@ bool CheckAndTap(
 			ChangeResources(ChangeTarget, Delta);
 			player_id Opp = GetOpponent(Card->Owner);
 			ChangeTarget = &PlayerResources[Opp];
-			Delta = &Deltas[Opp];
+			Delta = &Deltas[RelativePlayer_Opp];
 			ChangeResources(ChangeTarget, Delta);
 		}
 	}

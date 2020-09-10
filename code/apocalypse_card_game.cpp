@@ -325,24 +325,19 @@ bool CheckAndPlay(
 	player_resources* PlayerResources = SceneState->PlayerResources;
 	player_resources* Deltas = Card->PlayDelta;
 
-	// TODO: are the look ups using Card->Owner correct???
 	player_resources* ChangeTarget = &PlayerResources[Card->Owner];
-	player_resources* Delta = &Deltas[Card->Owner];
+	player_resources* Delta = &Deltas[RelativePlayer_Self];
 	bool Played = CanChangeResources(ChangeTarget, Delta);
 	if(Played)
-	{
-		// TODO: may need a faster card lookup
-		char* CardName = Card->Definition->Name;
-		
-		// NOTE: card effects on activation can be added here
-		// TODO: may need a faster card lookup
+	{		
+		// NOTE: card effects on play can be added here
 		
 		if(Played)
 		{
 			ChangeResources(ChangeTarget, Delta);
 			player_id Opp = GetOpponent(Card->Owner);
 			ChangeTarget = &PlayerResources[Opp];
-			Delta = &Deltas[Opp];
+			Delta = &Deltas[RelativePlayer_Opp];
 			ChangeResources(ChangeTarget, Delta);
 		}
 	}

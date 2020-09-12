@@ -1,6 +1,8 @@
 #ifndef APOCALYPSE_CARD_GAME_H
 
 #define MAX_CARDS_PER_SET 7
+#define RESOURCE_TO_TIME 5.0f
+#define TURN_TIMER_INCREASE 10.0f
 
 #include "apocalypse_platform.h"
 #include "apocalypse_vector.h"
@@ -157,6 +159,9 @@ struct card_game_state
 	player_id CurrentTurn;
 	int16_t LastWholeSecond;
 	float TurnTimer;
+	bool ShouldUpdateBaseline;
+	float BaselineNextTurnTimer;
+	float NextTurnTimer;
 	player_resources* PlayerResources;
 	card* Cards;
 	card* SelectedCard;

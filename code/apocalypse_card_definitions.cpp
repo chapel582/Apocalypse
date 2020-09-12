@@ -713,6 +713,40 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	SetName(Definition, "Give Increase", sizeof("Give Increase"));
 	SetTag(&Definition->Tags, CardEffect_GiveIncrease);
 
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 10, 1);
+	InitPlayerResource(
+		&Definition->PlayDelta[RelativePlayer_Self], 0, 0, 0, 0, -1
+	);
+	InitPlayerResource(
+		&Definition->TapDelta[RelativePlayer_Self], 0, 0, 0, 0, 0
+	);
+	InitPlayerResource(
+		&Definition->PlayDelta[RelativePlayer_Opp], 0, 0, 0, 0, 1
+	);
+	InitPlayerResource(
+		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 0
+	);
+	SetName(Definition, "Self Burn", sizeof("Self Burn"));
+	SetTag(&Definition->Tags, CardEffect_SelfBurn);
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 10, 1);
+	InitPlayerResource(
+		&Definition->PlayDelta[RelativePlayer_Self], 0, 0, 0, 0, -1
+	);
+	InitPlayerResource(
+		&Definition->TapDelta[RelativePlayer_Self], 0, 0, 0, 0, 0
+	);
+	InitPlayerResource(
+		&Definition->PlayDelta[RelativePlayer_Opp], 0, 0, 0, 0, 1
+	);
+	InitPlayerResource(
+		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 0
+	);
+	SetName(Definition, "Opp Burn", sizeof("Opp Burn"));
+	SetTag(&Definition->Tags, CardEffect_OppBurn);
+
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;
 	

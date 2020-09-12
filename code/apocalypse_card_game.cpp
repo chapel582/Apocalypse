@@ -160,6 +160,21 @@ void RemoveCardAndAlign(card_set* CardSet, card* Card)
 	}
 }
 
+void RemoveCardAndAlign(card_game_state* SceneState, card* Card)
+{
+	card_set* CardSet = NULL;
+	if(Card->SetType == CardSet_Hand)
+	{
+		CardSet = SceneState->Hands + Card->Owner;
+	}
+	else
+	{
+		CardSet = SceneState->Tableaus + Card->Owner; 
+	}
+
+	RemoveCardAndAlign(CardSet, Card);
+}
+
 card* GetInactiveCard(card_game_state* SceneState)
 {
 	card* Card = NULL;
@@ -265,18 +280,25 @@ void InitDeckCard(
 	DeckCard->Definition = Definitions->Array + CardId;
 }
 
+float GetTimeChangeFromCard(card* Card)
+{
+	player_resources* TapDelta = Card->TapDelta;
+	int32_t SelfResourceDelta = SumResources(TapDelta +RelativePlayer_Self);
+	int32_t OppResourceDelta = SumResources(TapDelta + RelativePlayer_Opp);
+	float TimeChange = (
+		RESOURCE_TO_TIME * (SelfResourceDelta - OppResourceDelta)
+	);
+	return TimeChange;
+}
+
 bool CheckAndTapLand(
 	game_state* GameState, card_game_state* SceneState, card* Card
 )
 {
 	bool Tapped = false;
-	int32_t SelfResourceDelta = SumResources(
-		&Card->TapDelta[RelativePlayer_Self]
-	);
-	int32_t OppResourceDelta = SumResources(
-		&Card->TapDelta[RelativePlayer_Opp]
-	);
-	float TimeChange = 5.0f * (SelfResourceDelta - OppResourceDelta);
+
+	float TimeChange = GetTimeChangeFromCard(Card);
+	
 	if(TimeChange <= GameState->Time)
 	{
 		SceneState->TurnTimer -= TimeChange;
@@ -312,6 +334,8 @@ bool CheckAndTap(
 			ChangeResources(ChangeTarget, Delta);
 		}
 	}
+	Card->TimesTapped++;
+
 	return Tapped;
 }
 
@@ -359,11 +383,19 @@ void DeselectCard(card_game_state* SceneState)
 	SceneState->SelectedCard = NULL;
 }
 
-void AttackCard(
+struct attack_card_result 
+{
+	bool AttackerDied;
+	bool AttackedDied;
+};
+
+attack_card_result AttackCard(
 	card_game_state* SceneState, card* AttackingCard, card* AttackedCard
 )
 {
 	// NOTE: this currently assumes cards must attack from the tableau
+	attack_card_result Result = {};
+
 	int16_t AttackingCardHealthDelta = AttackedCard->Attack;
 	int16_t AttackedCardHealthDelta = AttackingCard->Attack;
 	AttackingCard->Health -= AttackingCardHealthDelta;
@@ -371,26 +403,27 @@ void AttackCard(
 
 	if(AttackingCard->Health <= 0)
 	{
-		RemoveCardAndAlign(
-			&SceneState->Tableaus[AttackingCard->Owner], AttackingCard
-		);
+		RemoveCardAndAlign(SceneState, AttackingCard);
 		AttackingCard->Active = false;
+		Result.AttackerDied = true;
 	}
 	else
 	{
 		AttackingCard->TurnStartHealth -= AttackingCardHealthDelta;
 	}
+
 	if(AttackedCard->Health <= 0)
 	{
-		RemoveCardAndAlign(
-			&SceneState->Tableaus[AttackedCard->Owner], AttackedCard
-		);
+		RemoveCardAndAlign(SceneState, AttackedCard);
 		AttackedCard->Active = false;
+		Result.AttackedDied = true;
 	}
 	else
 	{
 		AttackedCard->TurnStartHealth -= AttackedCardHealthDelta;
 	}
+
+	return Result;
 }
 
 void SetTurnTimer(card_game_state* SceneState, float Value)
@@ -583,6 +616,11 @@ void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	DrawFullHand(SceneState, Player_Two);
 
 	SetTurnTimer(SceneState, 20.0f);
+	SceneState->BaselineNextTurnTimer = (
+		SceneState->TurnTimer + TURN_TIMER_INCREASE
+	);
+	SceneState->ShouldUpdateBaseline = false;
+	SceneState->NextTurnTimer = SceneState->BaselineNextTurnTimer;
 
 	for(int PlayerIndex = 0; PlayerIndex < Player_Count; PlayerIndex++)
 	{
@@ -677,9 +715,7 @@ void UpdateAndRenderCardGame(
 								);
 								if(WasPlayed)
 								{
-									RemoveCardAndAlign(
-										&SceneState->Hands[Card->Owner], Card
-									);
+									RemoveCardAndAlign(SceneState, Card);
 									AddCardAndAlign(
 										&SceneState->Tableaus[Card->Owner], Card
 									);
@@ -733,7 +769,6 @@ void UpdateAndRenderCardGame(
 												SceneState,
 												SelectedCard
 											);
-											SelectedCard->TimesTapped++;
 										}
 									}
 									else
@@ -752,21 +787,57 @@ void UpdateAndRenderCardGame(
 						// NOTE: player clicked on opponent's card on their turn
 						else
 						{
-							if(
-								SelectedCard != NULL && 
-								Card->SetType == CardSet_Tableau
-							)
+							if(SelectedCard != NULL)
 							{
-								player_id Owner = SelectedCard->Owner;
-								CheckAndTap(
-									GameState,
-									SceneState,
-									SelectedCard
-								);
-								SelectedCard->TimesTapped++;
-								DeselectCard(SceneState);
+								if(Card->SetType == CardSet_Tableau)
+								{
+									player_id Owner = SelectedCard->Owner;
+									bool Tapped = CheckAndTap(
+										GameState,
+										SceneState,
+										SelectedCard
+									);
+									if(Tapped)
+									{
+										DeselectCard(SceneState);
+										AttackCard(
+											SceneState, SelectedCard, Card
+										);
+									}
+								}
+								else if(
+									Card->SetType == CardSet_Hand && 
+									HasTag(
+										&SelectedCard->EffectTags, 
+										CardEffect_OppBurn
+									)									
+								)
+								{
+									bool Tapped = CheckAndTap(
+										GameState,
+										SceneState,
+										SelectedCard
+									);
+									if(Tapped)
+									{
+										DeselectCard(SceneState);
+										float TimeChange = (
+											GetTimeChangeFromCard(
+												Card
+											)
+										);
 
-								AttackCard(SceneState, SelectedCard, Card);
+										attack_card_result Result = AttackCard(
+											SceneState, SelectedCard, Card
+										);
+										if(Result.AttackedDied)
+										{
+											SceneState->NextTurnTimer += (
+												TimeChange
+											);
+										}
+									}
+								}
 							}
 						}
 					}
@@ -891,7 +962,19 @@ void UpdateAndRenderCardGame(
 	}
 	if(EndTurn)
 	{
-		SetTurnTimer(SceneState, 20.0f);
+		SetTurnTimer(SceneState, SceneState->NextTurnTimer);
+
+		if(SceneState->ShouldUpdateBaseline)
+		{
+			SceneState->BaselineNextTurnTimer += TURN_TIMER_INCREASE;
+			SceneState->ShouldUpdateBaseline = false;
+		}
+		else
+		{
+			SceneState->ShouldUpdateBaseline = true;
+		}
+		SceneState->NextTurnTimer = SceneState->BaselineNextTurnTimer;
+
 		SceneState->CurrentTurn = (
 			(SceneState->CurrentTurn == Player_Two) ? Player_One : Player_Two
 		);
@@ -1008,9 +1091,7 @@ void UpdateAndRenderCardGame(
 						}
 						if(Card->Health <= 0)
 						{
-							RemoveCardAndAlign(
-								&SceneState->Tableaus[Card->Owner], Card
-							);
+							RemoveCardAndAlign(SceneState, Card);
 							Card->Active = false;
 						}
 					}
@@ -1057,15 +1138,16 @@ void UpdateAndRenderCardGame(
 					{
 						if(WholeSecondPassed)
 						{
+							int32_t* Resources = (
+								Card->PlayDelta[RelativePlayer_Opp].Resources
+							);
 							for(
 								int Index = 0;
 								Index < PlayerResource_Count;
 								Index++
 							)
 							{
-								int32_t* Resource = (
-									&Card->PlayDelta[RelativePlayer_Opp].Resources[Index]
-								);
+								int32_t* Resource = Resources + Index;
 								if(*Resource > 0)
 								{
 									*Resource += 1;

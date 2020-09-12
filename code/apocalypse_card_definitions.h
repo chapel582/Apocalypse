@@ -14,7 +14,9 @@ typedef enum
 	CardEffect_SelfLifeLoss,
 	CardEffect_OppLifeGain,
 	CardEffect_CostIncrease,
-	CardEffect_GiveIncrease
+	CardEffect_GiveIncrease,
+	CardEffect_SelfBurn,
+	CardEffect_OppBurn
 } card_effect;
 
 struct card_effect_tags

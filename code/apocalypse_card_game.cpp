@@ -280,11 +280,10 @@ void InitDeckCard(
 	DeckCard->Definition = Definitions->Array + CardId;
 }
 
-float GetTimeChangeFromCard(card* Card)
+float GetTimeChangeFromCard(card* Card, player_resources* Delta)
 {
-	player_resources* TapDelta = Card->TapDelta;
-	int32_t SelfResourceDelta = SumResources(TapDelta +RelativePlayer_Self);
-	int32_t OppResourceDelta = SumResources(TapDelta + RelativePlayer_Opp);
+	int32_t SelfResourceDelta = SumResources(Delta + RelativePlayer_Self);
+	int32_t OppResourceDelta = SumResources(Delta + RelativePlayer_Opp);
 	float TimeChange = (
 		RESOURCE_TO_TIME * (SelfResourceDelta - OppResourceDelta)
 	);
@@ -297,9 +296,9 @@ bool CheckAndTapLand(
 {
 	bool Tapped = false;
 
-	float TimeChange = GetTimeChangeFromCard(Card);
+	float TimeChange = GetTimeChangeFromCard(Card, Card->TapDelta);
 	
-	if(TimeChange <= GameState->Time)
+	if(TimeChange <= SceneState->TurnTimer)
 	{
 		SceneState->TurnTimer -= TimeChange;
 		Tapped = true;
@@ -710,22 +709,69 @@ void UpdateAndRenderCardGame(
 						{
 							if(Card->SetType == CardSet_Hand)
 							{
-								bool WasPlayed = CheckAndPlay(
-									GameState, SceneState, Card
-								);
-								if(WasPlayed)
+								if(SelectedCard == NULL)
 								{
-									RemoveCardAndAlign(SceneState, Card);
-									AddCardAndAlign(
-										&SceneState->Tableaus[Card->Owner], Card
+									bool WasPlayed = CheckAndPlay(
+										GameState, SceneState, Card
 									);
+									if(WasPlayed)
+									{
+										RemoveCardAndAlign(SceneState, Card);
+										AddCardAndAlign(
+											&SceneState->Tableaus[Card->Owner], Card
+										);
+									}
+									else
+									{
+										CannotActivateCardMessage(
+											GameState, &SceneState->Alert
+										);
+									}
 								}
+
 								else
 								{
-									CannotActivateCardMessage(
-										GameState, &SceneState->Alert
+									bool Tapped = CheckAndTap(
+										GameState,
+										SceneState,
+										SelectedCard
 									);
-								}
+									if(Tapped)
+									{
+										DeselectCard(SceneState);
+										float TimeChange = (
+											GetTimeChangeFromCard(
+												Card,
+												Card->PlayDelta
+											)
+										);
+
+										bool HasSelfBurn = HasTag(
+											&SelectedCard->EffectTags, 
+											CardEffect_SelfBurn
+										);
+										attack_card_result Result = AttackCard(
+											SceneState, SelectedCard, Card
+										);
+										if(Result.AttackedDied)
+										{
+											if(HasSelfBurn)
+											{
+												/*NOTE: 
+												TimeChange is subtracted because
+												we want the opposite effect from
+												if it was played. If it would 
+												cost the player time to play it,
+												it now gives time. And vice 
+												versa 
+												*/
+												SceneState->TurnTimer -= (
+													TimeChange
+												);
+											}
+										}
+									}
+								}								
 							}
 							else if(Card->SetType == CardSet_Tableau)
 							{
@@ -823,7 +869,8 @@ void UpdateAndRenderCardGame(
 										DeselectCard(SceneState);
 										float TimeChange = (
 											GetTimeChangeFromCard(
-												Card
+												Card,
+												Card->PlayDelta
 											)
 										);
 
@@ -832,7 +879,7 @@ void UpdateAndRenderCardGame(
 										);
 										if(Result.AttackedDied)
 										{
-											SceneState->NextTurnTimer += (
+											SceneState->NextTurnTimer -= (
 												TimeChange
 											);
 										}

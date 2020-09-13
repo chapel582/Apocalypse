@@ -80,7 +80,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 1, 1);
 	InitPlayerResource(
-		&Definition->PlayDelta[RelativePlayer_Self], 0, 0, 0, 1, 0
+		&Definition->PlayDelta[RelativePlayer_Self], 0, 0, 0, -1, 0
 	);
 	InitPlayerResource(
 		&Definition->TapDelta[RelativePlayer_Self], 0, 0, 0, 0, 0

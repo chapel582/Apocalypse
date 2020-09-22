@@ -1340,10 +1340,11 @@ void RenderGroupToOutput(
 )
 {
 	TIMED_BLOCK();
-	for(
-		uint8_t* CurrentAddress = RenderGroup->Arena->Base;
-		CurrentAddress <= (RenderGroup->LastEntry);
-	)
+	uint8_t* CurrentAddress = (
+		RenderGroup->Arena->Base + 
+		FindAlignmentOffset(RenderGroup->Arena->Base, 4)
+	);	
+	while(CurrentAddress <= (RenderGroup->LastEntry))
 	{
 		render_entry_header* Header = (render_entry_header*) CurrentAddress; 
 		switch(Header->Type)
@@ -1395,6 +1396,7 @@ void RenderGroupToOutput(
 			{
 				ASSERT(false);
 			}
+			CurrentAddress += FindAlignmentOffset(CurrentAddress, 4);
 		}
 	}
 	ResetMemArena(RenderGroup->Arena);

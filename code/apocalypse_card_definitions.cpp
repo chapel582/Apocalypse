@@ -747,6 +747,23 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	SetName(Definition, "Opp Burn", sizeof("Opp Burn"));
 	SetTag(&Definition->Tags, CardEffect_OppBurn);
 
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 10, 1);
+	InitPlayerResource(
+		&Definition->PlayDelta[RelativePlayer_Self], 0, 0, 0, 0, -1
+	);
+	InitPlayerResource(
+		&Definition->TapDelta[RelativePlayer_Self], 0, 0, 0, 0, 0
+	);
+	InitPlayerResource(
+		&Definition->PlayDelta[RelativePlayer_Opp], 0, 0, 0, 0, 1
+	);
+	InitPlayerResource(
+		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 0
+	);
+	SetName(Definition, "Draw Extra", sizeof("Draw Extra"));
+	SetTag(&Definition->Tags, CardEffect_DrawExtra);	
+
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;
 	

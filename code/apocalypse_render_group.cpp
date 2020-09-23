@@ -1343,7 +1343,7 @@ void RenderGroupToOutput(
 	uint8_t* CurrentAddress = (
 		RenderGroup->Arena->Base + 
 		FindAlignmentOffset(RenderGroup->Arena->Base, 4)
-	);	
+	);
 	while(CurrentAddress <= (RenderGroup->LastEntry))
 	{
 		render_entry_header* Header = (render_entry_header*) CurrentAddress; 

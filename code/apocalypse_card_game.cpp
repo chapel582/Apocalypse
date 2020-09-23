@@ -234,7 +234,7 @@ void InitCardWithDeckCard(deck* Deck, card* Card, player_id Owner)
 	InDeckToOutDeck(Deck, CardToDraw);
 }
 
-void DrawCard(
+card* DrawCard(
 	game_state* GameState, card_game_state* SceneState, player_id Owner
 )
 {
@@ -245,13 +245,14 @@ void DrawCard(
 		DisplayMessageFor(
 			GameState, &SceneState->Alert, "Can't draw card. Hand full", 1.0f
 		);
-		return;
+		return NULL;
 	}
 	deck* Deck = &SceneState->Decks[SceneState->CurrentTurn];
 	
 	card* Card = GetInactiveCard(SceneState);
 	InitCardWithDeckCard(Deck, Card, Owner);
 	AddCardAndAlign(CardSet, Card);
+	return Card;
 }
 
 void DrawFullHand(card_game_state* SceneState, player_id Player)
@@ -322,6 +323,19 @@ bool CheckAndTap(
 		if(HasTag(&Card->EffectTags, CardEffect_Land))
 		{
 			Tapped = CheckAndTapLand(GameState, SceneState, Card);
+		}
+		if(HasTag(&Card->EffectTags, CardEffect_DrawExtra))
+		{
+			card* DrawnCard = DrawCard(GameState, SceneState, Card->Owner);
+			if(DrawnCard != NULL)
+			{
+				float TimeChange = GetTimeChangeFromCard(
+					DrawnCard, DrawnCard->PlayDelta + RelativePlayer_Self
+				);
+
+				SceneState->TurnTimer += TimeChange;
+				Tapped = true;
+			}
 		}
 
 		if(Tapped)
@@ -804,9 +818,17 @@ void UpdateAndRenderCardGame(
 								{
 									if(SelectedCard == Card)
 									{
-										// NOTE: We may want to have a more 
-										// CONT: specific check than this
-										if(SelectedCard->Attack == 0)
+										if(
+											HasTag(
+												&Card->EffectTags,
+												CardEffect_Land
+											) 
+											||
+											HasTag(
+												&Card->EffectTags,
+												CardEffect_DrawExtra
+											)
+										)
 										{
 											player_id Owner = SelectedCard->Owner;
 											DeselectCard(SceneState);

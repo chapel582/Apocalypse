@@ -239,7 +239,7 @@ card* DrawCard(
 )
 {
 	// NOTE: can't exceed maximum hand size
-	card_set* CardSet = &SceneState->Hands[SceneState->CurrentTurn];
+	card_set* CardSet = &SceneState->Hands[Owner];
 	if(CardSet->CardCount >= MAX_CARDS_PER_SET)
 	{
 		DisplayMessageFor(
@@ -247,7 +247,7 @@ card* DrawCard(
 		);
 		return NULL;
 	}
-	deck* Deck = &SceneState->Decks[SceneState->CurrentTurn];
+	deck* Deck = &SceneState->Decks[Owner];
 	
 	card* Card = GetInactiveCard(SceneState);
 	InitCardWithDeckCard(Deck, Card, Owner);
@@ -334,6 +334,21 @@ bool CheckAndTap(
 				);
 
 				SceneState->TurnTimer += TimeChange;
+				Tapped = true;
+			}
+		}
+		if(HasTag(&Card->EffectTags, CardEffect_DrawOppExtra))
+		{
+			card* DrawnCard = DrawCard(
+				GameState, SceneState, GetOpponent(Card->Owner)
+			);
+			if(DrawnCard != NULL)
+			{
+				float TimeChange = GetTimeChangeFromCard(
+					DrawnCard, DrawnCard->PlayDelta + RelativePlayer_Opp
+				);
+
+				SceneState->NextTurnTimer += TimeChange;
 				Tapped = true;
 			}
 		}
@@ -818,16 +833,14 @@ void UpdateAndRenderCardGame(
 								{
 									if(SelectedCard == Card)
 									{
+										card_effect_tags* Tags = (
+											&Card->EffectTags
+										);
 										if(
-											HasTag(
-												&Card->EffectTags,
-												CardEffect_Land
-											) 
+											HasTag(Tags, CardEffect_Land) ||
+											HasTag(Tags, CardEffect_DrawExtra) 
 											||
-											HasTag(
-												&Card->EffectTags,
-												CardEffect_DrawExtra
-											)
+											HasTag(Tags, CardEffect_DrawOppExtra)
 										)
 										{
 											player_id Owner = SelectedCard->Owner;

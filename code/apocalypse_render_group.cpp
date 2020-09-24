@@ -94,7 +94,8 @@ inline void PushBitmap(
 	render_group* Group,
 	loaded_bitmap* Bitmap,
 	basis* Basis,
-	vector4 Color
+	vector4 Color,
+	uint32_t Layer = 1
 )
 {
 	// TODO: we might want a way to push a bitmap while only designating its 
@@ -104,8 +105,9 @@ inline void PushBitmap(
 	// CONT: need it
 	// NOTE: basis offset should be the top left of the unrotated texture
 	render_entry_bitmap* Entry = PushStruct(Group->Arena, render_entry_bitmap);
-	Group->LastEntry = (uint8_t*) Entry;
+	Group->NumEntries++;
 	Entry->Header.Type = EntryType_Bitmap;
+	Entry->Header.Layer = Layer;
 	Entry->Bitmap = Bitmap;
 	Entry->Color = Color;
 
@@ -679,15 +681,18 @@ end:
 	return Result;
 }
 
-inline void PushRect(render_group* Group, rectangle Rectangle, vector4 Color)
+inline void PushRect(
+	render_group* Group, rectangle Rectangle, vector4 Color, uint32_t Layer = 1
+)
 {
 	// NOTE: Basis should be the bottom left of the unrotated rect
 
 	render_entry_rectangle* Entry = PushStruct(
 		Group->Arena, render_entry_rectangle
 	);
-	Group->LastEntry = (uint8_t*) Entry;
+	Group->NumEntries++;
 	Entry->Header.Type = EntryType_Rectangle;
+	Entry->Header.Layer = Layer;
 	Entry->Color = Color;
 
 	basis Basis = MakeBasis(
@@ -702,11 +707,12 @@ inline void PushRect(render_group* Group, rectangle Rectangle, vector4 Color)
 	Entry->YAxis = ((float) Rectangle.Dim.Y) * ScreenPosDim.YAxis;
 }
 
-inline void PushClear(render_group* Group, vector4 Color)
+inline void PushClear(render_group* Group, vector4 Color, uint32_t Layer)
 {
 	render_entry_clear* Entry = PushStruct(Group->Arena, render_entry_clear);
-	Group->LastEntry = (uint8_t*) Entry;
+	Group->NumEntries++;
 	Entry->Header.Type = EntryType_Clear;
+	Entry->Header.Layer = Layer;
 	Entry->Color = Color;
 }
 
@@ -1340,13 +1346,81 @@ void RenderGroupToOutput(
 )
 {
 	TIMED_BLOCK();
-	uint8_t* CurrentAddress = (
-		RenderGroup->Arena->Base + 
-		FindAlignmentOffset(RenderGroup->Arena->Base, 4)
+	memory_arena* RenderArena = RenderGroup->Arena;
+
+	temp_memory TempMemory = BeginTempMemory(RenderArena);
+	render_entry_handle* EntryHandles = PushArray(
+		RenderArena, RenderGroup->NumEntries, render_entry_handle
 	);
-	while(CurrentAddress <= (RenderGroup->LastEntry))
+
+	// NOTE: construct the sort space
+	uint8_t* CurrentAddress = (
+		RenderArena->Base + FindAlignmentOffset(RenderGroup->Arena->Base, 4)
+	);
+	for(uint32_t Index = 0; Index < RenderGroup->NumEntries; Index++)
 	{
 		render_entry_header* Header = (render_entry_header*) CurrentAddress; 
+		render_entry_handle* EntryHandle = EntryHandles + Index;
+		EntryHandle->Header = Header;
+		EntryHandle->Layer = Header->Layer;
+
+		switch(Header->Type)
+		{
+			case(EntryType_Clear):
+			{
+				render_entry_clear* Entry = (render_entry_clear*) Header;
+				CurrentAddress += sizeof(*Entry);
+				break;
+			}
+			case(EntryType_Rectangle):
+			{
+				render_entry_rectangle* Entry = (render_entry_rectangle*) (
+					Header
+				);
+				CurrentAddress += sizeof(*Entry);
+				break;
+			}
+			case(EntryType_Bitmap):
+			{
+				render_entry_bitmap* Entry = (render_entry_bitmap*) Header;
+
+				CurrentAddress += sizeof(*Entry);
+				break;
+			}
+			default:
+			{
+				ASSERT(false);
+			}
+			CurrentAddress += FindAlignmentOffset(CurrentAddress, 4);
+		}
+	}
+
+	// NOTE: sort layers here (smallest to largest)
+	// TODO: faster sort
+	bool Sorted;
+	do
+	{
+		Sorted = true;
+		render_entry_handle* LastHandle = EntryHandles;
+		for(uint32_t Index = 1; Index < RenderGroup->NumEntries; Index++)
+		{
+			render_entry_handle* CurrentHandle = EntryHandles + Index;
+			if(LastHandle->Layer > CurrentHandle->Layer)
+			{
+				render_entry_handle Temp = *CurrentHandle;
+				*CurrentHandle = *LastHandle;
+				*LastHandle = Temp;
+				Sorted = false;
+			}
+			LastHandle = CurrentHandle;
+		}
+	} while(!Sorted);
+
+	// NOTE: render to output
+	for(uint32_t Index = 0; Index < RenderGroup->NumEntries; Index++)
+	{
+		render_entry_handle* EntryHandle = EntryHandles + Index;
+		render_entry_header* Header = EntryHandle->Header; 
 		switch(Header->Type)
 		{
 			case(EntryType_Clear):
@@ -1358,7 +1432,6 @@ void RenderGroupToOutput(
 						Entry->Color.R, Entry->Color.G, Entry->Color.B, 1.0f
 					)
 				);
-				CurrentAddress += sizeof(*Entry);
 				break;
 			}
 			case(EntryType_Rectangle):
@@ -1374,7 +1447,6 @@ void RenderGroupToOutput(
 					Entry->YAxis,
 					Entry->Color
 				);
-				CurrentAddress += sizeof(*Entry);
 				break;
 			}
 			case(EntryType_Bitmap):
@@ -1389,15 +1461,16 @@ void RenderGroupToOutput(
 					Entry->Bitmap,
 					Entry->Color
 				);
-				CurrentAddress += sizeof(*Entry);
 				break;
 			}
 			default:
 			{
 				ASSERT(false);
 			}
-			CurrentAddress += FindAlignmentOffset(CurrentAddress, 4);
 		}
 	}
-	ResetMemArena(RenderGroup->Arena);
+
+	EndTempMemory(TempMemory);
+	ResetMemArena(RenderArena);
+	RenderGroup->NumEntries = 0;
 }

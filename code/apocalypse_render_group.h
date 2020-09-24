@@ -66,6 +66,7 @@ typedef enum
 struct render_entry_header
 {	
 	entry_type Type;
+	uint32_t Layer;
 };
 
 struct render_entry_clear
@@ -96,10 +97,16 @@ struct render_entry_rectangle
 	vector2 YAxis;
 };
 
+struct render_entry_handle
+{
+	render_entry_header* Header;
+	uint32_t Layer;
+};
+
 struct render_group
 {
 	memory_arena* Arena;
-	uint8_t* LastEntry;
+	uint32_t NumEntries;
 	
 	// NOTE: camera basis is helpful so we can center the scaling of the world
 	// CONT: somewhere besides the screen origin 
@@ -122,7 +129,7 @@ struct push_text_result
 	// CONT: editors
 };
 
-void PushClear(render_group* Group, vector4 Color);
+void PushClear(render_group* Group, vector4 Color, uint32_t Layer = 0);
 vector2 TransformPosFromBasis(basis* Basis, vector2 Vector);
 
 #define APOCALYPSE_RENDER_GROUP_H

@@ -60,5 +60,24 @@ inline void ResetMemArena(memory_arena* Arena)
 	Arena->Used = 0;
 }
 
+struct temp_memory
+{
+	memory_arena* Arena;
+	size_t OldUsed;
+};
+
+inline temp_memory BeginTempMemory(memory_arena* Arena)
+{
+	temp_memory TempMemory = {};
+	TempMemory.Arena = Arena;
+	TempMemory.OldUsed = Arena->Used;
+	return TempMemory;
+}
+
+inline void EndTempMemory(temp_memory TempMemory)
+{
+	TempMemory.Arena->Used = TempMemory.OldUsed;
+}
+
 #define APOCALYPSE_MEMORY_ARENA_H
 #endif

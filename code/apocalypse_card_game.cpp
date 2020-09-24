@@ -330,7 +330,7 @@ bool CheckAndTap(
 			if(DrawnCard != NULL)
 			{
 				float TimeChange = GetTimeChangeFromCard(
-					DrawnCard, DrawnCard->PlayDelta + RelativePlayer_Self
+					DrawnCard, DrawnCard->PlayDelta
 				);
 
 				SceneState->TurnTimer += TimeChange;
@@ -345,7 +345,7 @@ bool CheckAndTap(
 			if(DrawnCard != NULL)
 			{
 				float TimeChange = GetTimeChangeFromCard(
-					DrawnCard, DrawnCard->PlayDelta + RelativePlayer_Opp
+					DrawnCard, DrawnCard->PlayDelta
 				);
 
 				SceneState->NextTurnTimer += TimeChange;
@@ -359,7 +359,20 @@ bool CheckAndTap(
 			player_id Opp = GetOpponent(Card->Owner);
 			ChangeTarget = &PlayerResources[Opp];
 			Delta = &Deltas[RelativePlayer_Opp];
-			ChangeResources(ChangeTarget, Delta);
+			
+			if(HasTag(&Card->EffectTags, CardEffect_GiveTime))
+			{
+				int32_t OppResourceDelta = SumResources(
+					Card->TapDelta + RelativePlayer_Opp
+				);
+				float TimeChange = RESOURCE_TO_TIME * OppResourceDelta;
+
+				SceneState->NextTurnTimer += TimeChange;
+			}
+			else
+			{
+				ChangeResources(ChangeTarget, Delta);
+			}
 		}
 	}
 	Card->TimesTapped++;

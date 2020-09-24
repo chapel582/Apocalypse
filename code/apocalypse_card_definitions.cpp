@@ -781,6 +781,23 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	SetName(Definition, "Draw Opp Extra", sizeof("Draw Opp Extra"));
 	SetTag(&Definition->Tags, CardEffect_DrawOppExtra);
 
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 10, 1);
+	InitPlayerResource(
+		&Definition->PlayDelta[RelativePlayer_Self], 0, 0, 0, 0, -1
+	);
+	InitPlayerResource(
+		&Definition->TapDelta[RelativePlayer_Self], 0, 0, 0, 0, 0
+	);
+	InitPlayerResource(
+		&Definition->PlayDelta[RelativePlayer_Opp], 0, 0, 0, 0, 0
+	);
+	InitPlayerResource(
+		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 1
+	);
+	SetName(Definition, "Give Time", sizeof("Give Time"));
+	SetTag(&Definition->Tags, CardEffect_GiveTime);
+
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;
 	

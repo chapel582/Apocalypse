@@ -17,6 +17,7 @@ struct scroll_bar
 {
 	ui_id UiId;
 	rectangle Rect;
+	rectangle Trough;
 	float LastY;
 };
 

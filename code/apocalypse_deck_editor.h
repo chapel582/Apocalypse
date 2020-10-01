@@ -78,8 +78,8 @@ struct deck_editor_state
 
 	scroll_bar DeckScrollBar;
 	rectangle DeckScrollBox;
-	float DeckScrollBarTop;
-	float MaxDeckScrollBarY;
+	// float DeckScrollBarTop;
+	// float MaxDeckScrollBarY;
 
 	vector2 CardCountPos;
 };

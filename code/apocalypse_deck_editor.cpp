@@ -140,24 +140,27 @@ void UpdateDeckScrollBar(
 )
 {
 	float AllDeckCardsHeight = GetAllDeckCardsHeight(DeckCards);
-	float MaxDeckScrollBarY = SceneState->MaxDeckScrollBarY;
-	rectangle* ScrollBarRect = &SceneState->DeckScrollBar.Rect;
+	rectangle Box = SceneState->DeckScrollBox;
+	float BoxTop = GetTop(Box);
+	float BoxHeight = Box.Dim.Y;
+	scroll_bar* ScrollBar = &SceneState->DeckScrollBar;
+	rectangle* ScrollBarRect = &ScrollBar->Rect;
+	rectangle Trough = ScrollBar->Trough;
+	float TroughHeight = Trough.Dim.Y;
+	float TroughTop = GetTop(Trough);
+
 	UpdateScrollBarDim(
 		ScrollBarRect,
-		MaxDeckScrollBarY / AllDeckCardsHeight, 
-		MaxDeckScrollBarY
+		BoxHeight / AllDeckCardsHeight, 
+		TroughHeight
 	);
 
-	float FractionSeenStartFromTop = (
-		(DeckCards->YStart - SceneState->DeckScrollBarTop) / 
-		AllDeckCardsHeight
+	float TopFractionUnseen = (
+		(DeckCards->YStart - BoxTop) / AllDeckCardsHeight
 	);
 	SetTop(
 		ScrollBarRect, 
-		(
-			SceneState->DeckScrollBarTop - 
-			FractionSeenStartFromTop * MaxDeckScrollBarY
-		)
+		TroughTop - TopFractionUnseen * TroughHeight
 	);
 }
 
@@ -277,18 +280,17 @@ void ScrollDeckCardPositions(
 )
 {
 	float AllDeckCardsHeight = GetAllDeckCardsHeight(DeckCards);
+	float BoxTop = GetTop(SceneState->DeckScrollBox);
+	scroll_bar* ScrollBar = &SceneState->DeckScrollBar;
 	rectangle ScrollBarRect = SceneState->DeckScrollBar.Rect;
-	float FractionSeenStartFromTop = (
-		(
-			GetTop(ScrollBarRect) - 
-			SceneState->DeckScrollBarTop
-		) /
-		SceneState->MaxDeckScrollBarY
+	rectangle Trough = ScrollBar->Trough;
+	float TroughHeight = Trough.Dim.Y;
+	float TroughTop = GetTop(Trough);
+
+	float TopFractionUnseen = (
+		(TroughTop - GetTop(ScrollBarRect)) / TroughHeight
 	); 
-	DeckCards->YStart = (
-		SceneState->DeckScrollBarTop - 
-		(FractionSeenStartFromTop * AllDeckCardsHeight)
-	);
+	DeckCards->YStart = BoxTop + (TopFractionUnseen * AllDeckCardsHeight);
 }
 
 void LoadDeckForEditing(
@@ -459,8 +461,10 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		BackBuffer->Width - DeckScrollBarDim.X, 0.0f
 	);
 	DeckScrollBar->Rect = MakeRectangle(DeckScrollBarMin, DeckScrollBarDim);
-	SceneState->DeckScrollBarTop = (float) BackBuffer->Height;
-	SceneState->MaxDeckScrollBarY = (float) BackBuffer->Height;
+	DeckScrollBar->Trough = MakeRectangle(
+		Vector2(DeckScrollBarMin.X, 0.0f),
+		Vector2(DeckScrollBarDim.X, (float) BackBuffer->Height)
+	);
 	
 	deck_editor_cards* DeckCards = &SceneState->DeckCards;
 	*DeckCards = {};
@@ -780,7 +784,7 @@ void UpdateAndRenderDeckEditor(
 				MouseEvent,
 				MouseEventWorldPos,
 				MinY, 
-				SceneState->DeckScrollBarTop
+				SceneState->DeckScrollBar.Trough.Dim.Y
 			);
 			if(ScrollResult == ScrollHandleMouse_Moved)
 			{

@@ -5,6 +5,7 @@
 #include "apocalypse_text_input.h"
 #include "apocalypse_button.h"
 #include "apocalypse_alert.h"
+#include "apocalypse_scroll.h"
 
 struct start_deck_selector_args
 {
@@ -31,6 +32,9 @@ struct deck_selector_state
 	vector2 LoadDeckButtonDim;
 	float LoadDeckButtonsYStart;
 	float LoadDeckButtonsYMargin;
+
+	scroll_bar DeckScrollBar;
+	rectangle DeckScrollBox;
 
 	alert Alert;
 

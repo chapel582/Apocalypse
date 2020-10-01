@@ -460,7 +460,9 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 
 	SceneState->DeckScrollBox = MakeRectangle(
 		Vector2(DeckCards->XPos, 0.0f), 
-		Vector2(DeckCards->Dim.X + DeckScrollBarDim.X, DeckCards->YStart)
+		Vector2(
+			DeckCards->Dim.X + DeckScrollBarDim.X, (float) BackBuffer->Height
+		)
 	);
 
 	SceneState->Definitions = DefineCards(&GameState->TransientArena);

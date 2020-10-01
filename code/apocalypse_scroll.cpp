@@ -126,6 +126,7 @@ scroll_handle_mouse_code ScrollHandleMouse(
 	float MaxY
 )
 {
+	// TODO: we might be able to remove MinY and MaxY arguments
 	scroll_handle_mouse_code Result = ScrollHandleMouse_NoAction;
 	if(!CanScroll(ScrollBar, ScrollBox))
 	{

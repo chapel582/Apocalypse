@@ -6,6 +6,7 @@
 #include "apocalypse_deck_storage.h"
 #include "apocalypse_render_group.h"
 #include "apocalypse_assets.h"
+#include "apocalypse_scroll.h"
 
 void DeckSelectorPrepNextScene(
 	game_state* GameState, deck_selector_state* SceneState, bool AlreadyExists
@@ -41,6 +42,11 @@ void DeckSelectorPrepNextScene(
 			break;
 		}
 	}
+}
+
+float GetDeckScrollBoxLeft(rectangle DeckNameInputRectangle)
+{
+	return GetRight(DeckNameInputRectangle) + 10.0f;
 }
 
 void StartDeckSelectorPrep(game_state* GameState, scene_type ToStart)
@@ -95,6 +101,7 @@ void StartDeckSelector(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		Vector2(BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f),
 		Vector2(BackBuffer->Width / 5.0f, SceneState->DeckNameInput.FontHeight)
 	);
+	rectangle DeckNameInputRectangle = SceneState->DeckNameInputRectangle;
 	SetActive(UiContext, SceneState->DeckNameInput.UiId);
 
 	SceneState->DeckNamesSize = PLATFORM_MAX_PATH * MAX_DECKS_SAVED;
@@ -120,6 +127,23 @@ void StartDeckSelector(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	}
 
 	SceneState->Alert = MakeAlert();
+
+	scroll_bar* DeckScrollBar = &SceneState->DeckScrollBar;
+	InitScrollBar(UiContext, DeckScrollBar);
+	vector2 DeckScrollBarDim = Vector2(30.0f, 0.0f);
+	vector2 DeckScrollBarMin = Vector2(
+		GetRight(DeckNameInputRectangle) + SceneState->LoadDeckButtonDim.X, 0.0f
+	);
+	DeckScrollBar->Rect = MakeRectangle(DeckScrollBarMin, DeckScrollBarDim);
+	DeckScrollBar->Trough = MakeRectangle(
+		Vector2(DeckScrollBarMin.X, 0.0f),
+		Vector2(DeckScrollBarDim.X, (float) BackBuffer->Height)
+	);
+
+	SceneState->DeckScrollBox = MakeRectangle(
+		Vector2(GetDeckScrollBoxLeft(DeckNameInputRectangle), 0.0f), 
+		Vector2(SceneState->LoadDeckButtonDim.X, (float) BackBuffer->Height)
+	);
 }
 
 void UpdateAndRenderDeckSelector(
@@ -131,6 +155,59 @@ void UpdateAndRenderDeckSelector(
 	float DtForFrame
 )
 {
+	rectangle* DeckNameInputRectangle = &SceneState->DeckNameInputRectangle;
+
+	// NOTE: at start, we calculate the height of our stack of deck buttons
+	// TODO: consider making all the rectangles ONCE and then reusing the array 
+	// CONT: of rects throughout this function call
+	float AllElementsHeight = 0.0f;
+	{
+		load_deck_button* LoadDeckButtons = SceneState->LoadDeckButtons;
+		char* CurrentDeckName = SceneState->DeckNames;
+		flat_string_array_reader FlatArrayReader;
+		InitFlatStringArrayReader(
+			&FlatArrayReader,
+			CurrentDeckName,
+			SceneState->DeckNamesSize
+		);
+		rectangle Rectangle = MakeNextRectangle(
+			GetDeckScrollBoxLeft(*DeckNameInputRectangle),
+			SceneState->LoadDeckButtonsYStart,
+			SceneState->LoadDeckButtonsYMargin,
+			SceneState->LoadDeckButtonDim,
+			0
+		);
+		float Top = GetTop(Rectangle);
+		for(
+			uint32_t ButtonIndex = 1;
+			ButtonIndex < ARRAY_COUNT(SceneState->LoadDeckButtons);
+			ButtonIndex++
+		)
+		{
+			if(CurrentDeckName == NULL)
+			{
+				break;
+			}
+			Rectangle = MakeNextRectangle(
+				GetDeckScrollBoxLeft(*DeckNameInputRectangle),
+				SceneState->LoadDeckButtonsYStart,
+				SceneState->LoadDeckButtonsYMargin,
+				SceneState->LoadDeckButtonDim,
+				ButtonIndex
+			);
+			CurrentDeckName = GetNextString(&FlatArrayReader);
+		}
+		float Bottom = GetBottom(Rectangle);
+		AllElementsHeight = Top - Bottom;
+		// TODO: make a correction for the height calculation (it goes one past)
+	}
+	UpdateScrollBarPosDim(
+		&SceneState->DeckScrollBar,
+		SceneState->DeckScrollBox,
+		SceneState->LoadDeckButtonsYStart,
+		AllElementsHeight
+	);
+	
 	user_event_index UserEventIndex = 0;
 	int MouseEventIndex = 0;
 	int KeyboardEventIndex = 0;
@@ -160,13 +237,10 @@ void UpdateAndRenderDeckSelector(
 				)
 			);
 			
-			rectangle DeckNameInputRectangle = (
-				SceneState->DeckNameInputRectangle
-			);
 			TextInputHandleMouse(
 				UiContext,
 				&SceneState->DeckNameInput,
-				DeckNameInputRectangle,
+				*DeckNameInputRectangle,
 				MouseEvent,
 				MouseEventWorldPos
 			);
@@ -194,7 +268,7 @@ void UpdateAndRenderDeckSelector(
 					LoadDeckButtons + ButtonIndex
 				);
 				rectangle Rectangle = MakeNextRectangle(
-					GetRight(DeckNameInputRectangle) + 10.0f,
+					GetDeckScrollBoxLeft(*DeckNameInputRectangle),
 					SceneState->LoadDeckButtonsYStart,
 					SceneState->LoadDeckButtonsYMargin,
 					SceneState->LoadDeckButtonDim,
@@ -227,6 +301,25 @@ void UpdateAndRenderDeckSelector(
 				{
 					CurrentDeckName = GetNextString(&FlatArrayReader); 
 				}
+			}
+
+			float MinY = 0.0f;
+			scroll_handle_mouse_code ScrollResult = ScrollHandleMouse(
+				UiContext,
+				&SceneState->DeckScrollBar,
+				&SceneState->DeckScrollBox,
+				MouseEvent,
+				MouseEventWorldPos,
+				MinY, 
+				SceneState->DeckScrollBar.Trough.Dim.Y
+			);
+			if(ScrollResult == ScrollHandleMouse_Moved)
+			{
+				SceneState->LoadDeckButtonsYStart = GetElementsYStart(
+					&SceneState->DeckScrollBar,
+					SceneState->DeckScrollBox,
+					AllElementsHeight
+				);
 			}
 
 			UserEventIndex++;
@@ -327,12 +420,11 @@ void UpdateAndRenderDeckSelector(
 	vector4 FontColor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 	vector4 BackgroundColor = Vector4(0.1f, 0.1f, 0.1f, 1.0f);
 	bitmap_handle Background = BitmapHandle_TestCard2;
-	rectangle DeckNameInputRectangle = SceneState->DeckNameInputRectangle;
 	PushTextInput(
 		UiContext,
 		&SceneState->DeckNameInput,
 		FontColor,
-		DeckNameInputRectangle,
+		*DeckNameInputRectangle,
 		Background,
 		BackgroundColor,
 		Assets,
@@ -361,7 +453,7 @@ void UpdateAndRenderDeckSelector(
 			LoadDeckButtons + ButtonIndex
 		);
 		rectangle Rectangle = MakeNextRectangle(
-			GetRight(DeckNameInputRectangle) + 10.0f,
+			GetDeckScrollBoxLeft(*DeckNameInputRectangle),
 			SceneState->LoadDeckButtonsYStart,
 			SceneState->LoadDeckButtonsYMargin,
 			SceneState->LoadDeckButtonDim,
@@ -387,4 +479,14 @@ void UpdateAndRenderDeckSelector(
 	}
 
 	PushCenteredAlert(&SceneState->Alert, GameState, BackBuffer);
+
+	if(CanScroll(&SceneState->DeckScrollBar, &SceneState->DeckScrollBox))
+	{
+		PushScrollBarToRenderGroup(
+			SceneState->DeckScrollBar.Rect,
+			BitmapHandle_TestCard2,
+			DefaultRenderGroup,
+			Assets
+		);
+	}
 }

@@ -59,6 +59,11 @@ scroll_handle_mouse_code ScrollTroughHandleMouse(
 	return Result;
 }
 
+bool CanScroll(scroll_bar* ScrollBar, rectangle* ScrollBox)
+{
+	return ScrollBar->Rect.Dim.Y < ScrollBox->Dim.Y;
+}
+
 scroll_handle_mouse_code ScrollBarHandleMouse(
 	ui_context* UiContext,
 	scroll_bar* ScrollBar,
@@ -114,7 +119,6 @@ scroll_handle_mouse_code ScrollBarHandleMouse(
 scroll_handle_mouse_code ScrollHandleMouse(
 	ui_context* UiContext,
 	scroll_bar* ScrollBar,
-	rectangle* ScrollBarRect,
 	rectangle* ScrollBox,
 	game_mouse_event* MouseEvent,
 	vector2 MouseEventWorldPos,
@@ -122,7 +126,14 @@ scroll_handle_mouse_code ScrollHandleMouse(
 	float MaxY
 )
 {
-	scroll_handle_mouse_code Result = ScrollBoxHandleMouse(
+	scroll_handle_mouse_code Result = ScrollHandleMouse_NoAction;
+	if(!CanScroll(ScrollBar, ScrollBox))
+	{
+		return Result;
+	}
+
+	rectangle* ScrollBarRect = &ScrollBar->Rect;
+	Result = ScrollBoxHandleMouse(
 		ScrollBarRect, ScrollBox, MouseEvent, MouseEventWorldPos, MinY, MaxY
 	);
 	if(Result == ScrollHandleMouse_Moved)

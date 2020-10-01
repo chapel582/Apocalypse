@@ -135,20 +135,15 @@ float GetAllDeckCardsHeight(deck_editor_cards* DeckCards)
 	return GetTop(FirstDeckCard) - GetBottom(LastDeckCard);
 }
 
-bool IsScrollBarInteractable(deck_editor_state* SceneState)
-{
-	// TODO: this can probably be pulled out into the scroll bar tools
-	return SceneState->DeckScrollBarRect.Dim.Y < SceneState->MaxDeckScrollBarY;
-}
-
 void UpdateDeckScrollBar(
 	deck_editor_cards* DeckCards, deck_editor_state* SceneState
 )
 {
 	float AllDeckCardsHeight = GetAllDeckCardsHeight(DeckCards);
 	float MaxDeckScrollBarY = SceneState->MaxDeckScrollBarY;
+	rectangle* ScrollBarRect = &SceneState->DeckScrollBar.Rect;
 	UpdateScrollBarDim(
-		&SceneState->DeckScrollBarRect,
+		ScrollBarRect,
 		MaxDeckScrollBarY / AllDeckCardsHeight, 
 		MaxDeckScrollBarY
 	);
@@ -158,7 +153,7 @@ void UpdateDeckScrollBar(
 		AllDeckCardsHeight
 	);
 	SetTop(
-		&SceneState->DeckScrollBarRect, 
+		ScrollBarRect, 
 		(
 			SceneState->DeckScrollBarTop - 
 			FractionSeenStartFromTop * MaxDeckScrollBarY
@@ -282,9 +277,10 @@ void ScrollDeckCardPositions(
 )
 {
 	float AllDeckCardsHeight = GetAllDeckCardsHeight(DeckCards);
+	rectangle ScrollBarRect = SceneState->DeckScrollBar.Rect;
 	float FractionSeenStartFromTop = (
 		(
-			GetTop(SceneState->DeckScrollBarRect) - 
+			GetTop(ScrollBarRect) - 
 			SceneState->DeckScrollBarTop
 		) /
 		SceneState->MaxDeckScrollBarY
@@ -456,14 +452,13 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	InitUiContext(&SceneState->UiContext);
 	ui_context* UiContext = &SceneState->UiContext;
 
-	InitScrollBar(UiContext, &SceneState->DeckScrollBar);
+	scroll_bar* DeckScrollBar = &SceneState->DeckScrollBar;
+	InitScrollBar(UiContext, DeckScrollBar);
 	vector2 DeckScrollBarDim = Vector2(30.0f, 0.0f);
 	vector2 DeckScrollBarMin = Vector2(
 		BackBuffer->Width - DeckScrollBarDim.X, 0.0f
 	);
-	SceneState->DeckScrollBarRect = MakeRectangle(
-		DeckScrollBarMin, DeckScrollBarDim
-	);
+	DeckScrollBar->Rect = MakeRectangle(DeckScrollBarMin, DeckScrollBarDim);
 	SceneState->DeckScrollBarTop = (float) BackBuffer->Height;
 	SceneState->MaxDeckScrollBarY = (float) BackBuffer->Height;
 	
@@ -777,23 +772,19 @@ void UpdateAndRenderDeckEditor(
 				CollectionCardsNext(SceneState);
 			}
 
-			if(IsScrollBarInteractable(SceneState))
+			float MinY = 0.0f;
+			scroll_handle_mouse_code ScrollResult = ScrollHandleMouse(
+				UiContext,
+				&SceneState->DeckScrollBar,
+				&SceneState->DeckScrollBox,
+				MouseEvent,
+				MouseEventWorldPos,
+				MinY, 
+				SceneState->DeckScrollBarTop
+			);
+			if(ScrollResult == ScrollHandleMouse_Moved)
 			{
-				float MinY = 0.0f;
-				scroll_handle_mouse_code ScrollResult = ScrollHandleMouse(
-					UiContext,
-					&SceneState->DeckScrollBar,
-					&SceneState->DeckScrollBarRect,
-					&SceneState->DeckScrollBox,
-					MouseEvent,
-					MouseEventWorldPos,
-					MinY, 
-					SceneState->DeckScrollBarTop
-				);
-				if(ScrollResult == ScrollHandleMouse_Moved)
-				{
-					ScrollDeckCardPositions(SceneState, DeckCards);
-				}
+				ScrollDeckCardPositions(SceneState, DeckCards);
 			}
 
 			TextInputHandleMouse(
@@ -1103,10 +1094,10 @@ void UpdateAndRenderDeckEditor(
 	);
 
 	// NOTE: Push deck editor scroll bar
-	if(IsScrollBarInteractable(SceneState))
+	if(CanScroll(&SceneState->DeckScrollBar, &SceneState->DeckScrollBox))
 	{
 		PushScrollBarToRenderGroup(
-			SceneState->DeckScrollBarRect,
+			SceneState->DeckScrollBar.Rect,
 			BitmapHandle_TestCard2,
 			DefaultRenderGroup,
 			Assets

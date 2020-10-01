@@ -16,15 +16,18 @@ typedef enum
 struct scroll_bar
 {
 	ui_id UiId;
+	rectangle Rect;
 	float LastY;
 };
 
 inline void InitScrollBar(ui_context* UiContext, scroll_bar* ScrollBar)
 {
+	*ScrollBar = {};
 	ScrollBar->UiId = GetId(UiContext);
 	ScrollBar->LastY = 0.0f;
 }
 
+bool CanScroll(scroll_bar* ScrollBar, rectangle* ScrollBox);
 scroll_handle_mouse_code ScrollBoxHandleMouse(
 	rectangle* ScrollBarRect,
 	rectangle* ScrollBox,
@@ -54,13 +57,11 @@ void PushScrollBarToRenderGroup(
 scroll_handle_mouse_code ScrollHandleMouse(
 	ui_context* UiContext,
 	scroll_bar* ScrollBar,
-	rectangle* ScrollBarRect,
 	rectangle* ScrollBox,
 	game_mouse_event* MouseEvent,
 	vector2 MouseEventWorldPos,
 	float MinY, 
 	float MaxY
 );
-
 #define APOCALYPSE_SCROLL_H
 #endif

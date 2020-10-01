@@ -192,6 +192,35 @@ void UpdateScrollBarDim(
 	Rectangle->Dim.Y = FractionShown * MaxDimY;
 }
 
+void UpdateScrollBarPosDim(
+	scroll_bar* ScrollBar,
+	rectangle Box,
+	float ElementsYStart,
+	float AllElementsHeight
+)
+{
+	/* NOTE: 
+	for updating the scroll bar's position and dimensions. the scroll bar's 
+	position and dimensions are calculated based on where its elements start 
+	rendering and the total height of the space containing all its elements
+	*/ 
+	float BoxTop = GetTop(Box);
+	float BoxHeight = Box.Dim.Y;
+	rectangle* ScrollBarRect = &ScrollBar->Rect;
+	rectangle Trough = ScrollBar->Trough;
+	float TroughHeight = Trough.Dim.Y;
+	float TroughTop = GetTop(Trough);
+
+	UpdateScrollBarDim(
+		ScrollBarRect,
+		BoxHeight / AllElementsHeight, 
+		TroughHeight
+	);
+
+	float TopFractionUnseen = (ElementsYStart - BoxTop) / AllElementsHeight;
+	SetTop(ScrollBarRect, TroughTop - TopFractionUnseen * TroughHeight);
+}
+
 float GetElementsYStart(
 	scroll_bar* ScrollBar, rectangle ScrollBox, float AllElementsHeight
 )

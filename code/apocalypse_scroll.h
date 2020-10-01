@@ -64,6 +64,12 @@ scroll_handle_mouse_code ScrollHandleMouse(
 	float MinY, 
 	float MaxY
 );
+void UpdateScrollBarPosDim(
+	scroll_bar* ScrollBar,
+	rectangle Box,
+	float ElementsYStart,
+	float AllElementsHeight
+);
 float GetElementsYStart(
 	scroll_bar* ScrollBar, rectangle ScrollBox, float AllElementsHeight
 );

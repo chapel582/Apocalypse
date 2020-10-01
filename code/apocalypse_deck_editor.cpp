@@ -140,27 +140,12 @@ void UpdateDeckScrollBar(
 )
 {
 	float AllDeckCardsHeight = GetAllDeckCardsHeight(DeckCards);
-	rectangle Box = SceneState->DeckScrollBox;
-	float BoxTop = GetTop(Box);
-	float BoxHeight = Box.Dim.Y;
 	scroll_bar* ScrollBar = &SceneState->DeckScrollBar;
-	rectangle* ScrollBarRect = &ScrollBar->Rect;
-	rectangle Trough = ScrollBar->Trough;
-	float TroughHeight = Trough.Dim.Y;
-	float TroughTop = GetTop(Trough);
-
-	UpdateScrollBarDim(
-		ScrollBarRect,
-		BoxHeight / AllDeckCardsHeight, 
-		TroughHeight
-	);
-
-	float TopFractionUnseen = (
-		(DeckCards->YStart - BoxTop) / AllDeckCardsHeight
-	);
-	SetTop(
-		ScrollBarRect, 
-		TroughTop - TopFractionUnseen * TroughHeight
+	UpdateScrollBarPosDim(
+		ScrollBar,
+		SceneState->DeckScrollBox,
+		DeckCards->YStart,
+		AllDeckCardsHeight
 	);
 }
 

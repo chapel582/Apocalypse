@@ -280,17 +280,11 @@ void ScrollDeckCardPositions(
 )
 {
 	float AllDeckCardsHeight = GetAllDeckCardsHeight(DeckCards);
-	float BoxTop = GetTop(SceneState->DeckScrollBox);
-	scroll_bar* ScrollBar = &SceneState->DeckScrollBar;
-	rectangle ScrollBarRect = SceneState->DeckScrollBar.Rect;
-	rectangle Trough = ScrollBar->Trough;
-	float TroughHeight = Trough.Dim.Y;
-	float TroughTop = GetTop(Trough);
-
-	float TopFractionUnseen = (
-		(TroughTop - GetTop(ScrollBarRect)) / TroughHeight
-	); 
-	DeckCards->YStart = BoxTop + (TopFractionUnseen * AllDeckCardsHeight);
+	DeckCards->YStart = GetElementsYStart(
+		&SceneState->DeckScrollBar,
+		SceneState->DeckScrollBox,
+		AllDeckCardsHeight
+	);
 }
 
 void LoadDeckForEditing(

@@ -192,6 +192,28 @@ void UpdateScrollBarDim(
 	Rectangle->Dim.Y = FractionShown * MaxDimY;
 }
 
+float GetElementsYStart(
+	scroll_bar* ScrollBar, rectangle ScrollBox, float AllElementsHeight
+)
+{
+	/* NOTE: 
+	for updating the scroll box elements' positions in world space. we get the
+	new y start based on an already updated ScrollBar
+
+	returns 
+		float - new y position in world space for starting to render elements
+	*/ 
+	float BoxTop = GetTop(ScrollBox);
+	rectangle ScrollBarRect = ScrollBar->Rect;
+	float ScrollBarTop = GetTop(ScrollBarRect);
+	rectangle Trough = ScrollBar->Trough;
+	float TroughHeight = Trough.Dim.Y;
+	float TroughTop = GetTop(Trough);
+
+	float TopFractionUnseen = (TroughTop - ScrollBarTop) / TroughHeight;
+	return BoxTop + (TopFractionUnseen * AllElementsHeight);
+}
+
 void PushScrollBarToRenderGroup(
 	rectangle Rectangle,
 	bitmap_handle ScrollBarBitmap,

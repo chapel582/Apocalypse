@@ -64,5 +64,8 @@ scroll_handle_mouse_code ScrollHandleMouse(
 	float MinY, 
 	float MaxY
 );
+float GetElementsYStart(
+	scroll_bar* ScrollBar, rectangle ScrollBox, float AllElementsHeight
+);
 #define APOCALYPSE_SCROLL_H
 #endif

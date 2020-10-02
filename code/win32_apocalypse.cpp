@@ -22,6 +22,9 @@ TODO: This is not a final platform layer
 #include <windows.h>
 #include <Winuser.h>
 #include <dsound.h>
+#include <gl/gl.h>
+
+#include "apocalypse_opengl.cpp"
 
 // NOTE: Win32 Apocalypse stuff
 #include "win32_apocalypse.h"
@@ -33,6 +36,7 @@ LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer = NULL;
 // CONT: globalbackbuffer. until you're sure it's not distinct from the 
 // CONT: game offscreen buffer on multiple platforms
 win32_offscreen_buffer GlobalBackBuffer = {};
+GLuint GlobalBlitTextureHandle;
 
 #define WINDOW_STYLE (WS_OVERLAPPEDWINDOW | WS_VISIBLE)
 
@@ -316,6 +320,45 @@ soundend:
 	return result;
 }
 
+void Win32InitOpenGl(HWND Window)
+{
+	HDC WindowDc = GetDC(Window);
+
+	PIXELFORMATDESCRIPTOR DesiredPixelFormat = {};
+	DesiredPixelFormat.nSize = sizeof(DesiredPixelFormat);
+	DesiredPixelFormat.nVersion = 1;
+	DesiredPixelFormat.iPixelType = PFD_TYPE_RGBA;
+	DesiredPixelFormat.dwFlags = (
+		PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW | PFD_DOUBLEBUFFER
+	);
+	DesiredPixelFormat.cColorBits = 32;
+	DesiredPixelFormat.cAlphaBits = 8;
+	DesiredPixelFormat.iLayerType = PFD_MAIN_PLANE;
+
+	int SuggestedPixelFormatIndex = ChoosePixelFormat(
+		WindowDc, &DesiredPixelFormat
+	);
+	PIXELFORMATDESCRIPTOR SuggestedPixelFormat;
+	DescribePixelFormat(
+		WindowDc,
+		SuggestedPixelFormatIndex,
+		sizeof(SuggestedPixelFormat),
+		&SuggestedPixelFormat
+	);
+	SetPixelFormat(WindowDc, SuggestedPixelFormatIndex, &SuggestedPixelFormat);
+
+	HGLRC OpenGlrc = wglCreateContext(WindowDc);
+	if(wglMakeCurrent(WindowDc, OpenGlrc))
+	{
+	}
+	else
+	{
+		ASSERT(false);
+		// TODO: Diagnostic
+	}
+	ReleaseDC(Window, WindowDc);
+}
+
 void Win32DebugDrawVertical(
 	win32_offscreen_buffer* BackBuffer, 
 	int X,
@@ -398,6 +441,11 @@ void Win32DebugSyncDisplay(
 
 void Win32BufferToWindow(win32_offscreen_buffer* BackBuffer, HDC DeviceContext)
 {
+	// TODO: clean up
+	// int WindowWidth = BackBuffer->Width;
+	// int WindowHeight = BackBuffer->Height;
+
+#if 0
 	StretchDIBits(
 		DeviceContext,
 		0,
@@ -413,6 +461,68 @@ void Win32BufferToWindow(win32_offscreen_buffer* BackBuffer, HDC DeviceContext)
 		DIB_RGB_COLORS,
 		SRCCOPY
 	);
+#endif
+
+	// glViewport(0, 0, WindowWidth, WindowHeight);
+	// glBindTexture(GL_TEXTURE_2D, GlobalBlitTextureHandle);
+
+	// glTexImage2D(
+	// 	GL_TEXTURE_2D,
+	// 	0,
+	// 	GL_RGBA8,
+	// 	BackBuffer->Width,
+	// 	BackBuffer->Height,
+	// 	0,
+	// 	GL_BGRA_EXT,
+	// 	GL_UNSIGNED_BYTE,
+	// 	BackBuffer->Memory
+	// );
+	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);    
+	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);    
+	// glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
+	// glEnable(GL_TEXTURE_2D);
+
+	// glClearColor(1.0f, 0.0f, 1.0f, 0.0f);
+	// glClear(GL_COLOR_BUFFER_BIT);
+
+	// glMatrixMode(GL_TEXTURE);
+	// glLoadIdentity();
+
+	// glMatrixMode(GL_MODELVIEW);
+	// glLoadIdentity();
+
+	// glMatrixMode(GL_PROJECTION);
+	// glLoadIdentity();
+
+	// glBegin(GL_TRIANGLES);
+
+	// // NOTE: Lower triangle
+	// float P = 1.0f;
+	// glTexCoord2f(0.0f, 0.0f);
+	// glVertex2f(-P, -P);
+
+	// glTexCoord2f(1.0f, 0.0f);
+	// glVertex2f(P, -P);
+
+	// glTexCoord2f(1.0f, 1.0f);
+	// glVertex2f(P, P);
+
+	// // NOTE: Upper triangle
+	// glTexCoord2f(0.0f, 0.0f);
+	// glVertex2f(-P, -P);
+
+	// glTexCoord2f(1.0f, 1.0f);
+	// glVertex2f(P, P);
+
+	// glTexCoord2f(0.0f, 1.0f);
+	// glVertex2f(-P, P);
+	
+	// glEnd();
+
+	SwapBuffers(DeviceContext);
 }
 
 win32_window_dimension Win32GetWindowDimension(HWND Window)
@@ -811,6 +921,8 @@ int CALLBACK WinMain(
 
 		if(WindowHandle)
 		{
+			Win32InitOpenGl(WindowHandle);
+
 			// TODO: query this on Windows
 			int MonitorRefreshHz = 60;
 			{

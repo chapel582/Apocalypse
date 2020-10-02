@@ -9,6 +9,7 @@
 #include "apocalypse_assets.h"
 #include "apocalypse_audio.h"
 #include "apocalypse_particles.h"
+#include "apocalypse_opengl.h"
 
 #include "apocalypse_deck_selector.cpp"
 #include "apocalypse_render_group.cpp"

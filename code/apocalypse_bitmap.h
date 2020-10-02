@@ -8,6 +8,9 @@ struct loaded_bitmap
 	// NOTE: Memory is not the head of memory! it's actually offset so we can 
 	// CONT: read it from the bottom left
 	void* Memory;
+
+	
+	uint32_t GlTextureHandle;
 };
 
 #define APOCALYPSE_BITMAP_H

@@ -56,6 +56,7 @@ loaded_bitmap LoadBmp(
 	Result.Memory = Pixels;
 	Result.Width = Header->Width;
 	Result.Height = Header->Height;
+	Result.GlTextureHandle = 0;
 
 	ASSERT(Result.Height > 0);
 	ASSERT(Header->Compression == 3);

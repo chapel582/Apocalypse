@@ -419,7 +419,9 @@ void StartDeckEditorPrep(
 	GameState->Scene = SceneType_DeckEditor;
 }
 
-void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
+void StartDeckEditor(
+	game_state* GameState, uint32_t WindowWidth, uint32_t WindowHeight
+)
 {
 	start_deck_editor_args* SceneArgs = (start_deck_editor_args*) (
 		GameState->SceneArgs
@@ -436,13 +438,11 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	scroll_bar* DeckScrollBar = &SceneState->DeckScrollBar;
 	InitScrollBar(UiContext, DeckScrollBar);
 	vector2 DeckScrollBarDim = Vector2(30.0f, 0.0f);
-	vector2 DeckScrollBarMin = Vector2(
-		BackBuffer->Width - DeckScrollBarDim.X, 0.0f
-	);
+	vector2 DeckScrollBarMin = Vector2(WindowWidth - DeckScrollBarDim.X, 0.0f);
 	DeckScrollBar->Rect = MakeRectangle(DeckScrollBarMin, DeckScrollBarDim);
 	DeckScrollBar->Trough = MakeRectangle(
 		Vector2(DeckScrollBarMin.X, 0.0f),
-		Vector2(DeckScrollBarDim.X, (float) BackBuffer->Height)
+		Vector2(DeckScrollBarDim.X, (float) WindowHeight)
 	);
 	
 	deck_editor_cards* DeckCards = &SceneState->DeckCards;
@@ -450,7 +450,7 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	DeckCards->ActiveButtons = 0;
 	DeckCards->Dim = Vector2(160.0f, 30.0f);
 	DeckCards->XPos = DeckScrollBarMin.X - DeckCards->Dim.X;
-	DeckCards->YStart = (float) BackBuffer->Height;
+	DeckCards->YStart = (float) WindowHeight;
 	DeckCards->YMargin = 0.1f * DeckCards->Dim.Y;
 	memset(
 		DeckCards->Cards,
@@ -461,7 +461,7 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	SceneState->DeckScrollBox = MakeRectangle(
 		Vector2(DeckCards->XPos, 0.0f), 
 		Vector2(
-			DeckCards->Dim.X + DeckScrollBarDim.X, (float) BackBuffer->Height
+			DeckCards->Dim.X + DeckScrollBarDim.X, (float) WindowHeight
 		)
 	);
 
@@ -522,10 +522,10 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		CARD_NAME_SIZE
 	);
 	vector2 TempDim = Vector2(
-		BackBuffer->Width / 5.0f, SceneState->SearchCollection.FontHeight
+		WindowWidth / 5.0f, SceneState->SearchCollection.FontHeight
 	);
 	SceneState->SearchCollectionRectangle = MakeRectangleCentered(
-		Vector2(TempDim.X / 2.0f, BackBuffer->Height / 2.0f),
+		Vector2(TempDim.X / 2.0f, WindowHeight / 2.0f),
 		TempDim	
 	);
 	SceneState->CollectionSorted = false;
@@ -578,7 +578,7 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	InitButton(UiContext, &SceneState->SaveButton, SaveButtonRect);
 
 	SceneState->CardCountPos = Vector2(
-		GetCenter(SaveButtonRect).X, (float) BackBuffer->Height - 30.0f
+		GetCenter(SaveButtonRect).X, (float) WindowHeight - 30.0f
 	);
 
 	SceneState->DeckNamePos = (
@@ -586,7 +586,7 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	); 
 
 	SceneState->InfoCardCenter = Vector2(
-		BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f
+		WindowWidth / 2.0f, WindowHeight / 2.0f
 	);
 	vector2 ScaledInfoCardDim = 0.33f * Vector2(600.0f, 900.0f);
 	SceneState->InfoCardXBound = Vector2(ScaledInfoCardDim.X, 0.0f);
@@ -601,7 +601,8 @@ void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer)
 void UpdateAndRenderDeckEditor(
 	game_state* GameState,
 	deck_editor_state* SceneState,
-	game_offscreen_buffer* BackBuffer,
+	uint32_t WindowWidth,
+	uint32_t WindowHeight,
 	game_mouse_events* MouseEvents,
 	game_keyboard_events* KeyboardEvents,
 	float DtForFrame
@@ -1122,5 +1123,5 @@ void UpdateAndRenderDeckEditor(
 		);
 	}
 
-	PushCenteredAlert(&SceneState->Alert, GameState, BackBuffer);
+	PushCenteredAlert(&SceneState->Alert, GameState, WindowWidth, WindowHeight);
 }

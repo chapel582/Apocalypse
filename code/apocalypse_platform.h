@@ -147,15 +147,6 @@ struct game_memory
 	platform_job_queue* DefaultJobQueue;
 };
 
-struct game_offscreen_buffer
-{
-	void* Memory;
-	int Width;
-	int Height;
-	int Pitch;
-	int BytesPerPixel;
-};
-
 struct game_sound_output_buffer
 {
 	int SamplesPerSecond;
@@ -227,14 +218,17 @@ struct keyboard_state
 
 void GameUpdateAndRender(
 	game_memory* Memory,
-	game_offscreen_buffer* BackBuffer,
+	uint32_t WindowWidth,
+	uint32_t WindowHeight,
 	game_mouse_events* MouseEvents,
 	game_keyboard_events* KeyboardEvents,
 	float dtForFrame
 );
 
 void GameFillSound(game_memory* Memory, game_sound_output_buffer* SoundBuffer);
-void HandleGameDebug(game_memory* Memory, game_offscreen_buffer* BackBuffer);
+void HandleGameDebug(
+	game_memory* Memory, uint32_t WindowWidth, uint32_t WindowHeight
+);
 
 #define APOCALYPSE_PLATFORM_H
 #endif

@@ -10,7 +10,9 @@ struct main_menu_state
 	ui_button DeckEditorButton;
 };
 
-void StartMainMenu(game_state* GameState, game_offscreen_buffer* BackBuffer);
+void StartMainMenu(
+	game_state* GameState, uint32_t WindowWidth, uint32_t WindowHeight
+);
 
 #define APOCALYPSE_MAIN_MENU_H
 #endif

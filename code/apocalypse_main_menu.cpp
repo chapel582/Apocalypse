@@ -6,7 +6,9 @@
 #include "apocalypse_button.h"
 #include "apocalypse_deck_selector.h"
 
-void StartMainMenu(game_state* GameState, game_offscreen_buffer* BackBuffer)
+void StartMainMenu(
+	game_state* GameState, uint32_t WindowWidth, uint32_t WindowHeight
+)
 {
 	ResetMemArena(&GameState->TransientArena);
 	GameState->SceneState = PushStruct(
@@ -17,10 +19,8 @@ void StartMainMenu(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	
 	ui_context* UiContext = &SceneState->UiContext;
 	InitUiContext(UiContext);
-	vector2 Center = Vector2(
-		BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f
-	);
-	vector2 Dim = Vector2(BackBuffer->Width / 5.5f, BackBuffer->Height / 20.0f); 
+	vector2 Center = Vector2(WindowWidth / 2.0f, WindowHeight / 2.0f);
+	vector2 Dim = Vector2(WindowWidth / 5.5f, WindowHeight / 20.0f); 
 	vector2 ButtonMin = Center - 0.5f * Dim;
 	InitButton(
 		UiContext, &SceneState->CardGameButton, MakeRectangle(ButtonMin, Dim)
@@ -35,7 +35,8 @@ void StartMainMenu(game_state* GameState, game_offscreen_buffer* BackBuffer)
 void UpdateAndRenderMainMenu(
 	game_state* GameState,
 	main_menu_state* SceneState,
-	game_offscreen_buffer* BackBuffer,
+	uint32_t WindowWidth,
+	uint32_t WindowHeight,
 	game_mouse_events* MouseEvents,
 	game_keyboard_events* KeyboardEvents,
 	float DtForFrame

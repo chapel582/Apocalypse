@@ -3,7 +3,7 @@
 #include "apocalypse_memory_arena.h"
 
 void RenderGroupToOutput(
-	render_group* RenderGroup, loaded_bitmap* Target
+	render_group* RenderGroup, uint32_t WindowWidth, uint32_t WindowHeight
 );
 
 #define APOCALYPSE_OPEN_GL

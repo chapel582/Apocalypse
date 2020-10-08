@@ -61,7 +61,9 @@ void StartDeckSelectorPrep(game_state* GameState, scene_type ToStart)
 	GameState->Scene = SceneType_DeckSelector; 
 }
 
-void StartDeckSelector(game_state* GameState, game_offscreen_buffer* BackBuffer)
+void StartDeckSelector(
+	game_state* GameState, uint32_t WindowWidth, uint32_t WindowHeight
+)
 {
 	start_deck_selector_args* Args = (start_deck_selector_args*) (
 		GameState->SceneArgs
@@ -98,8 +100,8 @@ void StartDeckSelector(game_state* GameState, game_offscreen_buffer* BackBuffer)
 		SceneState->DeckNameBufferSize
 	);
 	SceneState->DeckNameInputRectangle = MakeRectangleCentered(
-		Vector2(BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f),
-		Vector2(BackBuffer->Width / 5.0f, SceneState->DeckNameInput.FontHeight)
+		Vector2(WindowWidth / 2.0f, WindowHeight / 2.0f),
+		Vector2(WindowWidth / 5.0f, SceneState->DeckNameInput.FontHeight)
 	);
 	rectangle DeckNameInputRectangle = SceneState->DeckNameInputRectangle;
 	SetActive(UiContext, SceneState->DeckNameInput.UiId);
@@ -113,7 +115,7 @@ void StartDeckSelector(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	memset(SceneState->DeckNames, 0, SceneState->DeckNamesSize);
 	GetAllDeckPaths(SceneState->DeckNames, SceneState->DeckNamesSize);
 	SceneState->LoadDeckButtonDim = Vector2(160.0f, 30.0f);
-	SceneState->LoadDeckButtonsYStart = (float) BackBuffer->Height;
+	SceneState->LoadDeckButtonsYStart = (float) WindowHeight;
 	SceneState->LoadDeckButtonsYMargin = 0.1f * SceneState->LoadDeckButtonDim.Y;
 	load_deck_button* LoadDeckButtons = SceneState->LoadDeckButtons;
 	for(
@@ -137,19 +139,20 @@ void StartDeckSelector(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	DeckScrollBar->Rect = MakeRectangle(DeckScrollBarMin, DeckScrollBarDim);
 	DeckScrollBar->Trough = MakeRectangle(
 		Vector2(DeckScrollBarMin.X, 0.0f),
-		Vector2(DeckScrollBarDim.X, (float) BackBuffer->Height)
+		Vector2(DeckScrollBarDim.X, (float) WindowHeight)
 	);
 
 	SceneState->DeckScrollBox = MakeRectangle(
 		Vector2(GetDeckScrollBoxLeft(DeckNameInputRectangle), 0.0f), 
-		Vector2(SceneState->LoadDeckButtonDim.X, (float) BackBuffer->Height)
+		Vector2(SceneState->LoadDeckButtonDim.X, (float) WindowHeight)
 	);
 }
 
 void UpdateAndRenderDeckSelector(
 	game_state* GameState,
 	deck_selector_state* SceneState,
-	game_offscreen_buffer* BackBuffer,
+	uint32_t WindowWidth,
+	uint32_t WindowHeight,
 	game_mouse_events* MouseEvents,
 	game_keyboard_events* KeyboardEvents,
 	float DtForFrame
@@ -478,7 +481,7 @@ void UpdateAndRenderDeckSelector(
 		CurrentDeckName = GetNextString(&FlatArrayReader);
 	}
 
-	PushCenteredAlert(&SceneState->Alert, GameState, BackBuffer);
+	PushCenteredAlert(&SceneState->Alert, GameState, WindowWidth, WindowHeight);
 
 	if(CanScroll(&SceneState->DeckScrollBar, &SceneState->DeckScrollBox))
 	{

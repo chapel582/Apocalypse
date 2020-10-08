@@ -16,7 +16,10 @@ void DisplayMessageFor(
 }
 
 void PushCenteredAlert(
-	alert* Alert, game_state* GameState, game_offscreen_buffer* BackBuffer
+	alert* Alert,
+	game_state* GameState,
+	uint32_t WindowWidth,
+	uint32_t WindowHeight
 )
 {
 	if(GameState->Time < Alert->DisplayMessageUntil)
@@ -28,10 +31,7 @@ void PushCenteredAlert(
 			Alert->MessageBuffer,
 			ARRAY_COUNT(Alert->MessageBuffer),
 			50.0f,
-			Vector2(
-				BackBuffer->Width / 2.0f, 
-				BackBuffer->Height / 2.0f
-			),
+			Vector2(WindowWidth / 2.0f, WindowHeight / 2.0f),
 			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
 			&GameState->FrameArena
 		);

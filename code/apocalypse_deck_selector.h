@@ -45,7 +45,8 @@ void StartDeckSelectorPrep(game_state* GameState, scene_type ToStart);
 void UpdateAndRenderDeckSelector(
 	game_state* GameState,
 	deck_selector_state* SceneState,
-	game_offscreen_buffer* BackBuffer,
+	uint32_t WindowWidth,
+	uint32_t WindowHeight,
 	game_mouse_events* MouseEvents,
 	game_keyboard_events* KeyboardEvents,
 	float DtForFrame

@@ -85,11 +85,14 @@ struct deck_editor_state
 void StartDeckEditorPrep(
 	game_state* GameState, char* DeckName, bool AlreadyExists
 );
-void StartDeckEditor(game_state* GameState, game_offscreen_buffer* BackBuffer);
+void StartDeckEditor(
+	game_state* GameState, uint32_t WindowWidth, uint32_t WindowHeight
+);
 void UpdateAndRenderDeckEditor(
 	game_state* GameState,
 	deck_editor_state* SceneState,
-	game_offscreen_buffer* BackBuffer,
+	uint32_t WindowWidth,
+	uint32_t WindowHeight,
 	game_mouse_events* MouseEvents,
 	game_keyboard_events* KeyboardEvents,
 	float DtForFrame

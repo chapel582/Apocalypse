@@ -6,6 +6,10 @@
 #include "apocalypse_memory_arena.h"
 #include "apocalypse_vector.h"
 
+// TODO: include other platforms
+// TODO: move all of the render stuff to platform layer?
+#include <windows.h>
+
 #include <gl/gl.h>
 
 inline void OpenGlRectangle(vector2 MinP, vector2 MaxP, vector4 Color)
@@ -41,10 +45,9 @@ inline void OpenGlRectangle(vector2 MinP, vector2 MaxP, vector4 Color)
 uint32_t GlobalTextureBindCount = 0;
 
 void RenderGroupToOutput(
-	render_group* RenderGroup, loaded_bitmap* Target
+	render_group* RenderGroup, uint32_t WindowWidth, uint32_t WindowHeight
 )
 {
-	// TODO: do we still need a target bitmap?
 	TIMED_BLOCK();
 	memory_arena* RenderArena = RenderGroup->Arena;
 
@@ -121,7 +124,7 @@ void RenderGroupToOutput(
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
-	glViewport(0, 0, Target->Width, Target->Height);
+	glViewport(0, 0, WindowWidth, WindowHeight);
 
 	glMatrixMode(GL_TEXTURE);
 	glLoadIdentity();
@@ -129,9 +132,11 @@ void RenderGroupToOutput(
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
+	// NOTE: if we need to render to non-window elements, we can pull out
+	// CONT: this code and call it outside of this function 
 	glMatrixMode(GL_PROJECTION);
-	float A = SafeRatio1(2.0f, (float)Target->Width);
-	float B = SafeRatio1(2.0f, (float)Target->Height);
+	float A = SafeRatio1(2.0f, (float) WindowWidth);
+	float B = SafeRatio1(2.0f, (float) WindowHeight);
 	// NOTE: this projection matrix is here to map our 0 to 1 screen space stuff 
 	// CONT: to -1 to 1
 	float Proj[] =

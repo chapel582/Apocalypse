@@ -22,8 +22,8 @@ TODO: This is not a final platform layer
 #include <windows.h>
 #include <Winuser.h>
 #include <dsound.h>
-#include <gl/gl.h>
 
+// NOTE: OpenGL stuff
 #include "apocalypse_opengl.cpp"
 
 // NOTE: Win32 Apocalypse stuff
@@ -31,11 +31,9 @@ TODO: This is not a final platform layer
 
 // TODO: this is a global for now
 bool GlobalRunning = false;
+uint32_t GlobalWindowWidth;
+uint32_t GlobalWindowHeight;
 LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer = NULL;
-// NOTE: don't prematurely spend too much time getting rid of the 
-// CONT: globalbackbuffer. until you're sure it's not distinct from the 
-// CONT: game offscreen buffer on multiple platforms
-win32_offscreen_buffer GlobalBackBuffer = {};
 GLuint GlobalBlitTextureHandle;
 
 #define WINDOW_STYLE (WS_OVERLAPPEDWINDOW | WS_VISIBLE)
@@ -359,169 +357,8 @@ void Win32InitOpenGl(HWND Window)
 	ReleaseDC(Window, WindowDc);
 }
 
-void Win32DebugDrawVertical(
-	win32_offscreen_buffer* BackBuffer, 
-	int X,
-	int Top, 
-	int Bottom, 
-	uint32_t Color
-)
+void Win32BufferToWindow(HDC DeviceContext)
 {
-	uint8_t* Pixel = (
-		((uint8_t*) BackBuffer->Memory) +
-		X * BackBuffer->BytesPerPixel + 
-		Top * BackBuffer->Pitch
-	);
-	for(int Y = Top; Y < Bottom; Y++)
-	{
-		*((uint32_t*) Pixel) = Color;
-		Pixel += BackBuffer->Pitch;
-	}
-}
-
-void Win32DrawSoundBufferMarker(
-	win32_offscreen_buffer* BackBuffer,
-	win32_sound_output* SoundOutput,
-	float C, 
-	int PadX,
-	int Top,
-	int Bottom,
-	uint32_t Value,
-	uint32_t Color
-)
-{
-	ASSERT(Value < SoundOutput->SecondaryBufferSize);
-	float XFloat = (C * ((float) Value));
-	int X = PadX + ((int) XFloat);
-	Win32DebugDrawVertical(BackBuffer, X, Top, Bottom, Color);
-}
-
-void Win32DebugSyncDisplay(
-	win32_offscreen_buffer* BackBuffer,
-	win32_debug_time_marker* Markers,
-	int MarkerCount,
-	win32_sound_output* SoundOutput
-)
-{
-	int PadX = 16;
-	int PadY = 16;
-	int Top = PadY;
-	int Bottom = BackBuffer->Height - PadY;
-
-	float C = (
-		(float) (BackBuffer->Width - 2 * PadX) / 
-		(float) SoundOutput->SecondaryBufferSize
-	);
-
-	for(int MarkerIndex = 0; MarkerIndex < MarkerCount; MarkerIndex++)
-	{
-		win32_debug_time_marker* ThisMarker = &Markers[MarkerIndex];
-		Win32DrawSoundBufferMarker(
-			BackBuffer, 
-			SoundOutput,
-			C,
-			PadX,
-			Top,
-			Bottom,
-			ThisMarker->PlayCursor,
-			0xFFFFFFFF
-		);
-		Win32DrawSoundBufferMarker(
-			BackBuffer, 
-			SoundOutput,
-			C,
-			PadX,
-			Top,
-			Bottom,
-			ThisMarker->WriteCursor,
-			0xFFFF0000
-		);
-	}
-}
-
-void Win32BufferToWindow(win32_offscreen_buffer* BackBuffer, HDC DeviceContext)
-{
-	// TODO: clean up
-	// int WindowWidth = BackBuffer->Width;
-	// int WindowHeight = BackBuffer->Height;
-
-#if 0
-	StretchDIBits(
-		DeviceContext,
-		0,
-		0,
-		BackBuffer->Width,
-		BackBuffer->Height,
-		0,
-		0,
-		BackBuffer->Width,
-		BackBuffer->Height,
-		BackBuffer->Memory,
-		&BackBuffer->Info,
-		DIB_RGB_COLORS,
-		SRCCOPY
-	);
-#endif
-
-	// glViewport(0, 0, WindowWidth, WindowHeight);
-	// glBindTexture(GL_TEXTURE_2D, GlobalBlitTextureHandle);
-
-	// glTexImage2D(
-	// 	GL_TEXTURE_2D,
-	// 	0,
-	// 	GL_RGBA8,
-	// 	BackBuffer->Width,
-	// 	BackBuffer->Height,
-	// 	0,
-	// 	GL_BGRA_EXT,
-	// 	GL_UNSIGNED_BYTE,
-	// 	BackBuffer->Memory
-	// );
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);    
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);    
-	// glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-
-	// glEnable(GL_TEXTURE_2D);
-
-	// glClearColor(1.0f, 0.0f, 1.0f, 0.0f);
-	// glClear(GL_COLOR_BUFFER_BIT);
-
-	// glMatrixMode(GL_TEXTURE);
-	// glLoadIdentity();
-
-	// glMatrixMode(GL_MODELVIEW);
-	// glLoadIdentity();
-
-	// glMatrixMode(GL_PROJECTION);
-	// glLoadIdentity();
-
-	// glBegin(GL_TRIANGLES);
-
-	// // NOTE: Lower triangle
-	// float P = 1.0f;
-	// glTexCoord2f(0.0f, 0.0f);
-	// glVertex2f(-P, -P);
-
-	// glTexCoord2f(1.0f, 0.0f);
-	// glVertex2f(P, -P);
-
-	// glTexCoord2f(1.0f, 1.0f);
-	// glVertex2f(P, P);
-
-	// // NOTE: Upper triangle
-	// glTexCoord2f(0.0f, 0.0f);
-	// glVertex2f(-P, -P);
-
-	// glTexCoord2f(1.0f, 1.0f);
-	// glVertex2f(P, P);
-
-	// glTexCoord2f(0.0f, 1.0f);
-	// glVertex2f(-P, P);
-	
-	// glEnd();
-
 	SwapBuffers(DeviceContext);
 }
 
@@ -535,16 +372,14 @@ win32_window_dimension Win32GetWindowDimension(HWND Window)
 	return Result;
 }
 
-win32_window_dimension Win32CalculateWindowDimensions()
+win32_window_dimension Win32CalculateWindowDimensions(
+	uint32_t WindowWidth, uint32_t WindowHeight
+)
 {
 	RECT ClientRect = {};
-	ClientRect.right = GlobalBackBuffer.Width;
-	ClientRect.bottom = GlobalBackBuffer.Height;
-	AdjustWindowRect(
-		&ClientRect,
-		WINDOW_STYLE,
-		false
-	);
+	ClientRect.right = WindowWidth;
+	ClientRect.bottom = WindowHeight;
+	AdjustWindowRect(&ClientRect, WINDOW_STYLE, false);
 	win32_window_dimension Result;
 	Result.Width = ClientRect.right - ClientRect.left;
 	Result.Height = ClientRect.bottom - ClientRect.top;
@@ -633,14 +468,16 @@ LRESULT CALLBACK MainWindowCallback(
 			PAINTSTRUCT Paint = {};
 			HDC DeviceContext = BeginPaint(Window, &Paint);
 			
-			Win32BufferToWindow(&GlobalBackBuffer, DeviceContext);
+			Win32BufferToWindow(DeviceContext);
 
 			EndPaint(Window, &Paint);
 			break;
 		}
 		case(WM_GETMINMAXINFO):
 		{
-			win32_window_dimension Dim = Win32CalculateWindowDimensions();
+			win32_window_dimension Dim = Win32CalculateWindowDimensions(
+				GlobalWindowWidth, GlobalWindowHeight
+			);
 			MINMAXINFO* Mmi = (MINMAXINFO*) LParam;
 			Mmi->ptMinTrackSize.x = Dim.Width;
 			Mmi->ptMinTrackSize.y = Dim.Height;
@@ -853,42 +690,9 @@ int CALLBACK WinMain(
 		timeBeginPeriod(DesiredSchedulerMS) == TIMERR_NOERROR
 	);
 
-	GlobalBackBuffer = {};
-	GlobalBackBuffer.BytesPerPixel = 4;
-	// NOTE: get memory for backbuffer
-	{
-#if APOCALYPSE_RELEASE
-		GlobalBackBuffer.Width = 1440;
-		GlobalBackBuffer.Height = 910;
-#else
-		GlobalBackBuffer.Width = 960;
-		GlobalBackBuffer.Height = 540;
-#endif
-		GlobalBackBuffer.Pitch = (
-			GlobalBackBuffer.Width * GlobalBackBuffer.BytesPerPixel
-		);
-
-		GlobalBackBuffer.Info.bmiHeader.biSize = (
-			sizeof(GlobalBackBuffer.Info.bmiHeader)
-		);
-		GlobalBackBuffer.Info.bmiHeader.biWidth = GlobalBackBuffer.Width;
-		GlobalBackBuffer.Info.bmiHeader.biHeight = GlobalBackBuffer.Height;
-		GlobalBackBuffer.Info.bmiHeader.biPlanes = 1;
-		GlobalBackBuffer.Info.bmiHeader.biBitCount = 32;
-		GlobalBackBuffer.Info.bmiHeader.biCompression = BI_RGB;
-
-		size_t BitmapMemorySize = (
-			(GlobalBackBuffer.Width * GlobalBackBuffer.Height) * 
-			GlobalBackBuffer.BytesPerPixel
-		);
-		if(GlobalBackBuffer.Memory)
-		{
-			VirtualFree(GlobalBackBuffer.Memory, 0, MEM_RELEASE);
-		}
-		GlobalBackBuffer.Memory = VirtualAlloc(
-			0, BitmapMemorySize, MEM_COMMIT, PAGE_READWRITE
-		);
-	}
+	// TODO: make this changeable by the game layer
+	GlobalWindowWidth = 1440;
+	GlobalWindowHeight = 910;
 
 	WNDCLASS WindowClass = {};
 	WindowClass.lpfnWndProc = MainWindowCallback;
@@ -903,7 +707,9 @@ int CALLBACK WinMain(
 
 	if(RegisterClassA(&WindowClass))
 	{
-		win32_window_dimension WindowDim = Win32CalculateWindowDimensions();
+		win32_window_dimension WindowDim = Win32CalculateWindowDimensions(
+			GlobalWindowWidth, GlobalWindowHeight
+		);
 		HWND WindowHandle = CreateWindowExA(
 			0,
 			WindowClass.lpszClassName,
@@ -1040,7 +846,7 @@ int CALLBACK WinMain(
 								Message.lParam,
 								PrimaryDown,
 								&UserEventIndex,
-								GlobalBackBuffer.Height
+								GlobalWindowHeight
 							);
 							break;
 						}
@@ -1051,7 +857,7 @@ int CALLBACK WinMain(
 								Message.lParam,
 								PrimaryUp,
 								&UserEventIndex,
-								GlobalBackBuffer.Height
+								GlobalWindowHeight
 							);
 							break;
 						}
@@ -1062,7 +868,7 @@ int CALLBACK WinMain(
 								Message.lParam,
 								SecondaryDown,
 								&UserEventIndex,
-								GlobalBackBuffer.Height
+								GlobalWindowHeight
 							);
 							break;
 						}
@@ -1073,7 +879,7 @@ int CALLBACK WinMain(
 								Message.lParam,
 								SecondaryUp,
 								&UserEventIndex,
-								GlobalBackBuffer.Height
+								GlobalWindowHeight
 							);
 							break;
 						}
@@ -1084,7 +890,7 @@ int CALLBACK WinMain(
 								Message.lParam,
 								MouseMove,
 								&UserEventIndex,
-								GlobalBackBuffer.Height
+								GlobalWindowHeight
 							);
 							break;
 						}
@@ -1095,7 +901,7 @@ int CALLBACK WinMain(
 								Message.lParam,
 								MouseWheel,
 								&UserEventIndex,
-								GlobalBackBuffer.Height
+								GlobalWindowHeight
 							);
 							game_mouse_event* MouseEvent = (
 								&MouseEvents.Events[MouseEvents.Length - 1]
@@ -1140,15 +946,10 @@ int CALLBACK WinMain(
 					}
 				}				
 
-				game_offscreen_buffer BackBuffer = {};
-				BackBuffer.Memory = GlobalBackBuffer.Memory;
-				BackBuffer.Width = GlobalBackBuffer.Width;
-				BackBuffer.Height = GlobalBackBuffer.Height;
-				BackBuffer.Pitch = GlobalBackBuffer.Pitch;
-				BackBuffer.BytesPerPixel = GlobalBackBuffer.BytesPerPixel;
 				GameUpdateAndRender(
 					&GameMemory,
-					&BackBuffer,
+					GlobalWindowWidth,
+					GlobalWindowHeight,
 					&MouseEvents,
 					&KeyboardEvents,
 					TargetSecondsPerFrame
@@ -1416,21 +1217,14 @@ int CALLBACK WinMain(
 				}
 				// SECTION STOP: Fixing frame rate to constant
 
-				HandleGameDebug(&GameMemory, &BackBuffer);
+				HandleGameDebug(
+					&GameMemory, GlobalWindowWidth, GlobalWindowHeight
+				);
 
 				uint64_t FrameEndCycle = __rdtsc();
 				int64_t FrameEndCounter = Win32GetWallClock();
 
-#if 0
-				// NOTE: this is debug code
-				Win32DebugSyncDisplay(
-					&GlobalBackBuffer,
-					DebugTimeMarkers,
-					ARRAY_COUNT(DebugTimeMarkers),
-					&SoundOutput
-				);
-#endif
-				Win32BufferToWindow(&GlobalBackBuffer, DeviceContext);
+				Win32BufferToWindow(DeviceContext);
 				FlipWallClock = Win32GetWallClock();
 				
 

@@ -48,7 +48,8 @@ loaded_bitmap MakeEmptyBitmap(
 
 void GameUpdateAndRender(
 	game_memory* Memory,
-	game_offscreen_buffer* BackBuffer,
+	uint32_t WindowWidth,
+	uint32_t WindowHeight,
 	game_mouse_events* MouseEvents,
 	game_keyboard_events* KeyboardEvents,
 	float DtForFrame
@@ -115,14 +116,13 @@ void GameUpdateAndRender(
 		);
 
 		GameState->WorldToCamera = MakeBasis(
-			Vector2(BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f),
+			Vector2(WindowWidth / 2.0f, WindowHeight / 2.0f),
 			Vector2(1.0f, 0.0f),
 			Vector2(0.0f, 1.0f)
 		);
 		GameState->CameraToScreen = MakeBasis(
 			Vector2(
-				-1.0f * BackBuffer->Width / 2.0f,
-				-1.0f * BackBuffer->Height / 2.0f
+				-1.0f * WindowWidth / 2.0f, -1.0f * WindowHeight / 2.0f
 			),
 			Vector2(1, 0),
 			Vector2(0, 1)
@@ -146,7 +146,7 @@ void GameUpdateAndRender(
 
 		Memory->IsInitialized = true;
 
-		StartMainMenu(GameState, BackBuffer);
+		StartMainMenu(GameState, WindowWidth, WindowHeight);
 		GameState->Scene = SceneType_MainMenu;
 		GameState->LastFrameScene = GameState->Scene;
 	}
@@ -159,22 +159,22 @@ void GameUpdateAndRender(
 		{
 			case(SceneType_CardGame):
 			{
-				StartCardGame(GameState, BackBuffer);
+				StartCardGame(GameState, WindowWidth, WindowHeight);
 				break;
 			}
 			case(SceneType_MainMenu):
 			{
-				StartMainMenu(GameState, BackBuffer);
+				StartMainMenu(GameState, WindowWidth, WindowHeight);
 				break;
 			}
 			case(SceneType_DeckEditor):
 			{
-				StartDeckEditor(GameState, BackBuffer);
+				StartDeckEditor(GameState, WindowWidth, WindowHeight);
 				break;
 			}
 			case(SceneType_DeckSelector):
 			{
-				StartDeckSelector(GameState, BackBuffer);
+				StartDeckSelector(GameState, WindowWidth, WindowHeight);
 				break;
 			}
 			default:
@@ -192,7 +192,8 @@ void GameUpdateAndRender(
 			UpdateAndRenderCardGame(
 				GameState,
 				(card_game_state*) GameState->SceneState,
-				BackBuffer,
+				WindowWidth,
+				WindowHeight,
 				MouseEvents,
 				KeyboardEvents,
 				DtForFrame
@@ -205,7 +206,8 @@ void GameUpdateAndRender(
 			UpdateAndRenderMainMenu(
 				GameState,
 				(main_menu_state*) GameState->SceneState,
-				BackBuffer,
+				WindowWidth,
+				WindowHeight,
 				MouseEvents,
 				KeyboardEvents,
 				DtForFrame
@@ -218,7 +220,8 @@ void GameUpdateAndRender(
 			UpdateAndRenderDeckEditor(
 				GameState,
 				(deck_editor_state*) GameState->SceneState,
-				BackBuffer,
+				WindowWidth,
+				WindowHeight,
 				MouseEvents,
 				KeyboardEvents,
 				DtForFrame
@@ -231,7 +234,8 @@ void GameUpdateAndRender(
 			UpdateAndRenderDeckSelector(
 				GameState,
 				(deck_selector_state*) GameState->SceneState,
-				BackBuffer,
+				WindowWidth,
+				WindowHeight,
 				MouseEvents,
 				KeyboardEvents,
 				DtForFrame
@@ -245,15 +249,7 @@ void GameUpdateAndRender(
 		}
 	}
 	
-	// SECTION START: Render from RenderGroup
-	loaded_bitmap DrawBuffer = {};
-	DrawBuffer.Width = BackBuffer->Width;
-	DrawBuffer.Height = BackBuffer->Height;
-	DrawBuffer.Pitch = BackBuffer->Pitch;
-	DrawBuffer.Memory = BackBuffer->Memory;
-
-	RenderGroupToOutput(&GameState->RenderGroup, &DrawBuffer);
-	// SECTION STOP: Render from RenderGroup
+	RenderGroupToOutput(&GameState->RenderGroup, WindowWidth, WindowHeight);
 
 	ResetMemArena(&GameState->FrameArena);
 }
@@ -271,18 +267,14 @@ void GameFillSound(game_memory* Memory, game_sound_output_buffer* SoundBuffer)
 	);
 }
 
-void HandleGameDebug(game_memory* Memory, game_offscreen_buffer* BackBuffer)
+void HandleGameDebug(
+	game_memory* Memory, uint32_t WindowWidth, uint32_t WindowHeight
+)
 {
 	ASSERT(sizeof(game_state) <= Memory->PermanentStorageSize);
 	game_state* GameState = (game_state*) Memory->PermanentStorage;
 	if(GameState->OverlayDebugInfo)
 	{
-		loaded_bitmap DrawBuffer = {};
-		DrawBuffer.Width = BackBuffer->Width;
-		DrawBuffer.Height = BackBuffer->Height;
-		DrawBuffer.Pitch = BackBuffer->Pitch;
-		DrawBuffer.Memory = BackBuffer->Memory;
-
 		uint32_t MaxDebugInfoStringSize = 2048; 
 		char* DebugInfoString = PushArray(
 			&GameState->FrameArena, MaxDebugInfoStringSize, char
@@ -343,13 +335,15 @@ void HandleGameDebug(game_memory* Memory, game_offscreen_buffer* BackBuffer)
 			20.0f,
 			Vector2(
 				0.0f, 
-				BackBuffer->Height - 30.0f
+				WindowHeight - 30.0f
 			),
 			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
 			&GameState->FrameArena
 		);
 
-		RenderGroupToOutput(&GameState->RenderGroup, &DrawBuffer);	
+		RenderGroupToOutput(
+			&GameState->RenderGroup, WindowWidth, WindowHeight
+		);
 		ResetMemArena(&GameState->FrameArena);
 	}
 }

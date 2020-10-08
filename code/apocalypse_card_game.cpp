@@ -492,7 +492,9 @@ void StartCardGamePrep(
 	GameState->Scene = SceneType_CardGame; 
 }
 
-void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
+void StartCardGame(
+	game_state* GameState, uint32_t WindowWidth, uint32_t WindowHeight
+)
 {
 	start_card_game_args* SceneArgs = (start_card_game_args*) (
 		GameState->SceneArgs
@@ -611,7 +613,7 @@ void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	// NOTE: transform assumes screen and camera are 1:1
 	vector2 ScreenDimInWorld = TransformVectorToBasis(
 		&GameState->WorldToCamera,
-		Vector2(BackBuffer->Width, BackBuffer->Height)
+		Vector2(WindowWidth, WindowHeight)
 	);
 	float ScreenWidthInWorld = ScreenDimInWorld.X;
 	
@@ -646,7 +648,7 @@ void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 	CardSet->CardWidth = CardWidth;
 	
 	SceneState->InfoCardCenter = Vector2(
-		BackBuffer->Width / 2.0f, BackBuffer->Height / 2.0f
+		WindowWidth / 2.0f, WindowHeight / 2.0f
 	);
 
 	vector2 ScaledInfoCardDim = 0.33f * Vector2(600.0f, 900.0f);
@@ -689,7 +691,8 @@ void StartCardGame(game_state* GameState, game_offscreen_buffer* BackBuffer)
 void UpdateAndRenderCardGame(
 	game_state* GameState,
 	card_game_state* SceneState,
-	game_offscreen_buffer* BackBuffer,
+	uint32_t WindowWidth,
+	uint32_t WindowHeight,
 	game_mouse_events* MouseEvents,
 	game_keyboard_events* KeyboardEvents,
 	float DtForFrame
@@ -760,7 +763,8 @@ void UpdateAndRenderCardGame(
 									{
 										RemoveCardAndAlign(SceneState, Card);
 										AddCardAndAlign(
-											&SceneState->Tableaus[Card->Owner], Card
+											&SceneState->Tableaus[Card->Owner],
+											Card
 										);
 									}
 									else
@@ -1292,10 +1296,7 @@ void UpdateAndRenderCardGame(
 			TurnTimerString,
 			MaxTurnTimerCharacters,
 			50.0f,
-			Vector2(
-				BackBuffer->Width - 150.0f, 
-				(BackBuffer->Height / 2.0f)
-			),
+			Vector2(WindowWidth - 150.0f, WindowHeight / 2.0f),
 			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
 			&GameState->FrameArena
 		);
@@ -1361,10 +1362,7 @@ void UpdateAndRenderCardGame(
 			ResourceString,
 			MAX_RESOURCE_STRING_SIZE,
 			15.0f,
-			Vector2(
-				BackBuffer->Width - 50.0f, 
-				BackBuffer->Height / 2.0f - Padding
-			),
+			Vector2(WindowWidth - 50.0f, WindowHeight / 2.0f - Padding),
 			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
 			&GameState->FrameArena
 		);
@@ -1380,8 +1378,7 @@ void UpdateAndRenderCardGame(
 			MAX_RESOURCE_STRING_SIZE,
 			15.0f,
 			Vector2(
-				BackBuffer->Width - 50.0f, 
-				(BackBuffer->Height / 2.0f) + 80.0f + Padding
+				WindowWidth - 50.0f, (WindowHeight / 2.0f) + 80.0f + Padding
 			),
 			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
 			&GameState->FrameArena
@@ -1389,5 +1386,5 @@ void UpdateAndRenderCardGame(
 	}
 	// SECTION STOP: Push resources
 
-	PushCenteredAlert(&SceneState->Alert, GameState, BackBuffer);
+	PushCenteredAlert(&SceneState->Alert, GameState, WindowWidth, WindowHeight);
 }

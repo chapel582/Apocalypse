@@ -369,6 +369,15 @@ bool CheckAndTap(
 
 				SceneState->NextTurnTimer += TimeChange;
 			}
+			else if(HasTag(&Card->EffectTags, CardEffect_GetTime))
+			{
+				int32_t SelfResourceDelta = SumResources(
+					Card->TapDelta + RelativePlayer_Self
+				);
+				float TimeChange = RESOURCE_TO_TIME * SelfResourceDelta;
+
+				SceneState->TurnTimer += TimeChange;
+			}
 			else
 			{
 				ChangeResources(ChangeTarget, Delta);

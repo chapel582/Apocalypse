@@ -798,6 +798,23 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	SetName(Definition, "Give Time", sizeof("Give Time"));
 	SetTag(&Definition->Tags, CardEffect_GiveTime);
 
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 10, 1);
+	InitPlayerResource(
+		&Definition->PlayDelta[RelativePlayer_Self], 0, 0, 0, 0, -1
+	);
+	InitPlayerResource(
+		&Definition->TapDelta[RelativePlayer_Self], 0, 0, 0, 0, 1
+	);
+	InitPlayerResource(
+		&Definition->PlayDelta[RelativePlayer_Opp], 0, 0, 0, 0, 0
+	);
+	InitPlayerResource(
+		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 1
+	);
+	SetName(Definition, "Get Time", sizeof("Get Time"));
+	SetTag(&Definition->Tags, CardEffect_GetTime);
+
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;
 	

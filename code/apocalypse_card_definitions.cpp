@@ -815,6 +815,42 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	SetName(Definition, "Get Time", sizeof("Get Time"));
 	SetTag(&Definition->Tags, CardEffect_GetTime);
 
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 10, 1);
+	InitPlayerResource(
+		&Definition->PlayDelta[RelativePlayer_Self], 0, 0, 0, 0, -1
+	);
+	InitPlayerResource(
+		&Definition->TapDelta[RelativePlayer_Self], 0, 0, 0, 0, 1
+	);
+	InitPlayerResource(
+		&Definition->PlayDelta[RelativePlayer_Opp], 0, 0, 0, 0, 0
+	);
+	InitPlayerResource(
+		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 1
+	);
+	SetName(Definition, "Get Time", sizeof("Get Time"));
+	SetTag(&Definition->Tags, CardEffect_GetTime);
+
+	// NOTE: it might be fun if this card was expensive to make the decision 
+	// CONT: tougher
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 10, 1);
+	InitPlayerResource(
+		&Definition->PlayDelta[RelativePlayer_Self], 0, -1, 0, 0, 0
+	);
+	InitPlayerResource(
+		&Definition->TapDelta[RelativePlayer_Self], 0, 0, 0, 0, 0
+	);
+	InitPlayerResource(
+		&Definition->PlayDelta[RelativePlayer_Opp], 0, 1, 0, 0, 0
+	);
+	InitPlayerResource(
+		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 0
+	);
+	SetName(Definition, "Self Hand Weaken", sizeof("Self Hand Weaken"));
+	SetTag(&Definition->Tags, CardEffect_SelfHandWeaken);
+
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;
 	

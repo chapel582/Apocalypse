@@ -355,7 +355,20 @@ bool CheckAndTap(
 
 		if(Tapped)
 		{
-			ChangeResources(ChangeTarget, Delta);
+			if(HasTag(&Card->EffectTags, CardEffect_GetTime))
+			{
+				int32_t SelfResourceDelta = SumResources(
+					Card->TapDelta + RelativePlayer_Self
+				);
+				float TimeChange = RESOURCE_TO_TIME * SelfResourceDelta;
+
+				SceneState->TurnTimer += TimeChange;
+			}
+			else
+			{
+				ChangeResources(ChangeTarget, Delta);
+			}
+
 			player_id Opp = GetOpponent(Card->Owner);
 			ChangeTarget = &PlayerResources[Opp];
 			Delta = &Deltas[RelativePlayer_Opp];
@@ -368,15 +381,6 @@ bool CheckAndTap(
 				float TimeChange = RESOURCE_TO_TIME * OppResourceDelta;
 
 				SceneState->NextTurnTimer += TimeChange;
-			}
-			else if(HasTag(&Card->EffectTags, CardEffect_GetTime))
-			{
-				int32_t SelfResourceDelta = SumResources(
-					Card->TapDelta + RelativePlayer_Self
-				);
-				float TimeChange = RESOURCE_TO_TIME * SelfResourceDelta;
-
-				SceneState->TurnTimer += TimeChange;
 			}
 			else
 			{
@@ -1101,6 +1105,13 @@ void UpdateAndRenderCardGame(
 						Card->Attack = Card->TurnStartAttack;
 					}
 				}
+				if(HasTag(EffectTags, CardEffect_SelfHandWeaken))
+				{
+					if(Card->SetType == CardSet_Hand)
+					{
+						Card->Attack = Card->TurnStartAttack;
+					}
+				}
 				if(HasTag(EffectTags, CardEffect_OppStrengthen))
 				{
 					if(Card->SetType == CardSet_Tableau)
@@ -1165,6 +1176,19 @@ void UpdateAndRenderCardGame(
 					if(
 						Card->Owner == SceneState->CurrentTurn && 
 						Card->SetType == CardSet_Tableau
+					)
+					{
+						if(WholeSecondPassed)
+						{
+							Card->Attack -= 1;
+						}
+					}
+				}
+				if(HasTag(EffectTags, CardEffect_SelfHandWeaken))
+				{
+					if(
+						Card->Owner == SceneState->CurrentTurn && 
+						Card->SetType == CardSet_Hand
 					)
 					{
 						if(WholeSecondPassed)

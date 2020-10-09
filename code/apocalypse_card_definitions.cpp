@@ -851,6 +851,38 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	SetName(Definition, "Self Hand Weaken", sizeof("Self Hand Weaken"));
 	SetTag(&Definition->Tags, CardEffect_SelfHandWeaken);
 
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 5, 1);
+	InitPlayerResource(
+		&Definition->PlayDelta[RelativePlayer_Self], 0, -1, -1, 0, 0
+	);
+	InitPlayerResource(
+		&Definition->TapDelta[RelativePlayer_Self], 0, 0, 0, 0, 0
+	);
+	InitPlayerResource(
+		&Definition->PlayDelta[RelativePlayer_Opp], 0, 0, 0, 0, 0
+	);
+	InitPlayerResource(
+		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 0
+	);
+	SetName(Definition, "Weak Give Little", sizeof("Weak Give Little"));
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 5, 1);
+	InitPlayerResource(
+		&Definition->PlayDelta[RelativePlayer_Self], 0, -1, -1, 0, 0
+	);
+	InitPlayerResource(
+		&Definition->TapDelta[RelativePlayer_Self], 0, 0, 0, 0, 0
+	);
+	InitPlayerResource(
+		&Definition->PlayDelta[RelativePlayer_Opp], 0, 5, 5, 0, 0
+	);
+	InitPlayerResource(
+		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 0
+	);
+	SetName(Definition, "Strong Give Much", sizeof("Strong Give Much"));
+
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;
 	

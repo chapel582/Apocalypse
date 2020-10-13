@@ -386,6 +386,20 @@ bool CheckAndTap(
 			{
 				ChangeResources(ChangeTarget, Delta);
 			}
+
+			if(HasTag(&Card->EffectTags, CardEffect_TimeGrowth))
+			{
+				int32_t SelfResourceDelta = SumResources(
+					Card->PlayDelta + RelativePlayer_Self
+				);
+				float TimeChange = RESOURCE_TO_TIME * SelfResourceDelta;
+
+				SceneState->TurnTimer += TimeChange;
+				card_set* Tableau = SceneState->Tableaus + Card->Owner;
+				RemoveCardAndAlign(Tableau, Card);
+				card_set* Hand = SceneState->Hands + Card->Owner;
+				AddCardAndAlign(Hand, Card);
+			}
 		}
 	}
 	Card->TimesTapped++;
@@ -871,6 +885,8 @@ void UpdateAndRenderCardGame(
 											HasTag(Tags, CardEffect_DrawExtra) 
 											||
 											HasTag(Tags, CardEffect_DrawOppExtra)
+											||
+											HasTag(Tags, CardEffect_TimeGrowth)
 										)
 										{
 											player_id Owner = SelectedCard->Owner;
@@ -1149,6 +1165,20 @@ void UpdateAndRenderCardGame(
 						Card->PlayDelta[RelativePlayer_Opp] = (
 							Card->TurnStartPlayDelta[RelativePlayer_Opp]
 						);
+					}
+				}
+				if(HasTag(EffectTags, CardEffect_TimeGrowth))
+				{
+					player_resources* PlayDelta = (
+						Card->PlayDelta + RelativePlayer_Self
+					);
+					for(
+						int Resource = 0;
+						Resource < PlayerResource_Count;
+						Resource++
+					)
+					{
+						PlayDelta->Resources[Resource] += 1;
 					}
 				}
 			}

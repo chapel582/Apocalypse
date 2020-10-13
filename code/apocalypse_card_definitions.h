@@ -21,7 +21,8 @@ typedef enum
 	CardEffect_DrawOppExtra,
 	CardEffect_GiveTime,
 	CardEffect_GetTime,
-	CardEffect_SelfHandWeaken
+	CardEffect_SelfHandWeaken,
+	CardEffect_TimeGrowth
 } card_effect;
 
 struct card_effect_tags

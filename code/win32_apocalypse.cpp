@@ -485,6 +485,10 @@ LRESULT CALLBACK MainWindowCallback(
 			Mmi->ptMaxTrackSize.y = Dim.Height;
 			break;
 		}
+		case(WM_SETCURSOR):
+		{
+			break;
+		}
 		default:
 		{
 			Result = DefWindowProc(Window, Message, WParam, LParam);
@@ -698,6 +702,7 @@ int CALLBACK WinMain(
 	WindowClass.lpfnWndProc = MainWindowCallback;
 	WindowClass.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
 	WindowClass.hInstance = Instance;
+	WindowClass.hCursor = LoadCursor(Instance, MAKEINTRESOURCE(32512));
 	WindowClass.lpszClassName = "ApocalypseWindowClass";
 
 	// NOTE: if we ever have a variable framerate, we also have to update

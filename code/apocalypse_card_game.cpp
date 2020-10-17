@@ -217,8 +217,9 @@ void InitCardWithDeckCard(deck* Deck, card* Card, player_id Owner)
 	Card->TurnStartAttack = Definition->Attack;
 	Card->Health = Definition->Health;
 	Card->TurnStartHealth = Definition->Health;
-	Card->EffectTags = Definition->Tags;
-
+	Card->TableauTags = Definition->TableauTags;
+	Card->StackTags = Definition->StackTags;
+	
 	for(
 		int PlayerIndex = 0;
 		PlayerIndex < Player_Count;
@@ -320,11 +321,12 @@ bool CheckAndTap(
 	bool Tapped = CanChangeResources(ChangeTarget, Delta);
 	if(Tapped)
 	{
-		if(HasTag(&Card->EffectTags, CardEffect_Land))
+		tableau_effect_tags* TableauTags = &Card->TableauTags;
+		if(HasTag(TableauTags, TableauEffect_Land))
 		{
 			Tapped = CheckAndTapLand(GameState, SceneState, Card);
 		}
-		if(HasTag(&Card->EffectTags, CardEffect_DrawExtra))
+		if(HasTag(TableauTags, TableauEffect_DrawExtra))
 		{
 			card* DrawnCard = DrawCard(GameState, SceneState, Card->Owner);
 			if(DrawnCard != NULL)
@@ -337,7 +339,7 @@ bool CheckAndTap(
 				Tapped = true;
 			}
 		}
-		if(HasTag(&Card->EffectTags, CardEffect_DrawOppExtra))
+		if(HasTag(TableauTags, TableauEffect_DrawOppExtra))
 		{
 			card* DrawnCard = DrawCard(
 				GameState, SceneState, GetOpponent(Card->Owner)
@@ -355,7 +357,7 @@ bool CheckAndTap(
 
 		if(Tapped)
 		{
-			if(HasTag(&Card->EffectTags, CardEffect_GetTime))
+			if(HasTag(TableauTags, TableauEffect_GetTime))
 			{
 				int32_t SelfResourceDelta = SumResources(
 					Card->TapDelta + RelativePlayer_Self
@@ -373,7 +375,7 @@ bool CheckAndTap(
 			ChangeTarget = &PlayerResources[Opp];
 			Delta = &Deltas[RelativePlayer_Opp];
 			
-			if(HasTag(&Card->EffectTags, CardEffect_GiveTime))
+			if(HasTag(TableauTags, TableauEffect_GiveTime))
 			{
 				int32_t OppResourceDelta = SumResources(
 					Card->TapDelta + RelativePlayer_Opp
@@ -387,7 +389,7 @@ bool CheckAndTap(
 				ChangeResources(ChangeTarget, Delta);
 			}
 
-			if(HasTag(&Card->EffectTags, CardEffect_TimeGrowth))
+			if(HasTag(TableauTags, TableauEffect_TimeGrowth))
 			{
 				int32_t SelfResourceDelta = SumResources(
 					Card->PlayDelta + RelativePlayer_Self
@@ -820,8 +822,8 @@ void UpdateAndRenderCardGame(
 										);
 
 										bool HasSelfBurn = HasTag(
-											&SelectedCard->EffectTags, 
-											CardEffect_SelfBurn
+											&SelectedCard->TableauTags, 
+											TableauEffect_SelfBurn
 										);
 										attack_card_result Result = AttackCard(
 											SceneState, SelectedCard, Card
@@ -877,16 +879,16 @@ void UpdateAndRenderCardGame(
 								{
 									if(SelectedCard == Card)
 									{
-										card_effect_tags* Tags = (
-											&Card->EffectTags
+										tableau_effect_tags* Tags = (
+											&Card->TableauTags
 										);
 										if(
-											HasTag(Tags, CardEffect_Land) ||
-											HasTag(Tags, CardEffect_DrawExtra) 
+											HasTag(Tags, TableauEffect_Land) ||
+											HasTag(Tags, TableauEffect_DrawExtra) 
 											||
-											HasTag(Tags, CardEffect_DrawOppExtra)
+											HasTag(Tags, TableauEffect_DrawOppExtra)
 											||
-											HasTag(Tags, CardEffect_TimeGrowth)
+											HasTag(Tags, TableauEffect_TimeGrowth)
 										)
 										{
 											player_id Owner = SelectedCard->Owner;
@@ -935,8 +937,8 @@ void UpdateAndRenderCardGame(
 								else if(
 									Card->SetType == CardSet_Hand && 
 									HasTag(
-										&SelectedCard->EffectTags, 
-										CardEffect_OppBurn
+										&SelectedCard->TableauTags, 
+										TableauEffect_OppBurn
 									)									
 								)
 								{
@@ -1113,43 +1115,43 @@ void UpdateAndRenderCardGame(
 			{
 				Card->TimesTapped = 0;
 
-				card_effect_tags* EffectTags = &Card->EffectTags;
-				if(HasTag(EffectTags, CardEffect_SelfWeaken))
+				tableau_effect_tags* EffectTags = &Card->TableauTags;
+				if(HasTag(EffectTags, TableauEffect_SelfWeaken))
 				{
 					if(Card->SetType == CardSet_Tableau)
 					{
 						Card->Attack = Card->TurnStartAttack;
 					}
 				}
-				if(HasTag(EffectTags, CardEffect_SelfHandWeaken))
+				if(HasTag(EffectTags, TableauEffect_SelfHandWeaken))
 				{
 					if(Card->SetType == CardSet_Hand)
 					{
 						Card->Attack = Card->TurnStartAttack;
 					}
 				}
-				if(HasTag(EffectTags, CardEffect_OppStrengthen))
+				if(HasTag(EffectTags, TableauEffect_OppStrengthen))
 				{
 					if(Card->SetType == CardSet_Tableau)
 					{
 						Card->Attack = Card->TurnStartAttack;
 					}
 				}
-				if(HasTag(EffectTags, CardEffect_SelfLifeLoss))
+				if(HasTag(EffectTags, TableauEffect_SelfLifeLoss))
 				{
 					if(Card->SetType == CardSet_Tableau)
 					{
 						Card->Health = Card->TurnStartHealth;
 					}
 				}
-				if(HasTag(EffectTags, CardEffect_OppLifeGain))
+				if(HasTag(EffectTags, TableauEffect_OppLifeGain))
 				{
 					if(Card->SetType == CardSet_Tableau)
 					{
 						Card->Health = Card->TurnStartHealth;
 					}
 				}
-				if(HasTag(EffectTags, CardEffect_CostIncrease))
+				if(HasTag(EffectTags, TableauEffect_CostIncrease))
 				{
 					if(Card->SetType == CardSet_Hand)
 					{
@@ -1158,7 +1160,7 @@ void UpdateAndRenderCardGame(
 						);
 					}
 				}
-				if(HasTag(EffectTags, CardEffect_GiveIncrease))
+				if(HasTag(EffectTags, TableauEffect_GiveIncrease))
 				{
 					if(Card->SetType == CardSet_Hand)
 					{
@@ -1167,7 +1169,7 @@ void UpdateAndRenderCardGame(
 						);
 					}
 				}
-				if(HasTag(EffectTags, CardEffect_TimeGrowth))
+				if(HasTag(EffectTags, TableauEffect_TimeGrowth))
 				{
 					player_resources* PlayDelta = (
 						Card->PlayDelta + RelativePlayer_Self
@@ -1200,8 +1202,8 @@ void UpdateAndRenderCardGame(
 			{
 				Card->TimeLeft -= DtForFrame;
 
-				card_effect_tags* EffectTags = &Card->EffectTags;
-				if(HasTag(EffectTags, CardEffect_SelfWeaken))
+				tableau_effect_tags* TableauTags = &Card->TableauTags;
+				if(HasTag(TableauTags, TableauEffect_SelfWeaken))
 				{
 					if(
 						Card->Owner == SceneState->CurrentTurn && 
@@ -1214,7 +1216,7 @@ void UpdateAndRenderCardGame(
 						}
 					}
 				}
-				if(HasTag(EffectTags, CardEffect_SelfHandWeaken))
+				if(HasTag(TableauTags, TableauEffect_SelfHandWeaken))
 				{
 					if(
 						Card->Owner == SceneState->CurrentTurn && 
@@ -1227,7 +1229,7 @@ void UpdateAndRenderCardGame(
 						}
 					}
 				}
-				if(HasTag(EffectTags, CardEffect_OppStrengthen))
+				if(HasTag(TableauTags, TableauEffect_OppStrengthen))
 				{
 					if(
 						Card->Owner != SceneState->CurrentTurn && 
@@ -1240,7 +1242,7 @@ void UpdateAndRenderCardGame(
 						}
 					}
 				}
-				if(HasTag(EffectTags, CardEffect_SelfLifeLoss))
+				if(HasTag(TableauTags, TableauEffect_SelfLifeLoss))
 				{
 					if(
 						Card->Owner == SceneState->CurrentTurn && 
@@ -1258,7 +1260,7 @@ void UpdateAndRenderCardGame(
 						}
 					}
 				}
-				if(HasTag(EffectTags, CardEffect_OppLifeGain))
+				if(HasTag(TableauTags, TableauEffect_OppLifeGain))
 				{
 					if(
 						Card->Owner != SceneState->CurrentTurn && 
@@ -1271,7 +1273,7 @@ void UpdateAndRenderCardGame(
 						}						
 					}
 				}
-				if(HasTag(EffectTags, CardEffect_CostIncrease))
+				if(HasTag(TableauTags, TableauEffect_CostIncrease))
 				{
 					if(Card->SetType == CardSet_Hand)
 					{
@@ -1294,7 +1296,7 @@ void UpdateAndRenderCardGame(
 						}
 					}
 				}
-				if(HasTag(EffectTags, CardEffect_GiveIncrease))
+				if(HasTag(TableauTags, TableauEffect_GiveIncrease))
 				{
 					if(Card->SetType == CardSet_Hand)
 					{

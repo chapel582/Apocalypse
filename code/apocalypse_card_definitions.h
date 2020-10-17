@@ -8,37 +8,61 @@
 
 typedef enum
 {
-	CardEffect_Land,
-	CardEffect_SelfWeaken,
-	CardEffect_OppStrengthen,
-	CardEffect_SelfLifeLoss,
-	CardEffect_OppLifeGain,
-	CardEffect_CostIncrease,
-	CardEffect_GiveIncrease,
-	CardEffect_SelfBurn,
-	CardEffect_OppBurn,
-	CardEffect_DrawExtra,
-	CardEffect_DrawOppExtra,
-	CardEffect_GiveTime,
-	CardEffect_GetTime,
-	CardEffect_SelfHandWeaken,
-	CardEffect_TimeGrowth
-} card_effect;
+	TableauEffect_Land,
+	TableauEffect_SelfWeaken,
+	TableauEffect_OppStrengthen,
+	TableauEffect_SelfLifeLoss,
+	TableauEffect_OppLifeGain,
+	TableauEffect_CostIncrease,
+	TableauEffect_GiveIncrease,
+	TableauEffect_SelfBurn,
+	TableauEffect_OppBurn,
+	TableauEffect_DrawExtra,
+	TableauEffect_DrawOppExtra,
+	TableauEffect_GiveTime,
+	TableauEffect_GetTime,
+	TableauEffect_SelfHandWeaken,
+	TableauEffect_TimeGrowth
+} tableau_effect;
 
-struct card_effect_tags
+struct tableau_effect_tags
 {
 	// NOTE: wrapped in a struct for easy transtion to having even more tags
 	uint64_t Tags;
 };
 
-inline void SetTag(card_effect_tags* Tags, card_effect ToAdd)
+inline void SetTag(tableau_effect_tags* Tags, tableau_effect ToAdd)
 {
-	ASSERT(ToAdd < ((8 * sizeof(card_effect_tags)) - 1));
+	ASSERT(ToAdd < ((8 * sizeof(tableau_effect_tags)) - 1));
 	Tags->Tags |= (1LL << ToAdd);
 }
 
-inline bool HasTag(card_effect_tags* Tags, card_effect Check)
+inline bool HasTag(tableau_effect_tags* Tags, tableau_effect Check)
 {
+	ASSERT(Check < ((8 * sizeof(tableau_effect_tags)) - 1));
+	return (Tags->Tags & (1LL << Check)) > 0;
+}
+
+typedef enum
+{
+	CardEffect_HurtOpp,
+	CardEffect_DisableNext
+} stack_effect;
+
+struct stack_effect_tags
+{
+	uint64_t Tags;
+};
+
+inline void SetTag(stack_effect_tags* Tags, stack_effect ToAdd)
+{
+	ASSERT(ToAdd < (8 * sizeof(stack_effect_tags) - 1));
+	Tags->Tags |= (1LL << ToAdd);
+}
+
+inline bool HasTag(stack_effect_tags* Tags, stack_effect Check)
+{
+	ASSERT(Check < (8 * sizeof(stack_effect_tags) - 1));
 	return (Tags->Tags & (1LL << Check)) > 0;
 }
 
@@ -54,7 +78,8 @@ struct card_definition
 	int16_t Health;
 	char Name[CARD_NAME_SIZE];
 	char Description[CARD_DESCRIPTION_SIZE];
-	card_effect_tags Tags;
+	tableau_effect_tags TableauTags;
+	stack_effect_tags StackTags;
 };
 
 struct card_definitions

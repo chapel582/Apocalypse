@@ -141,7 +141,8 @@ struct card
 	int16_t TurnStartAttack;
 	int16_t Health;
 	int16_t TurnStartHealth;
-	card_effect_tags EffectTags;
+	tableau_effect_tags TableauTags;
+	stack_effect_tags StackTags;
 };
 
 struct card_set

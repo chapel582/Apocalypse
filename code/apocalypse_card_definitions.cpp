@@ -541,7 +541,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		&Definition->TapDelta[RelativePlayer_Opp], 1, 0, 0, 0, 0
 	);
 	SetName(Definition, "Red Land", sizeof("Red Land"));
-	SetTag(&Definition->Tags, CardEffect_Land);
+	SetTag(&Definition->TableauTags, TableauEffect_Land);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 0, 1);
@@ -558,7 +558,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		&Definition->TapDelta[RelativePlayer_Opp], 0, 1, 0, 0, 0
 	);
 	SetName(Definition, "Green Land", sizeof("Green Land"));
-	SetTag(&Definition->Tags, CardEffect_Land);
+	SetTag(&Definition->TableauTags, TableauEffect_Land);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 0, 1);
@@ -575,7 +575,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 1, 0, 0
 	);
 	SetName(Definition, "Blue Land", sizeof("Blue Land"));
-	SetTag(&Definition->Tags, CardEffect_Land);
+	SetTag(&Definition->TableauTags, TableauEffect_Land);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 0, 1);
@@ -592,7 +592,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 2, 0
 	);
 	SetName(Definition, "White Land", sizeof("White Land"));
-	SetTag(&Definition->Tags, CardEffect_Land);
+	SetTag(&Definition->TableauTags, TableauEffect_Land);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 0, 1);
@@ -609,7 +609,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 1
 	);
 	SetName(Definition, "Black Land", sizeof("Black Land"));
-	SetTag(&Definition->Tags, CardEffect_Land);
+	SetTag(&Definition->TableauTags, TableauEffect_Land);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 10, 1);
@@ -626,7 +626,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 0
 	);
 	SetName(Definition, "Self Weaker", sizeof("Self Weaker"));
-	SetTag(&Definition->Tags, CardEffect_SelfWeaken);
+	SetTag(&Definition->TableauTags, TableauEffect_SelfWeaken);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 10, 1);
@@ -643,7 +643,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 0
 	);
 	SetName(Definition, "Opp Strengthen", sizeof("Opp Strengthen"));
-	SetTag(&Definition->Tags, CardEffect_OppStrengthen);
+	SetTag(&Definition->TableauTags, TableauEffect_OppStrengthen);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 10, 10);
@@ -660,7 +660,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 0
 	);
 	SetName(Definition, "Life Loss", sizeof("Life Loss"));
-	SetTag(&Definition->Tags, CardEffect_SelfLifeLoss);
+	SetTag(&Definition->TableauTags, TableauEffect_SelfLifeLoss);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 10, 1);
@@ -677,7 +677,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 0
 	);
 	SetName(Definition, "Life Gain", sizeof("Life Gain"));
-	SetTag(&Definition->Tags, CardEffect_OppLifeGain);
+	SetTag(&Definition->TableauTags, TableauEffect_OppLifeGain);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 10, 1);
@@ -694,7 +694,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 0
 	);
 	SetName(Definition, "Cost Increase", sizeof("Cost Increase"));
-	SetTag(&Definition->Tags, CardEffect_CostIncrease);
+	SetTag(&Definition->TableauTags, TableauEffect_CostIncrease);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 10, 1);
@@ -711,7 +711,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 0
 	);
 	SetName(Definition, "Give Increase", sizeof("Give Increase"));
-	SetTag(&Definition->Tags, CardEffect_GiveIncrease);
+	SetTag(&Definition->TableauTags, TableauEffect_GiveIncrease);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 10, 1);
@@ -728,7 +728,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 0
 	);
 	SetName(Definition, "Self Burn", sizeof("Self Burn"));
-	SetTag(&Definition->Tags, CardEffect_SelfBurn);
+	SetTag(&Definition->TableauTags, TableauEffect_SelfBurn);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 10, 1);
@@ -745,7 +745,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 0
 	);
 	SetName(Definition, "Opp Burn", sizeof("Opp Burn"));
-	SetTag(&Definition->Tags, CardEffect_OppBurn);
+	SetTag(&Definition->TableauTags, TableauEffect_OppBurn);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 10, 1);
@@ -762,7 +762,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 0
 	);
 	SetName(Definition, "Draw Extra", sizeof("Draw Extra"));
-	SetTag(&Definition->Tags, CardEffect_DrawExtra);
+	SetTag(&Definition->TableauTags, TableauEffect_DrawExtra);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 10, 1);
@@ -779,7 +779,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 0
 	);
 	SetName(Definition, "Draw Opp Extra", sizeof("Draw Opp Extra"));
-	SetTag(&Definition->Tags, CardEffect_DrawOppExtra);
+	SetTag(&Definition->TableauTags, TableauEffect_DrawOppExtra);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 10, 1);
@@ -796,7 +796,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 1
 	);
 	SetName(Definition, "Give Time", sizeof("Give Time"));
-	SetTag(&Definition->Tags, CardEffect_GiveTime);
+	SetTag(&Definition->TableauTags, TableauEffect_GiveTime);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 10, 1);
@@ -813,7 +813,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 1
 	);
 	SetName(Definition, "Get Time", sizeof("Get Time"));
-	SetTag(&Definition->Tags, CardEffect_GetTime);
+	SetTag(&Definition->TableauTags, TableauEffect_GetTime);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 10, 1);
@@ -830,7 +830,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 1
 	);
 	SetName(Definition, "Get Time", sizeof("Get Time"));
-	SetTag(&Definition->Tags, CardEffect_GetTime);
+	SetTag(&Definition->TableauTags, TableauEffect_GetTime);
 
 	// NOTE: it might be fun if this card was expensive to make the decision 
 	// CONT: tougher
@@ -849,7 +849,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 0
 	);
 	SetName(Definition, "Self Hand Weaken", sizeof("Self Hand Weaken"));
-	SetTag(&Definition->Tags, CardEffect_SelfHandWeaken);
+	SetTag(&Definition->TableauTags, TableauEffect_SelfHandWeaken);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 5, 1);
@@ -898,7 +898,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 0
 	);
 	SetName(Definition, "Time Growth", sizeof("Time Growth"));
-	SetTag(&Definition->Tags, CardEffect_TimeGrowth);
+	SetTag(&Definition->TableauTags, TableauEffect_TimeGrowth);
 
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;

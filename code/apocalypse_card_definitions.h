@@ -45,8 +45,8 @@ inline bool HasTag(tableau_effect_tags* Tags, tableau_effect Check)
 
 typedef enum
 {
-	CardEffect_HurtOpp,
-	CardEffect_DisableNext
+	StackEffect_HurtOpp,
+	StackEffect_DisableNext
 } stack_effect;
 
 struct stack_effect_tags
@@ -64,6 +64,11 @@ inline bool HasTag(stack_effect_tags* Tags, stack_effect Check)
 {
 	ASSERT(Check < (8 * sizeof(stack_effect_tags) - 1));
 	return (Tags->Tags & (1LL << Check)) > 0;
+}
+
+inline bool HasAnyTag(stack_effect_tags* Tags)
+{
+	return Tags->Tags != 0;
 }
 
 #define CARD_NAME_SIZE 64

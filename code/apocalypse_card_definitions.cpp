@@ -900,6 +900,40 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	SetName(Definition, "Time Growth", sizeof("Time Growth"));
 	SetTag(&Definition->TableauTags, TableauEffect_TimeGrowth);
 
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 0, 1);
+	InitPlayerResource(
+		&Definition->PlayDelta[RelativePlayer_Self], 0, -1, 0, 0, 0
+	);
+	InitPlayerResource(
+		&Definition->TapDelta[RelativePlayer_Self], 0, 0, 0, 0, 0
+	);
+	InitPlayerResource(
+		&Definition->PlayDelta[RelativePlayer_Opp], 0, 1, 0, 0, 0
+	);
+	InitPlayerResource(
+		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 0
+	);
+	SetName(Definition, "Hurt Opp", sizeof("Hurt Opp"));
+	SetTag(&Definition->StackTags, StackEffect_HurtOpp);
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 0, 1);
+	InitPlayerResource(
+		&Definition->PlayDelta[RelativePlayer_Self], 0, -1, 0, 0, 0
+	);
+	InitPlayerResource(
+		&Definition->TapDelta[RelativePlayer_Self], 0, 0, 0, 0, 0
+	);
+	InitPlayerResource(
+		&Definition->PlayDelta[RelativePlayer_Opp], 0, 1, 0, 0, 0
+	);
+	InitPlayerResource(
+		&Definition->TapDelta[RelativePlayer_Opp], 0, 0, 0, 0, 0
+	);
+	SetName(Definition, "Disable Next", sizeof("Disable Next"));
+	SetTag(&Definition->StackTags, StackEffect_DisableNext);
+
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;
 	

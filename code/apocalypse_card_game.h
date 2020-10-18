@@ -132,7 +132,9 @@ struct card
 	card_set_type SetType;
 	float TimeLeft;
 	vector4 Color;
+	// TODO: we're getting several bools here...time to move to flags?
 	bool Active;
+	bool Visible;
 	bool HoveredOver;
 	player_id Owner;
 	int32_t TapsAvailable;
@@ -153,6 +155,18 @@ struct card_set
 	float CardWidth;
 	float YPos;
 	card_set_type Type;
+};
+
+struct card_stack_entry
+{
+	card* Card;
+	union
+	{
+		struct
+		{
+			player_id PlayerTarget;
+		};
+	};
 };
 
 struct card_game_state
@@ -177,6 +191,13 @@ struct card_game_state
 	card_definitions* Definitions;
 	float CardWidth;
 	float CardHeight;
+
+	float PlayerLife[Player_Count];
+
+	bool StackBuilding;
+	player_id StackTurn;
+	card_stack_entry Stack[256];
+	uint32_t StackSize;
 };
 
 struct start_card_game_args

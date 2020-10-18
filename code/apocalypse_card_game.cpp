@@ -197,6 +197,7 @@ card* GetInactiveCard(card_game_state* SceneState)
 	Card->Rectangle.Dim.Y = SceneState->CardHeight;
 	Card->TimeLeft = 10.0f;
 	Card->Active = true;
+	Card->Visible = true;
 	vector4* Color = &Card->Color;
 	Color->A = 1.0f;
 	Color->R = 1.0f;
@@ -709,12 +710,438 @@ void StartCardGame(
 
 	SceneState->Alert = MakeAlert();
 
+	SceneState->PlayerLife[Player_One] = 100.0f;
+	SceneState->PlayerLife[Player_Two] = 100.0f;
+
 	// TODO: remove me!
 	// PlaySound(
 	// 	&GameState->PlayingSoundList,
 	// 	WavHandle_TestMusic,
 	// 	&GameState->TransientArena
 	// );
+}
+
+void PutCardOnStack(card_game_state* SceneState, card* Card)
+{
+	RemoveCardAndAlign(SceneState, Card);
+	Card->Visible = false;
+}
+
+void EndStackBuilding(card_game_state* SceneState)
+{
+	if(SceneState->StackBuilding)
+	{
+		bool IsDisabled = false;
+		while(SceneState->StackSize > 0)
+		{
+			card_stack_entry* CardStackEntry = (
+				SceneState->Stack + (SceneState->StackSize - 1)
+			);
+			card* Card = CardStackEntry->Card;
+			stack_effect_tags* StackTags = &Card->StackTags; 
+			if(!IsDisabled)
+			{
+				if(HasTag(StackTags, StackEffect_HurtOpp))
+				{
+					player_id ToHurt = CardStackEntry->PlayerTarget;
+					SceneState->PlayerLife[ToHurt] -= 5.0f;
+				}
+				if(HasTag(StackTags, StackEffect_DisableNext))
+				{
+					IsDisabled = true;
+				}
+				else
+				{
+					IsDisabled = false;
+				}
+			}
+
+			SceneState->StackSize--;
+			Card->Active = false;
+		}
+		SceneState->StackBuilding = false;
+	}
+}
+
+inline void StandardPrimaryUpHandler(
+	game_state* GameState,
+	card_game_state* SceneState,
+	vector2 MouseEventWorldPos
+)
+{
+	// NOTE: inlined b/c this is only called once
+	card* Card = &SceneState->Cards[0];
+
+	for(int CardIndex = 0; CardIndex < SceneState->MaxCards; CardIndex++)
+	{
+		if(
+			Card->Active &&
+			PointInRectangle(MouseEventWorldPos, Card->Rectangle)
+		)
+		{
+			card* SelectedCard = SceneState->SelectedCard;
+
+			// NOTE: player clicked their own card on their turn 
+			if(Card->Owner == SceneState->CurrentTurn)
+			{
+				if(Card->SetType == CardSet_Hand)
+				{
+					if(SelectedCard == NULL)
+					{
+						bool WasPlayed = CheckAndPlay(
+							GameState, SceneState, Card
+						);
+						if(WasPlayed)
+						{
+							if(HasAnyTag(&Card->StackTags))
+							{
+								card_stack_entry* StackEntry = (
+									SceneState->Stack + SceneState->StackSize
+								);
+								StackEntry->Card = Card;
+								SceneState->StackSize++;
+								SceneState->StackBuilding = true;
+
+								if(
+									HasTag(
+										&Card->StackTags, StackEffect_HurtOpp
+									)
+								)
+								{
+									StackEntry->PlayerTarget = (
+										GetOpponent(SceneState->CurrentTurn)
+									);
+								}
+								SceneState->StackTurn = GetOpponent(
+									SceneState->CurrentTurn
+								);
+								PutCardOnStack(SceneState, Card);
+							}
+							else
+							{
+								RemoveCardAndAlign(SceneState, Card);
+								AddCardAndAlign(
+									&SceneState->Tableaus[Card->Owner], Card
+								);
+							}
+						}
+						else
+						{
+							CannotActivateCardMessage(
+								GameState, &SceneState->Alert
+							);
+						}
+					}
+
+					else
+					{
+						bool Tapped = CheckAndTap(
+							GameState, SceneState, SelectedCard
+						);
+						if(Tapped)
+						{
+							DeselectCard(SceneState);
+							float TimeChange = (
+								GetTimeChangeFromCard(Card, Card->PlayDelta)
+							);
+
+							bool HasSelfBurn = HasTag(
+								&SelectedCard->TableauTags, 
+								TableauEffect_SelfBurn
+							);
+							attack_card_result Result = AttackCard(
+								SceneState, SelectedCard, Card
+							);
+							if(Result.AttackedDied)
+							{
+								if(HasSelfBurn)
+								{
+									/*NOTE: 
+									TimeChange is subtracted because
+									we want the opposite effect from
+									if it was played. If it would 
+									cost the player time to play it,
+									it now gives time. And vice 
+									versa 
+									*/
+									SceneState->TurnTimer -= TimeChange;
+								}
+							}
+						}
+					}								
+				}
+				else if(Card->SetType == CardSet_Tableau)
+				{
+					if(SelectedCard == NULL)
+					{
+						if(Card->TimesTapped < Card->TapsAvailable)
+						{
+							player_resources* ChangeTarget = (
+								&SceneState->PlayerResources[Card->Owner]
+							);
+							player_resources* Delta = (
+								&Card->TapDelta[Card->Owner]
+							);
+							bool CanActivate = CanChangeResources(
+								ChangeTarget, Delta
+							);										
+							if(CanActivate)
+							{
+								SelectCard(SceneState, Card);
+							}
+							else
+							{
+								CannotActivateCardMessage(
+									GameState, &SceneState->Alert
+								);
+							}
+						}
+					}
+					else
+					{
+						if(SelectedCard == Card)
+						{
+							tableau_effect_tags* Tags = (
+								&Card->TableauTags
+							);
+							if(
+								HasTag(Tags, TableauEffect_Land) ||
+								HasTag(Tags, TableauEffect_DrawExtra) ||
+								HasTag(Tags, TableauEffect_DrawOppExtra) ||
+								HasTag(Tags, TableauEffect_TimeGrowth)
+							)
+							{
+								player_id Owner = SelectedCard->Owner;
+								DeselectCard(SceneState);
+								CheckAndTap(
+									GameState, SceneState, SelectedCard
+								);
+							}
+						}
+						else
+						{
+							DeselectCard(SceneState);
+							SelectCard(SceneState, Card);
+						}
+					}
+				}
+				else
+				{
+					ASSERT(false);
+				}
+				break;
+			}
+			// NOTE: player clicked on opponent's card on their turn
+			else
+			{
+				if(SelectedCard != NULL)
+				{
+					if(Card->SetType == CardSet_Tableau)
+					{
+						player_id Owner = SelectedCard->Owner;
+						bool Tapped = CheckAndTap(
+							GameState,
+							SceneState,
+							SelectedCard
+						);
+						if(Tapped)
+						{
+							DeselectCard(SceneState);
+							AttackCard(SceneState, SelectedCard, Card);
+						}
+					}
+					else if(
+						Card->SetType == CardSet_Hand && 
+						HasTag(
+							&SelectedCard->TableauTags, TableauEffect_OppBurn
+						)									
+					)
+					{
+						bool Tapped = CheckAndTap(
+							GameState, SceneState, SelectedCard
+						);
+						if(Tapped)
+						{
+							DeselectCard(SceneState);
+							float TimeChange = (
+								GetTimeChangeFromCard(Card, Card->PlayDelta)
+							);
+
+							attack_card_result Result = AttackCard(
+								SceneState, SelectedCard, Card
+							);
+							if(Result.AttackedDied)
+							{
+								SceneState->NextTurnTimer -= TimeChange;
+							}
+						}
+					}
+				}
+			}
+		}
+		Card++;
+	}
+}
+
+inline void StackBuildingPrimaryUpHandler(
+	game_state* GameState,
+	card_game_state* SceneState,
+	vector2 MouseEventWorldPos
+)
+{
+	card* Card = &SceneState->Cards[0];
+
+	for(int CardIndex = 0; CardIndex < SceneState->MaxCards; CardIndex++)
+	{
+		if(
+			Card->Active &&
+			PointInRectangle(MouseEventWorldPos, Card->Rectangle)
+		)
+		{
+			card* SelectedCard = SceneState->SelectedCard;
+
+			// NOTE: player clicked their own card on their turn 
+			if(Card->Owner == SceneState->StackTurn)
+			{
+				if(Card->SetType == CardSet_Hand)
+				{
+					bool WasPlayed = CheckAndPlay(GameState, SceneState, Card);
+					if(WasPlayed)
+					{
+						if(HasAnyTag(&Card->StackTags))
+						{
+							card_stack_entry* StackEntry = (
+								SceneState->Stack + SceneState->StackSize
+							);
+							StackEntry->Card = Card;
+							if(HasTag(&Card->StackTags, StackEffect_HurtOpp))
+							{
+								StackEntry->PlayerTarget = GetOpponent(
+									SceneState->StackTurn
+								);
+							}
+
+							PutCardOnStack(SceneState, Card);
+							SceneState->StackTurn = GetOpponent(
+								SceneState->StackTurn
+							);
+							SceneState->StackSize++;
+						}
+						else
+						{
+							DisplayMessageFor(
+								GameState,
+								&SceneState->Alert,
+								"Card is not a stack card",
+								1.0f
+							);
+						}
+					}
+					else
+					{
+						CannotActivateCardMessage(
+							GameState, &SceneState->Alert
+						);
+					}
+				}
+				break;
+			}
+			// NOTE: player clicked on opponent's card on their turn
+			else
+			{
+			}
+		}
+		Card++;
+	}
+}
+
+inline bool StandardKeyboardHandler(
+	game_state* GameState,
+	card_game_state* SceneState,
+	game_keyboard_event* KeyboardEvent
+)
+{
+	// NOTE: end turn currently is the return value
+	bool EndTurn = false;
+
+	if(KeyboardEvent->IsDown != KeyboardEvent->WasDown)
+	{
+		switch(KeyboardEvent->Code)
+		{
+			case(0x0D): // NOTE: Return/Enter V-code
+			{
+				if(!KeyboardEvent->IsDown && KeyboardEvent->WasDown)
+				{
+					EndTurn = true;
+				}
+				break;
+			}
+			case(0x1B): // NOTE: Escape V-code
+			{
+				GameState->Scene = SceneType_MainMenu; 
+				break;
+			}
+			case(0x44): // NOTE: D V-code
+			{
+				// TODO: consider pulling this predicate out to an 
+				// CONT: inline function called "KeyUp" or something
+				if(!KeyboardEvent->IsDown && KeyboardEvent->WasDown)
+				{
+					// TODO: use console commands or something for 
+					// CONT: debug mode
+					GameState->OverlayDebugInfo = (
+						!GameState->OverlayDebugInfo
+					);
+				}
+				break;
+			}			
+		}
+	}
+	return EndTurn;
+}
+
+inline bool StackBuildingKeyboardHandler(
+	game_state* GameState,
+	card_game_state* SceneState,
+	game_keyboard_event* KeyboardEvent
+)
+{
+	// NOTE: end turn is the current return type
+	bool EndTurn = false;
+
+	if(KeyboardEvent->IsDown != KeyboardEvent->WasDown)
+	{
+		switch(KeyboardEvent->Code)
+		{
+			case(0x0D): // NOTE: Return/Enter V-code
+			{
+				if(!KeyboardEvent->IsDown && KeyboardEvent->WasDown)
+				{
+					EndTurn = true;
+				}
+				break;
+			}
+			case(0x1B): // NOTE: Escape V-code
+			{
+				GameState->Scene = SceneType_MainMenu; 
+				break;
+			}
+			case(0x44): // NOTE: D V-code
+			{
+				// TODO: consider pulling this predicate out to an 
+				// CONT: inline function called "KeyUp" or something
+				if(!KeyboardEvent->IsDown && KeyboardEvent->WasDown)
+				{
+					// TODO: use console commands or something for 
+					// CONT: debug mode
+					GameState->OverlayDebugInfo = !GameState->OverlayDebugInfo;
+				}
+				break;
+			}
+		}
+	}
+
+	return EndTurn;
 }
 
 void UpdateAndRenderCardGame(
@@ -764,214 +1191,17 @@ void UpdateAndRenderCardGame(
 					WavHandle_Bloop00,
 					&GameState->TransientArena
 				);
-				card* Card = &SceneState->Cards[0];
-				for(
-					int CardIndex = 0;
-					CardIndex < SceneState->MaxCards;
-					CardIndex++
-				)
+				if(SceneState->StackBuilding)
 				{
-					if(
-						Card->Active &&
-						PointInRectangle(MouseEventWorldPos, Card->Rectangle)
-					)
-					{
-						card* SelectedCard = SceneState->SelectedCard;
-
-						// NOTE: player clicked their own card on their turn 
-						if(Card->Owner == SceneState->CurrentTurn)
-						{
-							if(Card->SetType == CardSet_Hand)
-							{
-								if(SelectedCard == NULL)
-								{
-									bool WasPlayed = CheckAndPlay(
-										GameState, SceneState, Card
-									);
-									if(WasPlayed)
-									{
-										RemoveCardAndAlign(SceneState, Card);
-										AddCardAndAlign(
-											&SceneState->Tableaus[Card->Owner],
-											Card
-										);
-									}
-									else
-									{
-										CannotActivateCardMessage(
-											GameState, &SceneState->Alert
-										);
-									}
-								}
-
-								else
-								{
-									bool Tapped = CheckAndTap(
-										GameState,
-										SceneState,
-										SelectedCard
-									);
-									if(Tapped)
-									{
-										DeselectCard(SceneState);
-										float TimeChange = (
-											GetTimeChangeFromCard(
-												Card,
-												Card->PlayDelta
-											)
-										);
-
-										bool HasSelfBurn = HasTag(
-											&SelectedCard->TableauTags, 
-											TableauEffect_SelfBurn
-										);
-										attack_card_result Result = AttackCard(
-											SceneState, SelectedCard, Card
-										);
-										if(Result.AttackedDied)
-										{
-											if(HasSelfBurn)
-											{
-												/*NOTE: 
-												TimeChange is subtracted because
-												we want the opposite effect from
-												if it was played. If it would 
-												cost the player time to play it,
-												it now gives time. And vice 
-												versa 
-												*/
-												SceneState->TurnTimer -= (
-													TimeChange
-												);
-											}
-										}
-									}
-								}								
-							}
-							else if(Card->SetType == CardSet_Tableau)
-							{
-								if(SelectedCard == NULL)
-								{
-									if(Card->TimesTapped < Card->TapsAvailable)
-									{
-										player_resources* ChangeTarget = (
-											&SceneState->PlayerResources[Card->Owner]
-										);
-										player_resources* Delta = (
-											&Card->TapDelta[Card->Owner]
-										);
-										bool CanActivate = CanChangeResources(
-											ChangeTarget, Delta
-										);										
-										if(CanActivate)
-										{
-											SelectCard(SceneState, Card);
-										}
-										else
-										{
-											CannotActivateCardMessage(
-												GameState, &SceneState->Alert
-											);
-										}
-									}
-								}
-								else
-								{
-									if(SelectedCard == Card)
-									{
-										tableau_effect_tags* Tags = (
-											&Card->TableauTags
-										);
-										if(
-											HasTag(Tags, TableauEffect_Land) ||
-											HasTag(Tags, TableauEffect_DrawExtra) 
-											||
-											HasTag(Tags, TableauEffect_DrawOppExtra)
-											||
-											HasTag(Tags, TableauEffect_TimeGrowth)
-										)
-										{
-											player_id Owner = SelectedCard->Owner;
-											DeselectCard(SceneState);
-											CheckAndTap(
-												GameState,
-												SceneState,
-												SelectedCard
-											);
-										}
-									}
-									else
-									{
-										DeselectCard(SceneState);
-										SelectCard(SceneState, Card);
-									}
-								}
-							}
-							else
-							{
-								ASSERT(false);
-							}
-							break;
-						}
-						// NOTE: player clicked on opponent's card on their turn
-						else
-						{
-							if(SelectedCard != NULL)
-							{
-								if(Card->SetType == CardSet_Tableau)
-								{
-									player_id Owner = SelectedCard->Owner;
-									bool Tapped = CheckAndTap(
-										GameState,
-										SceneState,
-										SelectedCard
-									);
-									if(Tapped)
-									{
-										DeselectCard(SceneState);
-										AttackCard(
-											SceneState, SelectedCard, Card
-										);
-									}
-								}
-								else if(
-									Card->SetType == CardSet_Hand && 
-									HasTag(
-										&SelectedCard->TableauTags, 
-										TableauEffect_OppBurn
-									)									
-								)
-								{
-									bool Tapped = CheckAndTap(
-										GameState,
-										SceneState,
-										SelectedCard
-									);
-									if(Tapped)
-									{
-										DeselectCard(SceneState);
-										float TimeChange = (
-											GetTimeChangeFromCard(
-												Card,
-												Card->PlayDelta
-											)
-										);
-
-										attack_card_result Result = AttackCard(
-											SceneState, SelectedCard, Card
-										);
-										if(Result.AttackedDied)
-										{
-											SceneState->NextTurnTimer -= (
-												TimeChange
-											);
-										}
-									}
-								}
-							}
-						}
-					}
-					Card++;
+					StackBuildingPrimaryUpHandler(
+						GameState, SceneState, MouseEventWorldPos
+					);
+				}
+				else
+				{
+					StandardPrimaryUpHandler(
+						GameState, SceneState, MouseEventWorldPos
+					);
 				}
 			}
 			else if(MouseEvent->Type == SecondaryUp)
@@ -1022,41 +1252,27 @@ void UpdateAndRenderCardGame(
 				break;
 			}
 
-			if(KeyboardEvent->IsDown != KeyboardEvent->WasDown)
+			bool TempEndTurn = false;
+			if(!SceneState->StackBuilding)
 			{
-				switch(KeyboardEvent->Code)
+				TempEndTurn = StandardKeyboardHandler(
+					GameState, SceneState, KeyboardEvent
+				);
+				// NOTE: this is not unnecessary. Don't want to overwrite EndTurn 
+				// CONT: with false by accident
+				if(TempEndTurn)
 				{
-					case(0x0D): // NOTE: Return/Enter V-code
-					{
-						if(!KeyboardEvent->IsDown && KeyboardEvent->WasDown)
-						{
-							EndTurn = true;
-						}
-						break;
-					}
-					case(0x1B): // NOTE: Escape V-code
-					{
-						GameState->Scene = SceneType_MainMenu; 
-						break;
-					}
-					case(0x44): // NOTE: D V-code
-					{
-						// TODO: consider pulling this predicate out to an 
-						// CONT: inline function called "KeyUp" or something
-						if(!KeyboardEvent->IsDown && KeyboardEvent->WasDown)
-						{
-							// TODO: use console commands or something for 
-							// CONT: debug mode
-							GameState->OverlayDebugInfo = (
-								!GameState->OverlayDebugInfo
-							);
-						}
-						break;
-					}					
-					case(0x00):
-					{
-
-					}
+					EndTurn = TempEndTurn;
+				}
+			}
+			else
+			{
+				TempEndTurn = StackBuildingKeyboardHandler(
+					GameState, SceneState, KeyboardEvent
+				);
+				if(TempEndTurn)
+				{
+					EndStackBuilding(SceneState);
 				}
 			}
 
@@ -1072,7 +1288,30 @@ void UpdateAndRenderCardGame(
 	bool WholeSecondPassed = false;
 	if(!EndTurn)
 	{
-		SceneState->TurnTimer -= DtForFrame;
+		if(SceneState->StackBuilding)
+		{
+			if(SceneState->StackTurn == SceneState->CurrentTurn)
+			{
+				SceneState->TurnTimer -= DtForFrame;
+			}
+			else
+			{
+				SceneState->NextTurnTimer -= DtForFrame;
+				if(SceneState->NextTurnTimer <= 0.0f)
+				{
+					SceneState->NextTurnTimer = 0.0f;
+				}
+
+				if(SceneState->NextTurnTimer <= 0.0f)
+				{
+					EndStackBuilding(SceneState);
+				}
+			}
+		}
+		else
+		{
+			SceneState->TurnTimer -= DtForFrame;
+		}
 		// NOTE: switch turns
 		if(SceneState->TurnTimer <= 0)
 		{
@@ -1092,6 +1331,8 @@ void UpdateAndRenderCardGame(
 	}
 	if(EndTurn)
 	{
+		EndStackBuilding(SceneState);
+
 		SetTurnTimer(SceneState, SceneState->NextTurnTimer);
 
 		if(SceneState->ShouldUpdateBaseline)
@@ -1332,20 +1573,40 @@ void UpdateAndRenderCardGame(
 
 	// SECTION START: Push turn timer
 	{
-		int32_t TurnTimerCeil = Int32Ceil(SceneState->TurnTimer);
+		char* PlayerIndicator = NULL;
+		int32_t TurnTimerCeil = 0;
+		if(
+			SceneState->StackBuilding && 
+			(SceneState->StackTurn != SceneState->CurrentTurn)
+		)
+		{
+			TurnTimerCeil = Int32Ceil(SceneState->NextTurnTimer);
+			if(SceneState->StackTurn == Player_One)
+			{
+				PlayerIndicator = "P1";
+			}
+			else if(SceneState->StackTurn == Player_Two)
+			{
+				PlayerIndicator = "P2";
+			}
+		}
+		else
+		{
+			TurnTimerCeil = Int32Ceil(SceneState->TurnTimer);
+			if(SceneState->CurrentTurn == Player_One)
+			{
+				PlayerIndicator = "P1";
+			}
+			else if(SceneState->CurrentTurn == Player_Two)
+			{
+				PlayerIndicator = "P2";
+			}
+		}
+
 		uint32_t MaxTurnTimerCharacters = 10;
 		char* TurnTimerString = PushArray(
 			&GameState->FrameArena, MaxTurnTimerCharacters, char
 		);
-		char* PlayerIndicator = NULL;
-		if(SceneState->CurrentTurn == Player_One)
-		{
-			PlayerIndicator = "P1";
-		}
-		else if(SceneState->CurrentTurn == Player_Two)
-		{
-			PlayerIndicator = "P2";
-		}
 		ASSERT(PlayerIndicator != NULL);
 		snprintf(
 			TurnTimerString,
@@ -1376,7 +1637,7 @@ void UpdateAndRenderCardGame(
 			CardIndex++
 		)
 		{
-			if(Card->Active)
+			if(Card->Active && Card->Visible)
 			{
 				PushSizedBitmap(
 					&GameState->RenderGroup,

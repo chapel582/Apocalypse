@@ -42,6 +42,14 @@ inline vector2 GetTopLeft(rectangle Rectangle)
 	return Result;
 }
 
+inline vector2 GetTopRight(rectangle Rectangle)
+{
+	vector2 Result;
+	Result.X = GetRight(Rectangle);
+	Result.Y = GetTop(Rectangle);
+	return Result;
+}
+
 inline float GetBottom(rectangle Rectangle)
 {
 	return Rectangle.Min.Y;

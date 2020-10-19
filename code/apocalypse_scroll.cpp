@@ -1,5 +1,8 @@
 #include "apocalypse_scroll.h"
 
+// TODO: formalize initialization
+// TODO: formalize using children
+// TODO: add a little note up here of everything you have to do to execute this stuff
 scroll_handle_mouse_code ScrollBoxHandleMouse(
 	rectangle* ScrollBarRect,
 	rectangle* ScrollBox,

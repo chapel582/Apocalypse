@@ -204,6 +204,7 @@ struct card_game_state
 	player_id StackTurn;
 	card_stack_entry Stack[256];
 	uint32_t StackSize;
+	float StackYStart;
 };
 
 struct start_card_game_args

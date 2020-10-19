@@ -22,6 +22,7 @@ typedef enum
 {
 	CardSet_Hand,
 	CardSet_Tableau,
+	CardSet_Stack,
 	CardSet_Count
 } card_set_type;
 
@@ -171,6 +172,8 @@ struct card_stack_entry
 
 struct card_game_state
 {
+	ui_context UiContext;
+
 	player_id CurrentTurn;
 	int16_t LastWholeSecond;
 	float TurnTimer;
@@ -194,6 +197,9 @@ struct card_game_state
 
 	float PlayerLife[Player_Count];
 
+	vector2 StackEntryInfoDim;
+	scroll_bar StackScrollBar;
+	rectangle StackScrollBox;
 	bool StackBuilding;
 	player_id StackTurn;
 	card_stack_entry Stack[256];

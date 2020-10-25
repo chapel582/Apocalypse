@@ -67,6 +67,7 @@ struct render_entry_header
 {	
 	entry_type Type;
 	uint32_t Layer;
+	uint32_t ClipRectIndex;
 };
 
 struct render_entry_clear
@@ -112,6 +113,9 @@ struct render_group
 	// CONT: somewhere besides the screen origin 
 	basis* WorldToCamera;
 	basis* CameraToScreen;
+
+	rectangle ClipRects[16]; // TODO: make larger
+	uint32_t NumClipRects;
 };
 
 typedef enum 
@@ -131,6 +135,7 @@ struct push_text_result
 
 void PushClear(render_group* Group, vector4 Color, uint32_t Layer = 0);
 vector2 TransformPosFromBasis(basis* Basis, vector2 Vector);
+uint32_t AddClipRect(render_group* RenderGroup, rectangle ToAdd);
 
 #define APOCALYPSE_RENDER_GROUP_H
 #endif

@@ -97,6 +97,11 @@ inline vector2 operator-=(vector2 &A, vector2 B)
 	return A;
 }
 
+inline bool operator==(vector2 A, vector2 B)
+{
+	return (A.X == B.X) && (A.Y == B.Y);
+}
+
 inline vector2 Abs(vector2 A)
 {
 	vector2 Result;

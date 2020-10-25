@@ -95,7 +95,8 @@ inline void PushBitmap(
 	loaded_bitmap* Bitmap,
 	basis* Basis,
 	vector4 Color,
-	uint32_t Layer = 1
+	uint32_t Layer = 1,
+	uint32_t ClipRectIndex = 0
 )
 {
 	// TODO: we might want a way to push a bitmap while only designating its 
@@ -106,8 +107,10 @@ inline void PushBitmap(
 	// NOTE: basis offset should be the top left of the unrotated texture
 	render_entry_bitmap* Entry = PushStruct(Group->Arena, render_entry_bitmap);
 	Group->NumEntries++;
+	Entry->Header = {};
 	Entry->Header.Type = EntryType_Bitmap;
 	Entry->Header.Layer = Layer;
+	Entry->Header.ClipRectIndex = ClipRectIndex;
 	Entry->Bitmap = Bitmap;
 	Entry->Color = Color;
 
@@ -129,7 +132,9 @@ inline void PushCenteredBitmap(
 	vector2 Center,
 	vector2 XAxis,
 	vector2 YAxis,
-	vector4 Color
+	vector4 Color,
+	uint32_t Layer = 1,
+	uint32_t ClipRectIndex = 0
 )
 {
 	// NOTE: rotation is CCW e.g. Xaxis = {0.707, 0.707}  
@@ -154,7 +159,7 @@ inline void PushCenteredBitmap(
 		XAxis,
 		YAxis
 	);
-	PushBitmap(Group, Bitmap, &Basis, Color);
+	PushBitmap(Group, Bitmap, &Basis, Color, Layer, ClipRectIndex);
 }
 
 inline void PushCenteredBitmap(
@@ -164,13 +169,17 @@ inline void PushCenteredBitmap(
 	vector2 Center,
 	vector2 XAxis,
 	vector2 YAxis,
-	vector4 Color
+	vector4 Color,
+	uint32_t Layer = 1,
+	uint32_t ClipRectIndex = 0
 )
 {
 	loaded_bitmap* Bitmap = GetBitmap(Assets, BitmapHandle);
 	if(Bitmap)
 	{
-		PushCenteredBitmap(Group, Bitmap, Center, XAxis, YAxis, Color);
+		PushCenteredBitmap(
+			Group, Bitmap, Center, XAxis, YAxis, Color, Layer, ClipRectIndex
+		);
 	}
 }
 
@@ -180,7 +189,9 @@ inline void PushSizedBitmap(
 	vector2 Center,
 	vector2 SizedXAxis,
 	vector2 SizedYAxis,
-	vector4 Color
+	vector4 Color,
+	uint32_t Layer = 1,
+	uint32_t ClipRectIndex = 0
 )
 {
 	// NOTE: this is for when you know the dimensions that you want the bitmap
@@ -219,7 +230,9 @@ inline void PushSizedBitmap(
 		Center,
 		CameraXAxis / BmpWorldDim.X,
 		CameraYAxis / BmpWorldDim.Y,
-		Color
+		Color,
+		Layer,
+		ClipRectIndex
 	);
 }
 
@@ -230,13 +243,24 @@ inline void PushSizedBitmap(
 	vector2 Center,
 	vector2 SizedXAxis,
 	vector2 SizedYAxis,
-	vector4 Color
+	vector4 Color,
+	uint32_t Layer = 1,
+	uint32_t ClipRectIndex = 0
 )
 {
 	loaded_bitmap* Bitmap = GetBitmap(Assets, BitmapHandle);
 	if(Bitmap)
 	{
-		PushSizedBitmap(Group, Bitmap, Center, SizedXAxis, SizedYAxis, Color);
+		PushSizedBitmap(
+			Group,
+			Bitmap,
+			Center,
+			SizedXAxis,
+			SizedYAxis,
+			Color,
+			Layer,
+			ClipRectIndex
+		);
 	}
 }
 
@@ -246,7 +270,9 @@ inline void PushSizedBitmap(
 	bitmap_handle BitmapHandle,
 	vector2 Center,
 	vector2 XYAxes,
-	vector4 Color
+	vector4 Color,
+	uint32_t Layer = 1,
+	uint32_t ClipRectIndex = 0
 )
 {
 	loaded_bitmap* Bitmap = GetBitmap(Assets, BitmapHandle);
@@ -258,13 +284,19 @@ inline void PushSizedBitmap(
 			Center,
 			Vector2(XYAxes.X, 0.0f),
 			Vector2(0.0f, XYAxes.Y),
-			Color
+			Color,
+			Layer,
+			ClipRectIndex
 		);
 	}
 }
 
 void PushParticles(
-	render_group* Group, assets* Assets, particle_system* ParticleSystem
+	render_group* Group,
+	assets* Assets,
+	particle_system* ParticleSystem,
+	uint32_t Layer = 1,
+	uint32_t ClipRectIndex = 0
 )
 {
 	particle* Particle = &ParticleSystem->Particles[0];
@@ -279,7 +311,9 @@ void PushParticles(
 				Particle->Pos,
 				Vector2(Particle->Dim.X, 0.0f),
 				Vector2(0.0f, Particle->Dim.Y),
-				Particle->Color
+				Particle->Color,
+				Layer,
+				ClipRectIndex
 			);
 		}
 		Particle++;
@@ -294,7 +328,9 @@ inline void PushGlyph(
 	vector2 BottomLeft,
 	vector2 XAxis,
 	vector2 YAxis,
-	vector4 Color
+	vector4 Color,
+	uint32_t Layer = 1,
+	uint32_t ClipRectIndex = 0
 )
 {
 	// TODO: consider if there's a better way to handle avoiding white space 
@@ -309,7 +345,7 @@ inline void PushGlyph(
 	{
 		basis Basis = MakeBasis(BottomLeft, XAxis, YAxis);
 		PushBitmap(
-			Group, &Glyph->Bitmap, &Basis, Color
+			Group, &Glyph->Bitmap, &Basis, Color, Layer, ClipRectIndex
 		);
 	}
 }
@@ -325,7 +361,9 @@ inline void PushOffsetGlyph(
 	vector2 YAxis,
 	vector2 LeftBaselinePoint,
 	vector2 Offset,
-	vector4 Color
+	vector4 Color,
+	uint32_t Layer = 1,
+	uint32_t ClipRectIndex = 0
 )
 {
 	// NOTE: function pulled out for use in PushText only
@@ -339,7 +377,9 @@ inline void PushOffsetGlyph(
 		LeftBaselinePoint + Offset + (Scale * Vector2(X0, Y0)),
 		XAxis,
 		YAxis,
-		Color
+		Color,
+		Layer,
+		ClipRectIndex
 	);
 }
 
@@ -351,7 +391,9 @@ push_text_result PushText(
 	uint32_t CodePointCount,
 	float FontHeight, // NOTE: font height in world units
 	vector2 LeftBaselinePoint,
-	vector4 Color
+	vector4 Color,
+	uint32_t Layer = 1,
+	uint32_t ClipRectIndex = 0
 )
 {
 	push_text_result Result = {};
@@ -410,7 +452,9 @@ push_text_result PushText(
 				YAxis,
 				LeftBaselinePoint,
 				Offset,
-				Color
+				Color,
+				Layer,
+				ClipRectIndex
 			);
 			int Advance, Lsb;
 			stbtt_GetCodepointHMetrics(Font, CodePoint, &Advance, &Lsb);
@@ -435,7 +479,9 @@ push_text_result PushText(
 		YAxis,
 		LeftBaselinePoint,
 		Offset,
-		Color
+		Color,
+		Layer,
+		ClipRectIndex
 	);
 
 	{
@@ -465,8 +511,10 @@ push_text_result PushText(
 	float FontHeight, // NOTE: font height in world units
 	vector2 LeftBaselinePoint,
 	vector4 Color,
-	memory_arena* FrameArena // NOTE: this function will leak if you don't
+	memory_arena* FrameArena, // NOTE: this function will leak if you don't
 	// CONT: regularly clear the arena. Hence, FrameArena
+	uint32_t Layer = 1,
+	uint32_t ClipRectIndex = 0
 )
 {
 	/* NOTE: 
@@ -502,7 +550,9 @@ push_text_result PushText(
 		Index,
 		FontHeight,
 		LeftBaselinePoint,
-		Color
+		Color,
+		Layer,
+		ClipRectIndex
 	);
 }
 
@@ -515,8 +565,10 @@ push_text_result PushTextTopLeft(
 	float FontHeight, // NOTE: font height in world units
 	vector2 TopLeft,
 	vector4 Color,
-	memory_arena* FrameArena // NOTE: this function will leak if you don't
+	memory_arena* FrameArena, // NOTE: this function will leak if you don't
 	// CONT: regularly clear the arena. Hence, FrameArena
+	uint32_t Layer = 1,
+	uint32_t ClipRectIndex = 0
 )
 {
 	/* NOTE: 
@@ -565,7 +617,9 @@ push_text_result PushTextTopLeft(
 		FontHeight,
 		Baseline,
 		Color,
-		FrameArena
+		FrameArena,
+		Layer,
+		ClipRectIndex
 	);
 	goto end;
 
@@ -582,7 +636,9 @@ push_text_result PushTextCentered(
 	float FontHeight, 
 	vector2 Center,
 	vector4 Color,
-	memory_arena* FrameArena 
+	memory_arena* FrameArena,
+	uint32_t Layer = 1,
+	uint32_t ClipRectIndex = 0
 )
 {
 	// NOTE: FontHeight is in world units
@@ -672,7 +728,9 @@ push_text_result PushTextCentered(
 		FontHeight,
 		Baseline,
 		Color,
-		FrameArena
+		FrameArena,
+		Layer,
+		ClipRectIndex
 	);
 
 	goto end;
@@ -691,6 +749,7 @@ inline void PushRect(
 		Group->Arena, render_entry_rectangle
 	);
 	Group->NumEntries++;
+	Entry->Header = {};
 	Entry->Header.Type = EntryType_Rectangle;
 	Entry->Header.Layer = Layer;
 	Entry->Color = Color;
@@ -711,6 +770,7 @@ inline void PushClear(render_group* Group, vector4 Color, uint32_t Layer)
 {
 	render_entry_clear* Entry = PushStruct(Group->Arena, render_entry_clear);
 	Group->NumEntries++;
+	Entry->Header = {};
 	Entry->Header.Type = EntryType_Clear;
 	Entry->Header.Layer = Layer;
 	Entry->Color = Color;
@@ -1340,3 +1400,24 @@ void Clear(loaded_bitmap* Buffer, vector4 Color)
 		Color
 	);
 }
+
+uint32_t AddClipRect(render_group* RenderGroup, rectangle ToAdd)
+{
+	ASSERT(RenderGroup->NumClipRects < ARRAY_COUNT(RenderGroup->ClipRects));
+	uint32_t Index;
+	for(Index = 0; Index < RenderGroup->NumClipRects; Index++)
+	{
+		if(Equivalent(RenderGroup->ClipRects[Index], ToAdd))
+		{
+			return Index;
+		}
+	}
+
+	RenderGroup->ClipRects[RenderGroup->NumClipRects] = ToAdd;
+	Index = RenderGroup->NumClipRects;
+	RenderGroup->NumClipRects++;
+
+	return Index;
+}
+
+// TODO: have an option for resetting clip rect count

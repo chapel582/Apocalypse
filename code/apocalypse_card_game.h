@@ -200,6 +200,7 @@ struct card_game_state
 	vector2 StackEntryInfoDim;
 	scroll_bar StackScrollBar;
 	rectangle StackScrollBox;
+	uint32_t ScrollBoxClipIndex;
 	bool StackBuilding;
 	player_id StackTurn;
 	card_stack_entry Stack[256];

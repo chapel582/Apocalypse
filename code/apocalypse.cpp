@@ -134,7 +134,13 @@ void GameUpdateAndRender(
 
 		RenderGroup->WorldToCamera = &GameState->WorldToCamera;
 		RenderGroup->CameraToScreen = &GameState->CameraToScreen;
-
+		AddClipRect(
+			RenderGroup,
+			MakeRectangle(
+				Vector2(0, 0),
+				Vector2(WindowWidth, WindowHeight)
+			)
+		);
 		GameState->Time = 0;
 
 		assets* Assets = &GameState->Assets; 

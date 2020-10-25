@@ -121,6 +121,7 @@ void RenderGroupToOutput(
 
 	// SECTION START: render to output
 	glEnable(GL_TEXTURE_2D);
+	glEnable(GL_SCISSOR_TEST);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -148,10 +149,24 @@ void RenderGroupToOutput(
 	};
 	glLoadMatrixf(Proj);
 
+	uint32_t ClipRectIndex = 0;
 	for(uint32_t Index = 0; Index < RenderGroup->NumEntries; Index++)
 	{
 		render_entry_handle* EntryHandle = EntryHandles + Index;
-		render_entry_header* Header = EntryHandle->Header; 
+		render_entry_header* Header = EntryHandle->Header;
+		if(Header->ClipRectIndex != ClipRectIndex)
+		{
+			ASSERT(ClipRectIndex < RenderGroup->NumClipRects);
+			ClipRectIndex = Header->ClipRectIndex;
+			rectangle ClipRect = RenderGroup->ClipRects[ClipRectIndex];
+			glScissor(
+				(int) ClipRect.Min.X,
+				(int) ClipRect.Min.Y,
+				(int) ClipRect.Dim.X,
+				(int) ClipRect.Dim.Y
+			);
+		}
+
 		switch(Header->Type)
 		{
 			case(EntryType_Clear):

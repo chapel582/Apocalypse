@@ -8,6 +8,11 @@ struct rectangle
 	vector2 Dim;
 };
 
+inline bool Equivalent(rectangle A, rectangle B)
+{
+	return (A.Min == B.Min) && (A.Dim == B.Dim);
+}
+
 inline rectangle MakeRectangle(vector2 Min, vector2 Dim)
 {
 	rectangle Result;

@@ -739,6 +739,9 @@ void StartCardGame(
 		&StackScrollBar->Trough, GetTopRight(SceneState->StackScrollBox)
 	);
 	SceneState->StackYStart = GetTop(SceneState->StackScrollBox);
+	SceneState->ScrollBoxClipIndex = AddClipRect(
+		&GameState->RenderGroup, SceneState->StackScrollBox
+	);
 
 	// TODO: remove me!
 	// PlaySound(
@@ -1663,7 +1666,8 @@ void UpdateAndRenderCardGame(
 	// SECTION STOP: Updating game state
 
 	// SECTION START: Push render entries
-	PushClear(&GameState->RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
+	render_group* RenderGroup = &GameState->RenderGroup;
+	PushClear(RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
 
 	// SECTION START: Push turn timer
 	{
@@ -1710,7 +1714,7 @@ void UpdateAndRenderCardGame(
 			TurnTimerCeil
 		);
 		PushText(
-			&GameState->RenderGroup,
+			RenderGroup,
 			&GameState->Assets,
 			FontHandle_TestFont,
 			TurnTimerString,
@@ -1733,19 +1737,36 @@ void UpdateAndRenderCardGame(
 		{
 			if(Card->Active && Card->Visible)
 			{
-				PushSizedBitmap(
-					&GameState->RenderGroup,
-					&GameState->Assets,
-					BitmapHandle_TestCard2,
-					GetCenter(Card->Rectangle),
-					Vector2(Card->Rectangle.Dim.X, 0.0f),
-					Vector2(0.0f, Card->Rectangle.Dim.Y),
-					Card->Color
-				);
+				if(Card->SetType != CardSet_Stack)
+				{
+					PushSizedBitmap(
+						RenderGroup,
+						&GameState->Assets,
+						BitmapHandle_TestCard2,
+						GetCenter(Card->Rectangle),
+						Vector2(Card->Rectangle.Dim.X, 0.0f),
+						Vector2(0.0f, Card->Rectangle.Dim.Y),
+						Card->Color
+					);
+				}
+				else
+				{
+					PushSizedBitmap(
+						RenderGroup,
+						&GameState->Assets,
+						BitmapHandle_TestCard2,
+						GetCenter(Card->Rectangle),
+						Vector2(Card->Rectangle.Dim.X, 0.0f),
+						Vector2(0.0f, Card->Rectangle.Dim.Y),
+						Card->Color,
+						1,
+						SceneState->ScrollBoxClipIndex
+					);
+				}
 				if(Card->HoveredOver)
 				{
 					PushInfoCard(
-						&GameState->RenderGroup,
+						RenderGroup,
 						&GameState->Assets,
 						SceneState->InfoCardCenter,
 						SceneState->InfoCardXBound,
@@ -1776,7 +1797,7 @@ void UpdateAndRenderCardGame(
 		);
 		float Padding = 15.0f;
 		PushText(
-			&GameState->RenderGroup,
+			RenderGroup,
 			&GameState->Assets,
 			FontHandle_TestFont,
 			ResourceString,
@@ -1791,7 +1812,7 @@ void UpdateAndRenderCardGame(
 			ResourceString, &SceneState->PlayerResources[Player_Two]
 		);
 		PushText(
-			&GameState->RenderGroup,
+			RenderGroup,
 			&GameState->Assets,
 			FontHandle_TestFont,
 			ResourceString,
@@ -1813,7 +1834,7 @@ void UpdateAndRenderCardGame(
 		PushScrollBarToRenderGroup(
 			SceneState->StackScrollBar.Rect,
 			BitmapHandle_TestCard2,
-			&GameState->RenderGroup,
+			RenderGroup,
 			&GameState->Assets
 		);
 	}

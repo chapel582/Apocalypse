@@ -142,10 +142,7 @@ void UpdateDeckScrollBar(
 	float AllDeckCardsHeight = GetAllDeckCardsHeight(DeckCards);
 	scroll_bar* ScrollBar = &SceneState->DeckScrollBar;
 	UpdateScrollBarPosDim(
-		ScrollBar,
-		SceneState->DeckScrollBox,
-		DeckCards->YStart,
-		AllDeckCardsHeight
+		ScrollBar, DeckCards->YStart, AllDeckCardsHeight
 	);
 }
 
@@ -266,9 +263,7 @@ void ScrollDeckCardPositions(
 {
 	float AllDeckCardsHeight = GetAllDeckCardsHeight(DeckCards);
 	DeckCards->YStart = GetElementsYStart(
-		&SceneState->DeckScrollBar,
-		SceneState->DeckScrollBox,
-		AllDeckCardsHeight
+		&SceneState->DeckScrollBar, AllDeckCardsHeight
 	);
 }
 
@@ -435,21 +430,14 @@ void StartDeckEditor(
 	InitUiContext(&SceneState->UiContext);
 	ui_context* UiContext = &SceneState->UiContext;
 
-	scroll_bar* DeckScrollBar = &SceneState->DeckScrollBar;
-	InitScrollBar(UiContext, DeckScrollBar);
-	vector2 DeckScrollBarDim = Vector2(30.0f, 0.0f);
-	vector2 DeckScrollBarMin = Vector2(WindowWidth - DeckScrollBarDim.X, 0.0f);
-	DeckScrollBar->Rect = MakeRectangle(DeckScrollBarMin, DeckScrollBarDim);
-	DeckScrollBar->Trough = MakeRectangle(
-		Vector2(DeckScrollBarMin.X, 0.0f),
-		Vector2(DeckScrollBarDim.X, (float) WindowHeight)
-	);
-	
+	float DeckScrollBarWidth = 30.0f;
+	float DeckScrollBarMinX = WindowWidth - DeckScrollBarWidth;
+
 	deck_editor_cards* DeckCards = &SceneState->DeckCards;
 	*DeckCards = {};
 	DeckCards->ActiveButtons = 0;
 	DeckCards->Dim = Vector2(160.0f, 30.0f);
-	DeckCards->XPos = DeckScrollBarMin.X - DeckCards->Dim.X;
+	DeckCards->XPos = DeckScrollBarMinX - DeckCards->Dim.X;
 	DeckCards->YStart = (float) WindowHeight;
 	DeckCards->YMargin = 0.1f * DeckCards->Dim.Y;
 	memset(
@@ -458,11 +446,16 @@ void StartDeckEditor(
 		ARRAY_COUNT(DeckCards->Cards) * sizeof(deck_editor_card)
 	);
 
-	SceneState->DeckScrollBox = MakeRectangle(
+	rectangle DeckScrollBox = MakeRectangle(
 		Vector2(DeckCards->XPos, 0.0f), 
-		Vector2(
-			DeckCards->Dim.X + DeckScrollBarDim.X, (float) WindowHeight
-		)
+		Vector2(DeckCards->Dim.X, (float) WindowHeight)
+	);
+	scroll_bar* DeckScrollBar = &SceneState->DeckScrollBar;
+	InitScrollBar(
+		UiContext,
+		DeckScrollBar,
+		DeckScrollBarWidth,
+		DeckScrollBox
 	);
 
 	SceneState->Definitions = DefineCards(&GameState->TransientArena);
@@ -762,7 +755,6 @@ void UpdateAndRenderDeckEditor(
 			scroll_handle_mouse_code ScrollResult = ScrollHandleMouse(
 				UiContext,
 				&SceneState->DeckScrollBar,
-				&SceneState->DeckScrollBox,
 				MouseEvent,
 				MouseEventWorldPos,
 				MinY, 
@@ -1080,7 +1072,7 @@ void UpdateAndRenderDeckEditor(
 	);
 
 	// NOTE: Push deck editor scroll bar
-	if(CanScroll(&SceneState->DeckScrollBar, &SceneState->DeckScrollBox))
+	if(CanScroll(&SceneState->DeckScrollBar))
 	{
 		PushScrollBarToRenderGroup(
 			SceneState->DeckScrollBar.Rect,

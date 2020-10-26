@@ -197,15 +197,13 @@ struct card_game_state
 
 	float PlayerLife[Player_Count];
 
-	vector2 StackEntryInfoDim;
-	scroll_bar StackScrollBar;
-	rectangle StackScrollBox;
-	uint32_t ScrollBoxClipIndex;
-	bool StackBuilding;
 	player_id StackTurn;
+	bool StackBuilding;
 	card_stack_entry Stack[256];
 	uint32_t StackSize;
 	float StackYStart;
+	vector2 StackEntryInfoDim;
+	scroll_bar StackScrollBar;
 };
 
 struct start_card_game_args

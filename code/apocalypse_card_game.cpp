@@ -720,28 +720,17 @@ void StartCardGame(
 	vector2 StackEntryInfoDim = SceneState->StackEntryInfoDim;
 	scroll_bar* StackScrollBar = &SceneState->StackScrollBar;
 
-	SceneState->StackScrollBox = MakeRectangle(
+	rectangle StackScrollBox = MakeRectangle(
 		Vector2(0.0f, WindowHeight / 3.0f),
 		Vector2(StackEntryInfoDim.X, WindowHeight / 3.0f)
 	);
-
-	InitScrollBar(UiContext, StackScrollBar);
-	vector2 StackScrollBarDim = Vector2(
-		20.0f, SceneState->StackScrollBox.Dim.Y + 1.0f
+	uint32_t ScrollBoxClipIndex = AddClipRect(
+		&GameState->RenderGroup, StackScrollBox
 	);
-	StackScrollBar->Rect = MakeRectangle(Vector2(0, 0), StackScrollBarDim);
-	SetTopLeft(&StackScrollBar->Rect, GetTopRight(SceneState->StackScrollBox));
-	StackScrollBar->Trough = MakeRectangle(
-		Vector2(0.0f, 0.0f),
-		Vector2(StackScrollBarDim.X, SceneState->StackScrollBox.Dim.Y)
+	InitScrollBar(
+		UiContext, StackScrollBar, 20.0f, StackScrollBox, ScrollBoxClipIndex
 	);
-	SetTopLeft(
-		&StackScrollBar->Trough, GetTopRight(SceneState->StackScrollBox)
-	);
-	SceneState->StackYStart = GetTop(SceneState->StackScrollBox);
-	SceneState->ScrollBoxClipIndex = AddClipRect(
-		&GameState->RenderGroup, SceneState->StackScrollBox
-	);
+	SceneState->StackYStart = GetTop(StackScrollBox);
 
 	// TODO: remove me!
 	// PlaySound(
@@ -769,9 +758,7 @@ float GetStackEntriesHeight(card_game_state* SceneState)
 void SetStackPositions(card_game_state* SceneState)
 {
 	float NewY = GetElementsYStart(
-		&SceneState->StackScrollBar,
-		SceneState->StackScrollBox,
-		GetStackEntriesHeight(SceneState)
+		&SceneState->StackScrollBar, GetStackEntriesHeight(SceneState)
 	);
 	SceneState->StackYStart = NewY;
 
@@ -794,12 +781,11 @@ void AddCardToStack(card_game_state* SceneState, card* Card)
 	RemoveCardAndAlign(SceneState, Card);
 	Card->Rectangle.Dim = SceneState->StackEntryInfoDim;
 	Card->SetType = CardSet_Stack;
-	Card->Rectangle.Min.X = SceneState->StackScrollBox.Min.X;
+	Card->Rectangle.Min.X = SceneState->StackScrollBar.ScrollBox.Min.X;
 	SetStackPositions(SceneState);
 
 	UpdateScrollBarPosDim(
 		&SceneState->StackScrollBar,
-		SceneState->StackScrollBox,
 		SceneState->StackYStart,
 		GetStackEntriesHeight(SceneState)
 	);
@@ -1325,7 +1311,6 @@ void UpdateAndRenderCardGame(
 			scroll_handle_mouse_code ScrollResult = ScrollHandleMouse(
 				UiContext,
 				&SceneState->StackScrollBar,
-				&SceneState->StackScrollBox,
 				MouseEvent,
 				MouseEventWorldPos,
 				SceneState->StackScrollBar.Trough.Min.Y,
@@ -1760,7 +1745,7 @@ void UpdateAndRenderCardGame(
 						Vector2(0.0f, Card->Rectangle.Dim.Y),
 						Card->Color,
 						1,
-						SceneState->ScrollBoxClipIndex
+						SceneState->StackScrollBar.ScrollBoxClipIndex
 					);
 				}
 				if(Card->HoveredOver)
@@ -1829,7 +1814,7 @@ void UpdateAndRenderCardGame(
 
 	PushCenteredAlert(&SceneState->Alert, GameState, WindowWidth, WindowHeight);
 
-	if(CanScroll(&SceneState->StackScrollBar, &SceneState->StackScrollBox))
+	if(CanScroll(&SceneState->StackScrollBar))
 	{
 		PushScrollBarToRenderGroup(
 			SceneState->StackScrollBar.Rect,

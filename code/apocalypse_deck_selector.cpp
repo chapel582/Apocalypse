@@ -130,21 +130,16 @@ void StartDeckSelector(
 
 	SceneState->Alert = MakeAlert();
 
-	scroll_bar* DeckScrollBar = &SceneState->DeckScrollBar;
-	InitScrollBar(UiContext, DeckScrollBar);
-	vector2 DeckScrollBarDim = Vector2(30.0f, 0.0f);
-	vector2 DeckScrollBarMin = Vector2(
-		GetRight(DeckNameInputRectangle) + SceneState->LoadDeckButtonDim.X, 0.0f
-	);
-	DeckScrollBar->Rect = MakeRectangle(DeckScrollBarMin, DeckScrollBarDim);
-	DeckScrollBar->Trough = MakeRectangle(
-		Vector2(DeckScrollBarMin.X, 0.0f),
-		Vector2(DeckScrollBarDim.X, (float) WindowHeight)
-	);
-
-	SceneState->DeckScrollBox = MakeRectangle(
+	rectangle DeckScrollBox = MakeRectangle(
 		Vector2(GetDeckScrollBoxLeft(DeckNameInputRectangle), 0.0f), 
 		Vector2(SceneState->LoadDeckButtonDim.X, (float) WindowHeight)
+	);
+	scroll_bar* DeckScrollBar = &SceneState->DeckScrollBar;
+	InitScrollBar(
+		UiContext,
+		DeckScrollBar,
+		30.0f,
+		DeckScrollBox
 	);
 }
 
@@ -206,7 +201,6 @@ void UpdateAndRenderDeckSelector(
 	}
 	UpdateScrollBarPosDim(
 		&SceneState->DeckScrollBar,
-		SceneState->DeckScrollBox,
 		SceneState->LoadDeckButtonsYStart,
 		AllElementsHeight
 	);
@@ -310,7 +304,6 @@ void UpdateAndRenderDeckSelector(
 			scroll_handle_mouse_code ScrollResult = ScrollHandleMouse(
 				UiContext,
 				&SceneState->DeckScrollBar,
-				&SceneState->DeckScrollBox,
 				MouseEvent,
 				MouseEventWorldPos,
 				MinY, 
@@ -319,9 +312,7 @@ void UpdateAndRenderDeckSelector(
 			if(ScrollResult == ScrollHandleMouse_Moved)
 			{
 				SceneState->LoadDeckButtonsYStart = GetElementsYStart(
-					&SceneState->DeckScrollBar,
-					SceneState->DeckScrollBox,
-					AllElementsHeight
+					&SceneState->DeckScrollBar, AllElementsHeight
 				);
 			}
 
@@ -483,7 +474,7 @@ void UpdateAndRenderDeckSelector(
 
 	PushCenteredAlert(&SceneState->Alert, GameState, WindowWidth, WindowHeight);
 
-	if(CanScroll(&SceneState->DeckScrollBar, &SceneState->DeckScrollBox))
+	if(CanScroll(&SceneState->DeckScrollBar))
 	{
 		PushScrollBarToRenderGroup(
 			SceneState->DeckScrollBar.Rect,

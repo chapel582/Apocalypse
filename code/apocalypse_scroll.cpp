@@ -62,9 +62,9 @@ scroll_handle_mouse_code ScrollTroughHandleMouse(
 	return Result;
 }
 
-bool CanScroll(scroll_bar* ScrollBar, rectangle* ScrollBox)
+bool CanScroll(scroll_bar* ScrollBar)
 {
-	return ScrollBar->Rect.Dim.Y < ScrollBox->Dim.Y;
+	return ScrollBar->Rect.Dim.Y < ScrollBar->ScrollBox.Dim.Y;
 }
 
 scroll_handle_mouse_code ScrollBarHandleMouse(
@@ -122,7 +122,6 @@ scroll_handle_mouse_code ScrollBarHandleMouse(
 scroll_handle_mouse_code ScrollHandleMouse(
 	ui_context* UiContext,
 	scroll_bar* ScrollBar,
-	rectangle* ScrollBox,
 	game_mouse_event* MouseEvent,
 	vector2 MouseEventWorldPos,
 	float MinY, 
@@ -130,8 +129,9 @@ scroll_handle_mouse_code ScrollHandleMouse(
 )
 {
 	// TODO: we might be able to remove MinY and MaxY arguments
+	rectangle* ScrollBox = &ScrollBar->ScrollBox;
 	scroll_handle_mouse_code Result = ScrollHandleMouse_NoAction;
-	if(!CanScroll(ScrollBar, ScrollBox))
+	if(!CanScroll(ScrollBar))
 	{
 		return Result;
 	}
@@ -198,7 +198,6 @@ void UpdateScrollBarDim(
 
 void UpdateScrollBarPosDim(
 	scroll_bar* ScrollBar,
-	rectangle Box,
 	float ElementsYStart,
 	float AllElementsHeight
 )
@@ -208,6 +207,7 @@ void UpdateScrollBarPosDim(
 	position and dimensions are calculated based on where its elements start 
 	rendering and the total height of the space containing all its elements
 	*/ 
+	rectangle Box = ScrollBar->ScrollBox;
 	float BoxTop = GetTop(Box);
 	float BoxHeight = Box.Dim.Y;
 	rectangle* ScrollBarRect = &ScrollBar->Rect;
@@ -225,9 +225,7 @@ void UpdateScrollBarPosDim(
 	SetTop(ScrollBarRect, TroughTop - TopFractionUnseen * TroughHeight);
 }
 
-float GetElementsYStart(
-	scroll_bar* ScrollBar, rectangle ScrollBox, float AllElementsHeight
-)
+float GetElementsYStart(scroll_bar* ScrollBar, float AllElementsHeight)
 {
 	/* NOTE: 
 	for updating the scroll box elements' positions in world space. we get the
@@ -236,6 +234,7 @@ float GetElementsYStart(
 	returns 
 		float - new y position in world space for starting to render elements
 	*/ 
+	rectangle ScrollBox = ScrollBar->ScrollBox;
 	float BoxTop = GetTop(ScrollBox);
 	rectangle ScrollBarRect = ScrollBar->Rect;
 	float ScrollBarTop = GetTop(ScrollBarRect);

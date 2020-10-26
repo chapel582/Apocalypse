@@ -77,7 +77,6 @@ struct deck_editor_state
 	ui_button CollectionNext;
 
 	scroll_bar DeckScrollBar;
-	rectangle DeckScrollBox;
 
 	vector2 CardCountPos;
 };

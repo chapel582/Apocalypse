@@ -34,7 +34,6 @@ struct deck_selector_state
 	float LoadDeckButtonsYMargin;
 
 	scroll_bar DeckScrollBar;
-	rectangle DeckScrollBox;
 
 	alert Alert;
 

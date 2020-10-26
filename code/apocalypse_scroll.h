@@ -19,16 +19,42 @@ struct scroll_bar
 	rectangle Rect;
 	rectangle Trough;
 	float LastY;
+
+	rectangle ScrollBox;
+	uint32_t ScrollBoxClipIndex;
 };
 
-inline void InitScrollBar(ui_context* UiContext, scroll_bar* ScrollBar)
+inline void InitScrollBar(
+	ui_context* UiContext,
+	scroll_bar* ScrollBar,
+	float ScrollBarWidth,
+	rectangle ScrollBox,
+	uint32_t ScrollBoxClipIndex = 0
+)
 {
 	*ScrollBar = {};
 	ScrollBar->UiId = GetId(UiContext);
 	ScrollBar->LastY = 0.0f;
+	ScrollBar->ScrollBox = ScrollBox;
+	
+	// NOTE: the + 1.0f is here so the scroll bar doesn't render initially
+	vector2 StackScrollBarDim = Vector2(ScrollBarWidth, ScrollBox.Dim.Y + 1.0f);
+	ScrollBar->Rect = MakeRectangle(Vector2(0, 0), StackScrollBarDim);
+	SetTopLeft(&ScrollBar->Rect, GetTopRight(ScrollBox));
+
+	ScrollBar->Trough = MakeRectangle(
+		Vector2(0, 0),
+		Vector2(ScrollBar->Rect.Dim.X, ScrollBox.Dim.Y)
+	);
+	SetTopLeft(
+		&ScrollBar->Trough, GetTopRight(ScrollBox)
+	);
+	
+
+	ScrollBar->ScrollBoxClipIndex = ScrollBoxClipIndex;
 }
 
-bool CanScroll(scroll_bar* ScrollBar, rectangle* ScrollBox);
+bool CanScroll(scroll_bar* ScrollBar);
 scroll_handle_mouse_code ScrollBoxHandleMouse(
 	rectangle* ScrollBarRect,
 	rectangle* ScrollBox,
@@ -58,7 +84,6 @@ void PushScrollBarToRenderGroup(
 scroll_handle_mouse_code ScrollHandleMouse(
 	ui_context* UiContext,
 	scroll_bar* ScrollBar,
-	rectangle* ScrollBox,
 	game_mouse_event* MouseEvent,
 	vector2 MouseEventWorldPos,
 	float MinY, 
@@ -66,12 +91,9 @@ scroll_handle_mouse_code ScrollHandleMouse(
 );
 void UpdateScrollBarPosDim(
 	scroll_bar* ScrollBar,
-	rectangle Box,
 	float ElementsYStart,
 	float AllElementsHeight
 );
-float GetElementsYStart(
-	scroll_bar* ScrollBar, rectangle ScrollBox, float AllElementsHeight
-);
+float GetElementsYStart(scroll_bar* ScrollBar, float AllElementsHeight);
 #define APOCALYPSE_SCROLL_H
 #endif

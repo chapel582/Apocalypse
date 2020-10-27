@@ -1778,6 +1778,8 @@ void UpdateAndRenderCardGame(
 		}
 	}
 	// SECTION STOP: Push cards
+	#define RESOURCE_TEXT_HEIGHT 15.0f
+	#define RESOURCE_LEFT_PADDING 100.0f
 	// SECTION START: Push resources
 	{
 		char* ResourceString = PushArray(
@@ -1793,8 +1795,11 @@ void UpdateAndRenderCardGame(
 			FontHandle_TestFont,
 			ResourceString,
 			MAX_RESOURCE_STRING_SIZE,
-			15.0f,
-			Vector2(WindowWidth - 50.0f, WindowHeight / 2.0f - Padding),
+			RESOURCE_TEXT_HEIGHT,
+			Vector2(
+				WindowWidth - RESOURCE_LEFT_PADDING,
+				(WindowHeight / 2.0f) - Padding
+			),
 			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
 			&GameState->FrameArena
 		);
@@ -1808,15 +1813,68 @@ void UpdateAndRenderCardGame(
 			FontHandle_TestFont,
 			ResourceString,
 			MAX_RESOURCE_STRING_SIZE,
-			15.0f,
+			RESOURCE_TEXT_HEIGHT,
 			Vector2(
-				WindowWidth - 50.0f, (WindowHeight / 2.0f) + 80.0f + Padding
+				WindowWidth - RESOURCE_LEFT_PADDING,
+				(WindowHeight / 2.0f) + 80.0f + Padding
 			),
 			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
 			&GameState->FrameArena
 		);
 	}
 	// SECTION STOP: Push resources
+
+	// SECTION START: Push player life totals
+	{
+		#define MAX_PLAYER_LIFE_STRING 16
+		char* PlayerLifeString = PushArray(
+			&GameState->FrameArena, MAX_PLAYER_LIFE_STRING, char
+		);
+		snprintf(
+			PlayerLifeString,
+			MAX_RESOURCE_STRING_SIZE,
+			"P1:%d",
+			(int) SceneState->PlayerLife[Player_One]
+		);
+
+		float Padding = 95.0f;
+		PushText(
+			RenderGroup,
+			&GameState->Assets,
+			FontHandle_TestFont,
+			PlayerLifeString,
+			MAX_RESOURCE_STRING_SIZE,
+			30.0f,
+			Vector2(
+				WindowWidth - RESOURCE_LEFT_PADDING,
+				(WindowHeight / 2.0f) - Padding - 2.0f
+			),
+			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+			&GameState->FrameArena
+		);
+
+		snprintf(
+			PlayerLifeString,
+			MAX_RESOURCE_STRING_SIZE,
+			"P2:%d",
+			(int) SceneState->PlayerLife[Player_Two]
+		);
+		PushText(
+			RenderGroup,
+			&GameState->Assets,
+			FontHandle_TestFont,
+			PlayerLifeString,
+			MAX_RESOURCE_STRING_SIZE,
+			30.0f,
+			Vector2(
+				WindowWidth - RESOURCE_LEFT_PADDING,
+				(WindowHeight / 2.0f) + Padding + RESOURCE_TEXT_HEIGHT + 2.0f
+			),
+			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+			&GameState->FrameArena
+		);
+	}
+	// SECTION STOP: Push player life totals
 
 	PushCenteredAlert(&SceneState->Alert, GameState, WindowWidth, WindowHeight);
 

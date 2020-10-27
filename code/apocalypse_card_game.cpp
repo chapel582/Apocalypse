@@ -936,7 +936,7 @@ inline void StandardPrimaryUpHandler(
 								}
 							}
 						}
-					}								
+					}
 				}
 				else if(Card->SetType == CardSet_Tableau)
 				{
@@ -976,7 +976,8 @@ inline void StandardPrimaryUpHandler(
 								HasTag(Tags, TableauEffect_Land) ||
 								HasTag(Tags, TableauEffect_DrawExtra) ||
 								HasTag(Tags, TableauEffect_DrawOppExtra) ||
-								HasTag(Tags, TableauEffect_TimeGrowth)
+								HasTag(Tags, TableauEffect_TimeGrowth) ||
+								HasTag(Tags, TableauEffect_AttackTimer)
 							)
 							{
 								player_id Owner = SelectedCard->Owner;
@@ -984,6 +985,11 @@ inline void StandardPrimaryUpHandler(
 								CheckAndTap(
 									GameState, SceneState, SelectedCard
 								);
+
+								if(HasTag(Tags, TableauEffect_AttackTimer))
+								{
+									SceneState->NextTurnTimer -= Card->Attack;
+								}
 							}
 						}
 						else

@@ -4,7 +4,6 @@
 
 #include "string.h"
 
-#define MAX_CARDS_IN_GAME 200
 card_definitions* DefineCards(memory_arena* MemoryArena)
 {
 	card_definitions* Definitions = PushStruct(MemoryArena, card_definitions);
@@ -933,6 +932,23 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	);
 	SetName(Definition, "Disable Next", sizeof("Disable Next"));
 	SetTag(&Definition->StackTags, StackEffect_DisableNext);
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 5, 1);
+	InitPlayerResource(
+		&Definition->PlayDelta[RelativePlayer_Self], 0, -1, 0, 0, 0
+	);
+	InitPlayerResource(
+		&Definition->TapDelta[RelativePlayer_Self], 0, 0, 0, 0, 0
+	);
+	InitPlayerResource(
+		&Definition->PlayDelta[RelativePlayer_Opp], 0, 0, 0, 0, 0
+	);
+	InitPlayerResource(
+		&Definition->TapDelta[RelativePlayer_Opp], 1, 1, 1, 1, 1
+	);
+	SetName(Definition, "Attack Timer", sizeof("Attack Timer"));
+	SetTag(&Definition->TableauTags, TableauEffect_AttackTimer);
 
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;

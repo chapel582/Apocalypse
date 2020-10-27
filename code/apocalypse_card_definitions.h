@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#define MAX_CARDS_IN_GAME 200
+
 typedef enum
 {
 	TableauEffect_Land,
@@ -22,7 +24,8 @@ typedef enum
 	TableauEffect_GiveTime,
 	TableauEffect_GetTime,
 	TableauEffect_SelfHandWeaken,
-	TableauEffect_TimeGrowth
+	TableauEffect_TimeGrowth,
+	TableauEffect_AttackTimer
 } tableau_effect;
 
 struct tableau_effect_tags

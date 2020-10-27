@@ -99,7 +99,7 @@ void RenderGroupToOutput(
 	}
 
 	// NOTE: sort layers here (smallest to largest)
-	// TODO: faster sort
+	// TODO: faster sort, make sure it is still a stable sort
 	bool Sorted;
 	do
 	{

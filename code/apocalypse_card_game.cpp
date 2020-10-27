@@ -9,6 +9,9 @@
 #include "apocalypse_info_card.h"
 #include "apocalypse_alert.h"
 
+#define RESOURCE_TEXT_HEIGHT 15.0f
+#define RESOURCE_LEFT_PADDING 100.0f
+
 #define MAX_RESOURCE_STRING_SIZE 40
 void FormatResourceString(
 	char* ResourceString, player_resources* PlayerResources
@@ -731,6 +734,27 @@ void StartCardGame(
 		UiContext, StackScrollBar, 20.0f, StackScrollBox, ScrollBoxClipIndex
 	);
 	SceneState->StackYStart = GetTop(StackScrollBox);
+
+
+	// NOTE: the padding here is based on the height of the resource text info
+	// CONT: this is all kinda hard-coded until we have a good scheme for UI
+	// CONT: and also resolution scaling
+	float Padding = 95.0f;
+	vector2 PlayerLifeRectDim = Vector2(90.0f, 30.0f);
+	SceneState->PlayerLifeRects[Player_One] = MakeRectangle(
+		Vector2(
+			WindowWidth - RESOURCE_LEFT_PADDING,
+			(WindowHeight / 2.0f) - Padding - 2.0f
+		),
+		PlayerLifeRectDim
+	);
+	SceneState->PlayerLifeRects[Player_Two] = MakeRectangle(
+		Vector2(
+			WindowWidth - RESOURCE_LEFT_PADDING,
+			(WindowHeight / 2.0f) + Padding + RESOURCE_TEXT_HEIGHT + 2.0f
+		),
+		PlayerLifeRectDim
+	);
 
 	// TODO: remove me!
 	// PlaySound(
@@ -1778,8 +1802,7 @@ void UpdateAndRenderCardGame(
 		}
 	}
 	// SECTION STOP: Push cards
-	#define RESOURCE_TEXT_HEIGHT 15.0f
-	#define RESOURCE_LEFT_PADDING 100.0f
+
 	// SECTION START: Push resources
 	{
 		char* ResourceString = PushArray(
@@ -1837,20 +1860,31 @@ void UpdateAndRenderCardGame(
 			(int) SceneState->PlayerLife[Player_One]
 		);
 
+		vector4 White = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+		vector4 Black = Vector4(0.0f, 0.0f, 0.0f, 1.0f);
 		float Padding = 95.0f;
+		rectangle* PlayerLifeRects = SceneState->PlayerLifeRects;
+		PushSizedBitmap(
+			RenderGroup,
+			&GameState->Assets,
+			BitmapHandle_TestCard2,
+			GetCenter(PlayerLifeRects[Player_One]),
+			Vector2(PlayerLifeRects[Player_One].Dim.X, 0.0f),
+			Vector2(0.0f, PlayerLifeRects[Player_One].Dim.Y),
+			White,
+			1
+		);
 		PushText(
 			RenderGroup,
 			&GameState->Assets,
 			FontHandle_TestFont,
 			PlayerLifeString,
 			MAX_RESOURCE_STRING_SIZE,
-			30.0f,
-			Vector2(
-				WindowWidth - RESOURCE_LEFT_PADDING,
-				(WindowHeight / 2.0f) - Padding - 2.0f
-			),
-			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-			&GameState->FrameArena
+			PlayerLifeRects[Player_One].Dim.Y,
+			PlayerLifeRects[Player_One].Min,
+			Black,
+			&GameState->FrameArena,
+			2
 		);
 
 		snprintf(
@@ -1859,19 +1893,27 @@ void UpdateAndRenderCardGame(
 			"P2:%d",
 			(int) SceneState->PlayerLife[Player_Two]
 		);
+		PushSizedBitmap(
+			RenderGroup,
+			&GameState->Assets,
+			BitmapHandle_TestCard2,
+			GetCenter(PlayerLifeRects[Player_Two]),
+			Vector2(PlayerLifeRects[Player_Two].Dim.X, 0.0f),
+			Vector2(0.0f, PlayerLifeRects[Player_Two].Dim.Y),
+			White,
+			1
+		);
 		PushText(
 			RenderGroup,
 			&GameState->Assets,
 			FontHandle_TestFont,
 			PlayerLifeString,
 			MAX_RESOURCE_STRING_SIZE,
-			30.0f,
-			Vector2(
-				WindowWidth - RESOURCE_LEFT_PADDING,
-				(WindowHeight / 2.0f) + Padding + RESOURCE_TEXT_HEIGHT + 2.0f
-			),
-			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-			&GameState->FrameArena
+			PlayerLifeRects[Player_Two].Dim.Y,
+			PlayerLifeRects[Player_Two].Min,
+			Black,
+			&GameState->FrameArena,
+			2
 		);
 	}
 	// SECTION STOP: Push player life totals

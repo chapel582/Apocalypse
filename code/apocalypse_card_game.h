@@ -196,7 +196,7 @@ struct card_game_state
 	float CardHeight;
 
 	float PlayerLife[Player_Count];
-	rectangle PlayerLifeRect[Player_Count];
+	rectangle PlayerLifeRects[Player_Count];
 
 	player_id StackTurn;
 	bool StackBuilding;

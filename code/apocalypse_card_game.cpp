@@ -860,7 +860,7 @@ inline void StandardPrimaryUpHandler(
 	vector2 MouseEventWorldPos
 )
 {
-	// NOTE: inlined b/c this is only called once
+	// NOTE: inlined function b/c this is only called once
 	card* Card = &SceneState->Cards[0];
 
 	for(int CardIndex = 0; CardIndex < SceneState->MaxCards; CardIndex++)
@@ -1079,6 +1079,39 @@ inline void StandardPrimaryUpHandler(
 		}
 		Card++;
 	}
+
+	for(int Player = Player_One; Player < Player_Count; Player++)
+	{
+		if(
+			PointInRectangle(
+				MouseEventWorldPos, SceneState->PlayerLifeRects[Player]
+			)
+		)
+		{
+			card* SelectedCard = SceneState->SelectedCard;
+			if(SelectedCard != NULL)
+			{
+				// TODO: give a confirmation option for attacking yourself
+				player_id Owner = SelectedCard->Owner;
+				bool Tapped = CheckAndTap(
+					GameState,
+					SceneState,
+					SelectedCard
+				);
+				if(Tapped)
+				{
+					DeselectCard(SceneState);
+					SceneState->PlayerLife[Player] -= SelectedCard->Attack;
+
+					if(SceneState->PlayerLife[Player] <= 0.0f)
+					{
+						// TODO: give a small amount of fanfare for the winner
+						GameState->Scene = SceneType_MainMenu;
+					}
+				}
+			}
+		}
+	}
 }
 
 inline void StackBuildingPrimaryUpHandler(
@@ -1285,11 +1318,11 @@ void UpdateAndRenderCardGame(
 			);
 			if(MouseEvent->Type == PrimaryUp)
 			{
-				PlaySound(
-					&GameState->PlayingSoundList,
-					WavHandle_Bloop00,
-					&GameState->TransientArena
-				);
+				// PlaySound(
+				// 	&GameState->PlayingSoundList,
+				// 	WavHandle_Bloop00,
+				// 	&GameState->TransientArena
+				// );
 				if(SceneState->StackBuilding)
 				{
 					StackBuildingPrimaryUpHandler(

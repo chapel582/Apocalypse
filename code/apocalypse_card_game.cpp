@@ -1286,6 +1286,9 @@ void UpdateAndRenderCardGame(
 )
 {
 	ui_context* UiContext = &SceneState->UiContext;
+	memory_arena* FrameArena = &GameState->FrameArena;
+	assets* Assets = &GameState->Assets;
+
 	bool EndTurn = false;
 
 	// SECTION START: User input
@@ -1751,7 +1754,7 @@ void UpdateAndRenderCardGame(
 
 		uint32_t MaxTurnTimerCharacters = 10;
 		char* TurnTimerString = PushArray(
-			&GameState->FrameArena, MaxTurnTimerCharacters, char
+			FrameArena, MaxTurnTimerCharacters, char
 		);
 		ASSERT(PlayerIndicator != NULL);
 		snprintf(
@@ -1770,7 +1773,7 @@ void UpdateAndRenderCardGame(
 			50.0f,
 			Vector2(WindowWidth - 150.0f, WindowHeight / 2.0f),
 			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-			&GameState->FrameArena
+			FrameArena
 		);
 	}
 	// SECTION STOP: Push turn timer
@@ -1787,21 +1790,35 @@ void UpdateAndRenderCardGame(
 			{
 				if(Card->SetType != CardSet_Stack)
 				{
+					vector2 Center = GetCenter(Card->Rectangle); 
 					PushSizedBitmap(
 						RenderGroup,
-						&GameState->Assets,
+						Assets,
 						BitmapHandle_TestCard2,
-						GetCenter(Card->Rectangle),
+						Center,
 						Vector2(Card->Rectangle.Dim.X, 0.0f),
 						Vector2(0.0f, Card->Rectangle.Dim.Y),
-						Card->Color
+						Card->Color,
+						1
+					);
+					PushTextCentered(
+						RenderGroup,
+						Assets,
+						FontHandle_TestFont,
+						Card->Definition->Name,
+						CARD_NAME_SIZE,
+						0.2f * Card->Rectangle.Dim.Y, 
+						Center,
+						Vector4(0, 0, 0, 1),
+						FrameArena,
+						2
 					);
 				}
 				else
 				{
 					PushSizedBitmap(
 						RenderGroup,
-						&GameState->Assets,
+						Assets,
 						BitmapHandle_TestCard2,
 						GetCenter(Card->Rectangle),
 						Vector2(Card->Rectangle.Dim.X, 0.0f),
@@ -1815,12 +1832,12 @@ void UpdateAndRenderCardGame(
 				{
 					PushInfoCard(
 						RenderGroup,
-						&GameState->Assets,
+						Assets,
 						SceneState->InfoCardCenter,
 						SceneState->InfoCardXBound,
 						SceneState->InfoCardYBound,
 						Card->Color,
-						&GameState->FrameArena,
+						FrameArena,
 						Card->Definition->Name,
 						Card->Attack,
 						Card->Health,
@@ -1839,7 +1856,7 @@ void UpdateAndRenderCardGame(
 	// SECTION START: Push resources
 	{
 		char* ResourceString = PushArray(
-			&GameState->FrameArena, MAX_RESOURCE_STRING_SIZE, char
+			FrameArena, MAX_RESOURCE_STRING_SIZE, char
 		);
 		FormatResourceString(
 			ResourceString, &SceneState->PlayerResources[Player_One]
@@ -1847,7 +1864,7 @@ void UpdateAndRenderCardGame(
 		float Padding = 15.0f;
 		PushText(
 			RenderGroup,
-			&GameState->Assets,
+			Assets,
 			FontHandle_TestFont,
 			ResourceString,
 			MAX_RESOURCE_STRING_SIZE,
@@ -1857,7 +1874,7 @@ void UpdateAndRenderCardGame(
 				(WindowHeight / 2.0f) - Padding
 			),
 			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-			&GameState->FrameArena
+			FrameArena
 		);
 
 		FormatResourceString(
@@ -1865,7 +1882,7 @@ void UpdateAndRenderCardGame(
 		);
 		PushText(
 			RenderGroup,
-			&GameState->Assets,
+			Assets,
 			FontHandle_TestFont,
 			ResourceString,
 			MAX_RESOURCE_STRING_SIZE,
@@ -1875,7 +1892,7 @@ void UpdateAndRenderCardGame(
 				(WindowHeight / 2.0f) + 80.0f + Padding
 			),
 			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-			&GameState->FrameArena
+			FrameArena
 		);
 	}
 	// SECTION STOP: Push resources
@@ -1884,7 +1901,7 @@ void UpdateAndRenderCardGame(
 	{
 		#define MAX_PLAYER_LIFE_STRING 16
 		char* PlayerLifeString = PushArray(
-			&GameState->FrameArena, MAX_PLAYER_LIFE_STRING, char
+			FrameArena, MAX_PLAYER_LIFE_STRING, char
 		);
 		snprintf(
 			PlayerLifeString,
@@ -1899,7 +1916,7 @@ void UpdateAndRenderCardGame(
 		rectangle* PlayerLifeRects = SceneState->PlayerLifeRects;
 		PushSizedBitmap(
 			RenderGroup,
-			&GameState->Assets,
+			Assets,
 			BitmapHandle_TestCard2,
 			GetCenter(PlayerLifeRects[Player_One]),
 			Vector2(PlayerLifeRects[Player_One].Dim.X, 0.0f),
@@ -1909,14 +1926,14 @@ void UpdateAndRenderCardGame(
 		);
 		PushText(
 			RenderGroup,
-			&GameState->Assets,
+			Assets,
 			FontHandle_TestFont,
 			PlayerLifeString,
 			MAX_RESOURCE_STRING_SIZE,
 			PlayerLifeRects[Player_One].Dim.Y,
 			PlayerLifeRects[Player_One].Min,
 			Black,
-			&GameState->FrameArena,
+			FrameArena,
 			2
 		);
 
@@ -1928,7 +1945,7 @@ void UpdateAndRenderCardGame(
 		);
 		PushSizedBitmap(
 			RenderGroup,
-			&GameState->Assets,
+			Assets,
 			BitmapHandle_TestCard2,
 			GetCenter(PlayerLifeRects[Player_Two]),
 			Vector2(PlayerLifeRects[Player_Two].Dim.X, 0.0f),
@@ -1938,14 +1955,14 @@ void UpdateAndRenderCardGame(
 		);
 		PushText(
 			RenderGroup,
-			&GameState->Assets,
+			Assets,
 			FontHandle_TestFont,
 			PlayerLifeString,
 			MAX_RESOURCE_STRING_SIZE,
 			PlayerLifeRects[Player_Two].Dim.Y,
 			PlayerLifeRects[Player_Two].Min,
 			Black,
-			&GameState->FrameArena,
+			FrameArena,
 			2
 		);
 	}
@@ -1959,7 +1976,7 @@ void UpdateAndRenderCardGame(
 			SceneState->StackScrollBar.Rect,
 			BitmapHandle_TestCard2,
 			RenderGroup,
-			&GameState->Assets
+			Assets
 		);
 	}
 }

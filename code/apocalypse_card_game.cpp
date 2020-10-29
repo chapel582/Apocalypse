@@ -1816,16 +1816,29 @@ void UpdateAndRenderCardGame(
 				}
 				else
 				{
+					vector2 Center = GetCenter(Card->Rectangle);
 					PushSizedBitmap(
 						RenderGroup,
 						Assets,
 						BitmapHandle_TestCard2,
-						GetCenter(Card->Rectangle),
+						Center,
 						Vector2(Card->Rectangle.Dim.X, 0.0f),
 						Vector2(0.0f, Card->Rectangle.Dim.Y),
 						Card->Color,
 						1,
 						SceneState->StackScrollBar.ScrollBoxClipIndex
+					);
+					PushTextCentered(
+						RenderGroup,
+						Assets,
+						FontHandle_TestFont,
+						Card->Definition->Name,
+						CARD_NAME_SIZE,
+						0.8f * Card->Rectangle.Dim.Y, 
+						Center,
+						Vector4(0, 0, 0, 1),
+						FrameArena,
+						2
 					);
 				}
 				if(Card->HoveredOver)

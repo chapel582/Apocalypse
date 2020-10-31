@@ -799,6 +799,30 @@ void SetStackPositions(card_game_state* SceneState)
 	}
 }
 
+void SwitchStackTurns(game_state* GameState, card_game_state* SceneState)
+{
+	SceneState->StackTurn = GetOpponent(SceneState->StackTurn);
+
+	char Buffer[64];
+	if(SceneState->StackTurn == Player_One)
+	{
+		snprintf(
+			Buffer,
+			sizeof(Buffer),
+			"P1 can build on the stack (hit enter to trigger stack)"
+		);
+	}
+	else
+	{
+		snprintf(
+			Buffer,
+			sizeof(Buffer),
+			"P2 can build on the stack (hit enter to trigger stack)"
+		);
+	}
+	DisplayMessageFor(GameState, &SceneState->Alert, Buffer, 1.0f);
+}
+
 void AddCardToStack(card_game_state* SceneState, card* Card)
 {
 	// NOTE: this handles putting the card on the stack w/r/t UI only
@@ -903,11 +927,9 @@ inline void StandardPrimaryUpHandler(
 										GetOpponent(SceneState->CurrentTurn)
 									);
 								}
-								SceneState->StackTurn = GetOpponent(
-									SceneState->CurrentTurn
-								);
-								
+								SceneState->StackTurn = Player_One;
 								AddCardToStack(SceneState, Card);
+								SwitchStackTurns(GameState, SceneState);
 							}
 							else
 							{
@@ -1154,9 +1176,7 @@ inline void StackBuildingPrimaryUpHandler(
 							SceneState->StackSize++;
 
 							AddCardToStack(SceneState, Card);
-							SceneState->StackTurn = GetOpponent(
-								SceneState->StackTurn
-							);
+							SwitchStackTurns(GameState, SceneState);
 						}
 						else
 						{

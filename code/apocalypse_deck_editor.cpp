@@ -41,6 +41,14 @@ void SaveEditableDeck(
 	DisplayMessageFor(GameState, Alert, "Saved Deck", 1.0f);
 }
 
+void DeleteDeck(game_state* GameState, char* DeckName)
+{
+	char PathToDeck[256];
+	FormatDeckPath(PathToDeck, sizeof(PathToDeck), DeckName);
+	DeleteDeck(PathToDeck);
+	StartDeckSelectorPrep(GameState, SceneType_DeckEditor);
+}
+
 uint32_t GetNumCardsInDeck(deck_editor_cards* DeckCards)
 {
 	uint32_t CardsInDeck = 0;
@@ -570,6 +578,11 @@ void StartDeckEditor(
 	rectangle SaveButtonRect = MakeRectangle(SaveButtonPos, SaveButtonDim);
 	InitButton(UiContext, &SceneState->SaveButton, SaveButtonRect);
 
+	vector2 DeleteButtonPos = SaveButtonPos;
+	DeleteButtonPos.X -= SaveButtonDim.X + 5.0f; 
+	rectangle DeleteButtonRect = MakeRectangle(DeleteButtonPos, SaveButtonDim);
+	InitButton(UiContext, &SceneState->DeleteButton, DeleteButtonRect);
+
 	SceneState->CardCountPos = Vector2(
 		GetCenter(SaveButtonRect).X, (float) WindowHeight - 30.0f
 	);
@@ -727,6 +740,17 @@ void UpdateAndRenderDeckEditor(
 					DeckCards,
 					SceneState->DeckName
 				);
+			}
+
+			Result = ButtonHandleEvent(
+				UiContext,
+				&SceneState->DeleteButton,
+				MouseEvent,
+				MouseEventWorldPos
+			);
+			if(Result == ButtonHandleEvent_TakeAction)
+			{
+				DeleteDeck(GameState, SceneState->DeckName);
 			}
 
 			Result = ButtonHandleEvent(
@@ -1041,6 +1065,19 @@ void UpdateAndRenderDeckEditor(
 		Assets, 
 		"Save Deck",
 		sizeof("Save Deck"),
+		FontHandle_TestFont,
+		Black,
+		&GameState->FrameArena
+	);
+
+	// NOTE: push delete button
+	PushButtonToRenderGroup(
+		SceneState->DeleteButton.Rectangle,
+		BitmapHandle_TestCard2,
+		DefaultRenderGroup,
+		Assets, 
+		"Delete Deck",
+		sizeof("Delete Deck"),
 		FontHandle_TestFont,
 		Black,
 		&GameState->FrameArena

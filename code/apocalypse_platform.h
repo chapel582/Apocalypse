@@ -80,6 +80,8 @@ bool PlatformWriteEntireFile(
 void PlatformFindAllFiles(
 	char* FilePattern, char* FileNames, uint32_t FileNamesSize 
 );
+// TODO: error handling
+void PlatformDeleteFile(char* FileName);
 
 #if APOCALYPSE_INTERNAL
 

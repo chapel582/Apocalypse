@@ -17,6 +17,7 @@ struct loaded_deck
 #pragma pack(pop)
 
 void SaveDeck(char* PathToDeck, loaded_deck* Deck);
+void DeleteDeck(char* PathToDeck);
 loaded_deck LoadDeck(char* PathToDeck);
 void FormatDeckPath(char* Buffer, uint32_t MaxBufferSize, char* DeckName);
 void GetAllDeckPaths(char* Buffer, uint32_t MaxBufferSize);

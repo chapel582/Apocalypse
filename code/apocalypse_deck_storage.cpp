@@ -29,6 +29,11 @@ void SaveDeck(char* PathToDeck, loaded_deck* Deck)
 	PlatformWriteEntireFile(PathToDeck, Deck, sizeof(*Deck));
 }
 
+void DeleteDeck(char* PathToDeck)
+{
+	PlatformDeleteFile(PathToDeck);
+}
+
 void FormatDeckPath(char* Buffer, uint32_t MaxBufferSize, char* DeckName)
 {
 	snprintf(Buffer, MaxBufferSize, DECKS_PATH "%s.deck", DeckName);

@@ -199,6 +199,12 @@ end:
 	return;
 }
 
+void PlatformDeleteFile(char* File)
+{
+	// TODO: error handling
+	DeleteFileA(File);
+}
+
 // NOTE: DLL stubs
 #define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter)
 typedef DIRECT_SOUND_CREATE(direct_sound_create);

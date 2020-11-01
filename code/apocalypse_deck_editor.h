@@ -73,6 +73,7 @@ struct deck_editor_state
 
 	ui_context UiContext;
 	ui_button SaveButton;
+	ui_button DeleteButton;
 	ui_button CollectionPrev;
 	ui_button CollectionNext;
 

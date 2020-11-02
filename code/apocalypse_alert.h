@@ -21,8 +21,7 @@ void DisplayMessageFor(
 void PushCenteredAlert(
 	alert* Alert,
 	game_state* GameState,
-	uint32_t WindowWidth,
-	uint32_t WindowHeight
+	vector2 WindowDim
 );
 
 #define APOCALYPSE_ALERT_H

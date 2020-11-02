@@ -135,6 +135,7 @@ struct push_text_result
 
 void PushClear(render_group* Group, vector4 Color, uint32_t Layer = 0);
 vector2 TransformPosFromBasis(basis* Basis, vector2 Vector);
+vector2 TransformVectorToBasis(basis* Basis, vector2 Vector);
 uint32_t AddClipRect(render_group* RenderGroup, rectangle ToAdd);
 
 #define APOCALYPSE_RENDER_GROUP_H

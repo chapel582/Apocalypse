@@ -153,6 +153,11 @@ void UpdateAndRenderDeckSelector(
 	float DtForFrame
 )
 {
+	vector2 ScreenDimInWorld = TransformVectorToBasis(
+		&GameState->WorldToCamera,
+		Vector2(WindowWidth, WindowHeight)
+	);
+
 	rectangle* DeckNameInputRectangle = &SceneState->DeckNameInputRectangle;
 
 	// NOTE: at start, we calculate the height of our stack of deck buttons
@@ -472,7 +477,7 @@ void UpdateAndRenderDeckSelector(
 		CurrentDeckName = GetNextString(&FlatArrayReader);
 	}
 
-	PushCenteredAlert(&SceneState->Alert, GameState, WindowWidth, WindowHeight);
+	PushCenteredAlert(&SceneState->Alert, GameState, ScreenDimInWorld);
 
 	if(CanScroll(&SceneState->DeckScrollBar))
 	{

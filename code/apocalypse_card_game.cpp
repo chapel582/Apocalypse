@@ -644,10 +644,11 @@ void StartCardGame(
 
 	float HandTableauMargin = 5.0f;
 	// NOTE: transform assumes screen and camera are 1:1
-	vector2 ScreenDimInWorld = TransformVectorToBasis(
+	SceneState->ScreenDimInWorld = TransformVectorToBasis(
 		&GameState->WorldToCamera,
 		Vector2(WindowWidth, WindowHeight)
 	);
+	vector2 ScreenDimInWorld = SceneState->ScreenDimInWorld;
 	float ScreenWidthInWorld = ScreenDimInWorld.X;
 	
 	card_set* CardSet = &SceneState->Hands[Player_One];
@@ -680,9 +681,7 @@ void StartCardGame(
 	);
 	CardSet->CardWidth = CardWidth;
 	
-	SceneState->InfoCardCenter = Vector2(
-		WindowWidth / 2.0f, WindowHeight / 2.0f
-	);
+	SceneState->InfoCardCenter = ScreenDimInWorld / 2.0f;
 
 	vector2 ScaledInfoCardDim = 0.33f * Vector2(600.0f, 900.0f);
 	SceneState->InfoCardXBound = Vector2(ScaledInfoCardDim.X, 0.0f);
@@ -724,8 +723,8 @@ void StartCardGame(
 	scroll_bar* StackScrollBar = &SceneState->StackScrollBar;
 
 	rectangle StackScrollBox = MakeRectangle(
-		Vector2(0.0f, WindowHeight / 3.0f),
-		Vector2(StackEntryInfoDim.X, WindowHeight / 3.0f)
+		Vector2(0.0f, ScreenDimInWorld.Y / 3.0f),
+		Vector2(StackEntryInfoDim.X, ScreenDimInWorld.Y / 3.0f)
 	);
 	uint32_t ScrollBoxClipIndex = AddClipRect(
 		&GameState->RenderGroup, StackScrollBox
@@ -743,15 +742,15 @@ void StartCardGame(
 	vector2 PlayerLifeRectDim = Vector2(90.0f, 30.0f);
 	SceneState->PlayerLifeRects[Player_One] = MakeRectangle(
 		Vector2(
-			WindowWidth - RESOURCE_LEFT_PADDING,
-			(WindowHeight / 2.0f) - Padding - 2.0f
+			ScreenDimInWorld.X - RESOURCE_LEFT_PADDING,
+			(ScreenDimInWorld.Y / 2.0f) - Padding - 2.0f
 		),
 		PlayerLifeRectDim
 	);
 	SceneState->PlayerLifeRects[Player_Two] = MakeRectangle(
 		Vector2(
-			WindowWidth - RESOURCE_LEFT_PADDING,
-			(WindowHeight / 2.0f) + Padding + RESOURCE_TEXT_HEIGHT + 2.0f
+			ScreenDimInWorld.X - RESOURCE_LEFT_PADDING,
+			(ScreenDimInWorld.Y / 2.0f) + Padding + RESOURCE_TEXT_HEIGHT + 2.0f
 		),
 		PlayerLifeRectDim
 	);
@@ -876,6 +875,80 @@ void EndStackBuilding(card_game_state* SceneState)
 		scroll_bar* StackScrollBar = &SceneState->StackScrollBar;
 		StackScrollBar->Rect.Dim.Y = StackScrollBar->Trough.Dim.Y + 1.0f;
 	}
+}
+
+void PushTurnTimer(
+	card_game_state* SceneState,
+	player_id Player,
+	render_group* RenderGroup,
+	assets* Assets,
+	memory_arena* FrameArena
+)
+{
+	char* PlayerIndicator = NULL;
+	if(Player == Player_One)
+	{
+		PlayerIndicator = "P1";
+	}
+	else if(Player == Player_Two)
+	{
+		PlayerIndicator = "P2";
+	}
+	else
+	{
+		ASSERT(false);
+	}
+
+	int32_t TurnTimerCeil = 0;
+	if(SceneState->StackBuilding)
+	{
+		if(SceneState->StackTurn == Player)
+		{
+			TurnTimerCeil = Int32Ceil(SceneState->TurnTimer);
+		}
+		else
+		{
+			TurnTimerCeil = Int32Ceil(SceneState->NextTurnTimer);
+		}
+	}
+	else
+	{
+		if(SceneState->CurrentTurn == Player)
+		{
+			TurnTimerCeil = Int32Ceil(SceneState->TurnTimer);
+		}
+		else
+		{
+			TurnTimerCeil = Int32Ceil(SceneState->NextTurnTimer);
+		}
+	}
+
+	uint32_t MaxTurnTimerCharacters = 10;
+	char* TurnTimerString = PushArray(
+		FrameArena, MaxTurnTimerCharacters, char
+	);
+	ASSERT(PlayerIndicator != NULL);
+	snprintf(
+		TurnTimerString,
+		MaxTurnTimerCharacters,
+		"%s: %d",
+		PlayerIndicator,
+		TurnTimerCeil
+	);
+	PushText(
+		RenderGroup,
+		Assets,
+		FontHandle_TestFont,
+		TurnTimerString,
+		MaxTurnTimerCharacters,
+		50.0f,
+		Vector2(
+			SceneState->ScreenDimInWorld.X - 150.0f,
+			SceneState->Tableaus[Player].YPos
+		),
+		Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+		FrameArena
+	);
 }
 
 inline void StandardPrimaryUpHandler(
@@ -1309,6 +1382,12 @@ void UpdateAndRenderCardGame(
 	memory_arena* FrameArena = &GameState->FrameArena;
 	assets* Assets = &GameState->Assets;
 
+	SceneState->ScreenDimInWorld = TransformVectorToBasis(
+		&GameState->WorldToCamera,
+		Vector2(WindowWidth, WindowHeight)
+	);
+	vector2 ScreenDimInWorld = SceneState->ScreenDimInWorld;
+
 	bool EndTurn = false;
 
 	// SECTION START: User input
@@ -1740,63 +1819,9 @@ void UpdateAndRenderCardGame(
 	render_group* RenderGroup = &GameState->RenderGroup;
 	PushClear(RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
 
-	// SECTION START: Push turn timer
-	{
-		char* PlayerIndicator = NULL;
-		int32_t TurnTimerCeil = 0;
-		if(
-			SceneState->StackBuilding && 
-			(SceneState->StackTurn != SceneState->CurrentTurn)
-		)
-		{
-			TurnTimerCeil = Int32Ceil(SceneState->NextTurnTimer);
-			if(SceneState->StackTurn == Player_One)
-			{
-				PlayerIndicator = "P1";
-			}
-			else if(SceneState->StackTurn == Player_Two)
-			{
-				PlayerIndicator = "P2";
-			}
-		}
-		else
-		{
-			TurnTimerCeil = Int32Ceil(SceneState->TurnTimer);
-			if(SceneState->CurrentTurn == Player_One)
-			{
-				PlayerIndicator = "P1";
-			}
-			else if(SceneState->CurrentTurn == Player_Two)
-			{
-				PlayerIndicator = "P2";
-			}
-		}
+	PushTurnTimer(SceneState, Player_One, RenderGroup, Assets, FrameArena);
+	PushTurnTimer(SceneState, Player_Two, RenderGroup, Assets, FrameArena);
 
-		uint32_t MaxTurnTimerCharacters = 10;
-		char* TurnTimerString = PushArray(
-			FrameArena, MaxTurnTimerCharacters, char
-		);
-		ASSERT(PlayerIndicator != NULL);
-		snprintf(
-			TurnTimerString,
-			MaxTurnTimerCharacters,
-			"%s: %d",
-			PlayerIndicator,
-			TurnTimerCeil
-		);
-		PushText(
-			RenderGroup,
-			&GameState->Assets,
-			FontHandle_TestFont,
-			TurnTimerString,
-			MaxTurnTimerCharacters,
-			50.0f,
-			Vector2(WindowWidth - 150.0f, WindowHeight / 2.0f),
-			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-			FrameArena
-		);
-	}
-	// SECTION STOP: Push turn timer
 	// SECTION START: Push cards
 	{
 		card* Card = &SceneState->Cards[0];
@@ -1903,8 +1928,8 @@ void UpdateAndRenderCardGame(
 			MAX_RESOURCE_STRING_SIZE,
 			RESOURCE_TEXT_HEIGHT,
 			Vector2(
-				WindowWidth - RESOURCE_LEFT_PADDING,
-				(WindowHeight / 2.0f) - Padding
+				ScreenDimInWorld.X - RESOURCE_LEFT_PADDING,
+				(ScreenDimInWorld.Y / 2.0f) - Padding
 			),
 			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
 			FrameArena
@@ -1921,8 +1946,8 @@ void UpdateAndRenderCardGame(
 			MAX_RESOURCE_STRING_SIZE,
 			RESOURCE_TEXT_HEIGHT,
 			Vector2(
-				WindowWidth - RESOURCE_LEFT_PADDING,
-				(WindowHeight / 2.0f) + 80.0f + Padding
+				ScreenDimInWorld.X - RESOURCE_LEFT_PADDING,
+				(ScreenDimInWorld.Y / 2.0f) + 80.0f + Padding
 			),
 			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
 			FrameArena
@@ -2001,7 +2026,7 @@ void UpdateAndRenderCardGame(
 	}
 	// SECTION STOP: Push player life totals
 
-	PushCenteredAlert(&SceneState->Alert, GameState, WindowWidth, WindowHeight);
+	PushCenteredAlert(&SceneState->Alert, GameState, ScreenDimInWorld);
 
 	if(CanScroll(&SceneState->StackScrollBar))
 	{

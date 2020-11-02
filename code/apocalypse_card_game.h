@@ -190,6 +190,7 @@ struct card_game_state
 	vector2 InfoCardCenter;
 	vector2 InfoCardXBound;
 	vector2 InfoCardYBound;
+	vector2 ScreenDimInWorld;
 	alert Alert;
 	card_definitions* Definitions;
 	float CardWidth;

@@ -614,6 +614,11 @@ void UpdateAndRenderDeckEditor(
 	float DtForFrame
 )
 {
+	vector2 ScreenDimInWorld = TransformVectorToBasis(
+		&GameState->WorldToCamera,
+		Vector2(WindowWidth, WindowHeight)
+	);
+		
 	user_event_index UserEventIndex = 0;
 	int MouseEventIndex = 0;
 	int KeyboardEventIndex = 0;
@@ -1152,5 +1157,5 @@ void UpdateAndRenderDeckEditor(
 		);
 	}
 
-	PushCenteredAlert(&SceneState->Alert, GameState, WindowWidth, WindowHeight);
+	PushCenteredAlert(&SceneState->Alert, GameState, ScreenDimInWorld);
 }

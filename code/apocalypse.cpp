@@ -11,6 +11,8 @@
 #include "apocalypse_particles.h"
 #include "apocalypse_opengl.h"
 
+#include "apocalypse_host_game.cpp"
+#include "apocalypse_join_game.cpp"
 #include "apocalypse_deck_selector.cpp"
 #include "apocalypse_render_group.cpp"
 #include "apocalypse_bitmap.cpp"
@@ -183,6 +185,16 @@ void GameUpdateAndRender(
 				StartDeckSelector(GameState, WindowWidth, WindowHeight);
 				break;
 			}
+			case(SceneType_HostGame):
+			{
+				StartHostGame(GameState, WindowWidth, WindowHeight);
+				break;
+			}
+			case(SceneType_JoinGame):
+			{
+				StartJoinGame(GameState, WindowWidth, WindowHeight);
+				break;
+			}
 			default:
 			{
 				ASSERT(false);
@@ -240,6 +252,34 @@ void GameUpdateAndRender(
 			UpdateAndRenderDeckSelector(
 				GameState,
 				(deck_selector_state*) GameState->SceneState,
+				WindowWidth,
+				WindowHeight,
+				MouseEvents,
+				KeyboardEvents,
+				DtForFrame
+			);
+			GameState->LastFrameScene = SceneType_DeckSelector;
+			break;
+		}
+		case(SceneType_HostGame):
+		{
+			UpdateAndRenderHostGame(
+				GameState,
+				(host_game_state*) GameState->SceneState,
+				WindowWidth,
+				WindowHeight,
+				MouseEvents,
+				KeyboardEvents,
+				DtForFrame
+			);
+			GameState->LastFrameScene = SceneType_DeckSelector;
+			break;
+		}
+		case(SceneType_JoinGame):
+		{
+			UpdateAndRenderJoinGame(
+				GameState,
+				(join_game_state*) GameState->SceneState,
 				WindowWidth,
 				WindowHeight,
 				MouseEvents,

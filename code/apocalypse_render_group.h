@@ -3,6 +3,7 @@
 #include "apocalypse_memory_arena.h"
 #include "apocalypse_vector.h"
 #include "apocalypse_bitmap.h"
+#include "apocalypse_assets.h"
 
 /* NOTE:
 	1) Everywhere outside the renderer, Y _always_ goes upward, and X to the 
@@ -133,6 +134,32 @@ struct push_text_result
 	// CONT: editors
 };
 
+push_text_result PushText(
+	render_group* Group,
+	assets* Assets,
+	font_handle FontHandle,
+	uint32_t* CodePoints,
+	uint32_t CodePointCount,
+	float FontHeight, // NOTE: font height in world units
+	vector2 LeftBaselinePoint,
+	vector4 Color,
+	uint32_t Layer = 1,
+	uint32_t ClipRectIndex = 0
+);
+push_text_result PushText(
+	render_group* Group,
+	assets* Assets,
+	font_handle FontHandle,
+	char* CodePoints,
+	uint32_t MaxCodePointCount,
+	float FontHeight, // NOTE: font height in world units
+	vector2 LeftBaselinePoint,
+	vector4 Color,
+	memory_arena* FrameArena, // NOTE: this function will leak if you don't
+	// CONT: regularly clear the arena. Hence, FrameArena
+	uint32_t Layer = 1,
+	uint32_t ClipRectIndex = 0
+);
 void PushClear(render_group* Group, vector4 Color, uint32_t Layer = 0);
 vector2 TransformPosFromBasis(basis* Basis, vector2 Vector);
 vector2 TransformVectorToBasis(basis* Basis, vector2 Vector);

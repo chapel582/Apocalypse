@@ -392,8 +392,8 @@ push_text_result PushText(
 	float FontHeight, // NOTE: font height in world units
 	vector2 LeftBaselinePoint,
 	vector4 Color,
-	uint32_t Layer = 1,
-	uint32_t ClipRectIndex = 0
+	uint32_t Layer,
+	uint32_t ClipRectIndex
 )
 {
 	push_text_result Result = {};
@@ -513,8 +513,8 @@ push_text_result PushText(
 	vector4 Color,
 	memory_arena* FrameArena, // NOTE: this function will leak if you don't
 	// CONT: regularly clear the arena. Hence, FrameArena
-	uint32_t Layer = 1,
-	uint32_t ClipRectIndex = 0
+	uint32_t Layer,
+	uint32_t ClipRectIndex
 )
 {
 	/* NOTE: 

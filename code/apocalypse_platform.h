@@ -25,6 +25,21 @@
 #endif
 #endif
 
+#if COMPILER_MSVC
+// NOTE: need lean and mean b/c windows.h duplicates a lot of stuff in winsock
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+
+#include <windows.h>
+#include <Winuser.h>
+// NOTE: mmsystem needed for dsound, excluded from windows 
+#include <mmsystem.h>
+#include <dsound.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
+
 #if APOCALYPSE_SLOW
 // TODO: Complete assertion macro
 #define ASSERT(Expression) if(!(Expression)) {*(int*) 0 = 0;}
@@ -52,6 +67,9 @@ inline uint32_t SafeTruncateUInt64(uint64_t Value)
 
 // NOTE: These are blocking calls that don't protect against lost data
 // CONT: they are intended for debug purposes only
+
+// TODO: figure out how to set up ports in an easy way
+#define DEFAULT_PORT "27015"
 
 // TODO: handle non-windows max path
 #define PLATFORM_MAX_PATH 260
@@ -82,6 +100,54 @@ void PlatformFindAllFiles(
 );
 // TODO: error handling
 void PlatformDeleteFile(char* FileName);
+
+typedef enum
+{
+	PlatformSocketResult_Success,
+	PlatformSocketResult_SocketModuleInitFail,
+	PlatformSocketResult_AddrInfoFail,
+	PlatformSocketResult_MakeSocketFail,
+	PlatformSocketResult_BindSocketFail,
+	PlatformSocketResult_ListenSocketFail,
+	PlatformSocketResult_AcceptFail,
+	PlatformSocketResult_ConnectSocketFail
+} platform_socket_result;
+
+typedef enum
+{
+	PlatformSendSocketResult_Success,
+	PlatformSendSocketResult_Error
+} platform_send_socket_result;
+
+typedef enum
+{
+	PlatformReadSocketResult_Success,
+	PlatformReadSocketResult_Error
+} platform_read_socket_result;
+
+#if COMPILER_MSVC
+struct platform_socket
+{
+	SOCKET Socket;
+};
+#endif
+
+platform_socket_result PlatformCreateServer(
+	platform_socket* ListenSocket, platform_socket* ClientSocket
+);
+void PlatformServerDisconnect(
+	platform_socket* ListenSocket, platform_socket* ClientSocket
+);
+platform_socket_result PlatformCreateClient(
+	char* ServerIp, platform_socket* ConnectSocket
+);
+void PlatformClientDisconnect(platform_socket* ConnectSocket);
+platform_send_socket_result PlatformSocketSend(
+	platform_socket* Socket, void* Buffer, uint32_t BufferLength
+);
+platform_read_socket_result PlatformSocketRead(
+	platform_socket* Socket, void* Buffer, uint32_t BufferLength
+);
 
 #if APOCALYPSE_INTERNAL
 
@@ -135,6 +201,10 @@ void PlatformAddJob(
 );
 void PlatformCompleteAllJobs(platform_job_queue* JobQueue);
 // SECTION STOP: Threading Code
+
+// SECTION START: Network code
+
+// SECTION STOP: Network code
 
 struct game_memory
 {

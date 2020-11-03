@@ -5,6 +5,8 @@
 #include "apocalypse_deck_editor.h"
 #include "apocalypse_button.h"
 #include "apocalypse_deck_selector.h"
+#include "apocalypse_host_game.h"
+#include "apocalypse_join_game.h"
 
 void StartMainMenu(
 	game_state* GameState, uint32_t WindowWidth, uint32_t WindowHeight
@@ -24,6 +26,16 @@ void StartMainMenu(
 	vector2 ButtonMin = Center - 0.5f * Dim;
 	InitButton(
 		UiContext, &SceneState->CardGameButton, MakeRectangle(ButtonMin, Dim)
+	);
+
+	ButtonMin.Y -= 1.5f * Dim.Y;
+	InitButton(
+		UiContext, &SceneState->HostGameButton, MakeRectangle(ButtonMin, Dim)
+	);
+	
+	ButtonMin.Y -= 1.5f * Dim.Y;
+	InitButton(
+		UiContext, &SceneState->JoinGameButton, MakeRectangle(ButtonMin, Dim)
 	);
 	
 	ButtonMin.Y -= 1.5f * Dim.Y;
@@ -81,6 +93,26 @@ void UpdateAndRenderMainMenu(
 			}
 			Result = ButtonHandleEvent(
 				&SceneState->UiContext,
+				&SceneState->HostGameButton,
+				MouseEvent,
+				MouseEventWorldPos
+			);
+			if(Result == ButtonHandleEvent_TakeAction)
+			{
+				StartHostGamePrep(GameState);
+			}
+			Result = ButtonHandleEvent(
+				&SceneState->UiContext,
+				&SceneState->JoinGameButton,
+				MouseEvent,
+				MouseEventWorldPos
+			);
+			if(Result == ButtonHandleEvent_TakeAction)
+			{
+				StartJoinGamePrep(GameState);
+			}
+			Result = ButtonHandleEvent(
+				&SceneState->UiContext,
 				&SceneState->DeckEditorButton,
 				MouseEvent,
 				MouseEventWorldPos
@@ -117,6 +149,28 @@ void UpdateAndRenderMainMenu(
 		&GameState->Assets, 
 		"Start Card Game",
 		sizeof("Start Card Game"),
+		FontHandle_TestFont,
+		Black, 
+		&GameState->FrameArena
+	);
+	PushButtonToRenderGroup(
+		SceneState->HostGameButton.Rectangle,
+		BitmapHandle_TestCard2,
+		&GameState->RenderGroup,
+		&GameState->Assets, 
+		"Host Card Game",
+		sizeof("Host Card Game"),
+		FontHandle_TestFont,
+		Black, 
+		&GameState->FrameArena
+	);
+	PushButtonToRenderGroup(
+		SceneState->JoinGameButton.Rectangle,
+		BitmapHandle_TestCard2,
+		&GameState->RenderGroup,
+		&GameState->Assets, 
+		"Join Card Game",
+		sizeof("Join Card Game"),
 		FontHandle_TestFont,
 		Black, 
 		&GameState->FrameArena

@@ -4,7 +4,6 @@ TODO: This is not a final platform layer
 	- Non-job threading
 	- sleep
 	- control cursor visibility
-	- Hardware acceleration
 	- Blit speed improvements
 	- Raw input and support for multiple keyboards
 */
@@ -17,11 +16,6 @@ TODO: This is not a final platform layer
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
-
-// NOTE: Windows stuff
-#include <windows.h>
-#include <Winuser.h>
-#include <dsound.h>
 
 // NOTE: OpenGL stuff
 #include "apocalypse_opengl.cpp"
@@ -203,6 +197,249 @@ void PlatformDeleteFile(char* File)
 {
 	// TODO: error handling
 	DeleteFileA(File);
+}
+
+platform_socket_result PlatformCreateServer(
+	platform_socket* ListenSocket, platform_socket* ClientSocket
+)
+{
+	platform_socket_result Result = PlatformSocketResult_Success;
+	
+	addrinfo* AddrInfo = NULL;
+	SOCKET Win32ListenSocket = INVALID_SOCKET;
+	SOCKET Win32ClientSocket = INVALID_SOCKET;
+
+	WSADATA WsaData = {};
+	int WsaResult = WSAStartup(MAKEWORD(2, 2), &WsaData);
+	if(WsaResult != 0)
+	{
+		// TODO: logging
+		// TODO: see if this should be done during application startup?
+		Result = PlatformSocketResult_SocketModuleInitFail;
+		goto error;
+	}
+
+	addrinfo Hints = {};
+	Hints.ai_family = AF_INET;
+	Hints.ai_socktype = SOCK_STREAM;
+	Hints.ai_protocol = IPPROTO_TCP;
+	Hints.ai_flags = AI_PASSIVE;
+
+	int AddrInfoResult = getaddrinfo(
+		NULL, DEFAULT_PORT, &Hints, &AddrInfo
+	);
+	if(AddrInfoResult != 0)
+	{
+		Result = PlatformSocketResult_AddrInfoFail;
+		// TODO: logging
+		goto error;
+	}
+
+	Win32ListenSocket = socket(
+		AddrInfo->ai_family, AddrInfo->ai_socktype, AddrInfo->ai_protocol
+	);
+	if(Win32ListenSocket == INVALID_SOCKET)
+	{
+		Result = PlatformSocketResult_MakeSocketFail;
+		// TODO: logging
+		goto error;
+	}
+
+	int BindResult = bind(
+		Win32ListenSocket, AddrInfo->ai_addr, (int) AddrInfo->ai_addrlen
+	);
+	if(BindResult == SOCKET_ERROR)
+	{
+		// TODO: logging
+		Result = PlatformSocketResult_BindSocketFail;
+		goto error;
+	}
+
+	// TODO: we might need to pull this out to a function that doesn't block?
+	if(listen(Win32ListenSocket, 1) == SOCKET_ERROR)
+	{
+		// TODO: logging
+		Result = PlatformSocketResult_ListenSocketFail;
+		goto error;
+	}
+
+	// TODO: move this out to a thread?
+	Win32ClientSocket = accept(Win32ListenSocket, NULL, NULL);
+	if(Win32ClientSocket == INVALID_SOCKET)
+	{
+		// TODO: logging
+		Result = PlatformSocketResult_AcceptFail;
+		goto error;
+	}
+
+	ListenSocket->Socket = Win32ListenSocket;
+	ClientSocket->Socket = Win32ClientSocket; 
+
+	goto end;
+
+error:
+	if(Win32ListenSocket != INVALID_SOCKET)
+	{
+		closesocket(Win32ListenSocket);
+	}
+	if(Win32ClientSocket != INVALID_SOCKET)
+	{
+		closesocket(Win32ClientSocket);
+	}
+	if(WsaResult != 0)
+	{
+		WSACleanup();
+	}
+
+end:
+	if(AddrInfo != NULL)
+	{
+		freeaddrinfo(AddrInfo);
+	}
+	return Result;
+}
+
+void PlatformServerDisconnect(
+	platform_socket* ListenSocket, platform_socket* ClientSocket
+)
+{
+	int ShutdownResult = shutdown(ClientSocket->Socket, SD_SEND);
+	if(ShutdownResult == SOCKET_ERROR)
+	{
+		// TODO: logging
+	}
+
+	closesocket(ListenSocket->Socket);
+	closesocket(ClientSocket->Socket);
+	WSACleanup();
+}
+
+platform_socket_result PlatformCreateClient(
+	char* ServerIp, platform_socket* ConnectSocket
+)
+{
+	platform_socket_result Result = PlatformSocketResult_Success;
+	
+	addrinfo* AddrInfo = NULL;
+	SOCKET Win32ConnectSocket = INVALID_SOCKET;
+
+	WSADATA WsaData = {};
+	int WsaResult = WSAStartup(MAKEWORD(2, 2), &WsaData);
+	if(WsaResult != 0)
+	{
+		// TODO: logging
+		// TODO: see if this should be done during application startup?
+		return PlatformSocketResult_SocketModuleInitFail;
+		goto error;
+	}
+
+	addrinfo Hints = {};
+	Hints.ai_family = AF_UNSPEC;
+	Hints.ai_socktype = SOCK_STREAM;
+	Hints.ai_protocol = IPPROTO_TCP;
+
+	int AddrInfoResult = getaddrinfo(
+		ServerIp, DEFAULT_PORT, &Hints, &AddrInfo
+	);
+	if(AddrInfoResult != 0)
+	{
+		Result = PlatformSocketResult_AddrInfoFail;
+		// TODO: logging
+		goto error;
+	}
+
+	Win32ConnectSocket = socket(
+		AddrInfo->ai_family, AddrInfo->ai_socktype, AddrInfo->ai_protocol
+	);
+	if(Win32ConnectSocket == INVALID_SOCKET)
+	{
+		// TODO: logging
+		Result = PlatformSocketResult_MakeSocketFail;
+
+		goto error;
+	}
+
+	int ConnectResult = connect(
+		Win32ConnectSocket, AddrInfo->ai_addr, (int) AddrInfo->ai_addrlen
+	);
+	if(ConnectResult == SOCKET_ERROR)
+	{
+		// TODO: logging
+		Result = PlatformSocketResult_ConnectSocketFail;
+		goto error;
+	}
+
+	goto end;
+
+error:
+	if(Win32ConnectSocket != INVALID_SOCKET)
+	{
+		closesocket(Win32ConnectSocket);
+	}
+	if(WsaResult != 0)
+	{
+		WSACleanup();
+	}
+end:
+	if(AddrInfo != NULL)
+	{
+		freeaddrinfo(AddrInfo);
+	}
+	return Result;
+}
+
+void PlatformClientDisconnect(platform_socket* ConnectSocket)
+{
+	int ShutdownResult = shutdown(ConnectSocket->Socket, SD_SEND);
+	if(ShutdownResult == SOCKET_ERROR)
+	{
+		// TODO: logging
+	}
+
+	closesocket(ConnectSocket->Socket);
+	WSACleanup();
+}
+
+platform_send_socket_result PlatformSocketSend(
+	platform_socket* Socket, void* Buffer, uint32_t BufferLength
+)
+{
+	platform_send_socket_result Result = PlatformSendSocketResult_Success;
+	int SendResult = send(
+		Socket->Socket, (const char*) Buffer, BufferLength, 0
+	);
+	if(SendResult == SOCKET_ERROR)
+	{
+		Result = PlatformSendSocketResult_Error;
+	}
+
+	return Result;
+}
+
+platform_read_socket_result PlatformSocketRead(
+	platform_socket* Socket, void* Buffer, uint32_t BufferLength
+)
+{
+	platform_read_socket_result ReadResult = PlatformReadSocketResult_Success;
+	int RemainingLength = BufferLength;
+	int RecvResult = 0;
+	int BytesRead = 0;
+	do
+	{
+		RecvResult = recv(Socket->Socket, (char*) Buffer, RemainingLength, 0);
+		if(RecvResult >= 0)
+		{
+			BytesRead = RecvResult;
+			RemainingLength -= BytesRead;
+		}
+		else
+		{
+			// TODO: logging
+			ReadResult = PlatformReadSocketResult_Error;
+		}
+	} while(BytesRead > 0);
+
+	return ReadResult;
 }
 
 // NOTE: DLL stubs
@@ -515,11 +752,13 @@ struct win32_thread_info
 
 struct platform_semaphore_handle
 {
+	// TODO: move this out to platform.h and allocate using our allocators
 	HANDLE Semaphore;
 };
 
 struct platform_mutex_handle
 {
+	// TODO: move this out to platform.h and allocate using our allocators
 	HANDLE Mutex;
 };
 
@@ -550,6 +789,7 @@ void PlatformFreeMutex(platform_mutex_handle* MutexHandle)
 
 struct platform_event_handle
 {
+	// TODO: move this out to platform.h and allocate using our allocators
 	HANDLE Event;
 };
 

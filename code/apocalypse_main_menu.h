@@ -8,6 +8,8 @@ struct main_menu_state
 	ui_context UiContext;
 	ui_button CardGameButton;
 	ui_button DeckEditorButton;
+	ui_button HostGameButton;
+	ui_button JoinGameButton;
 };
 
 void StartMainMenu(

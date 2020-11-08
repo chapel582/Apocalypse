@@ -35,7 +35,7 @@ void StartJoinGame(
 	);
 
 	platform_socket_result ServerResult = PlatformCreateClient(
-		"192.0.0.1", ConnectSocket
+		"127.0.0.1", ConnectSocket
 	);
 	if(ServerResult != PlatformSocketResult_Success)
 	{

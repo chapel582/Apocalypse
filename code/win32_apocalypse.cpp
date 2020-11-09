@@ -750,25 +750,9 @@ struct win32_thread_info
 	platform_job_queue* JobQueue;
 };
 
-struct platform_semaphore_handle
+void PlatformCreateMutex(platform_mutex_handle* Result)
 {
-	// TODO: move this out to platform.h and allocate using our allocators
-	HANDLE Semaphore;
-};
-
-struct platform_mutex_handle
-{
-	// TODO: move this out to platform.h and allocate using our allocators
-	HANDLE Mutex;
-};
-
-platform_mutex_handle* PlatformCreateMutex()
-{
-	platform_mutex_handle* Result = (platform_mutex_handle*) VirtualAlloc(
-		0, sizeof(platform_mutex_handle), MEM_COMMIT, PAGE_READWRITE
-	);
 	Result->Mutex = CreateMutexA(NULL, false, NULL);
-	return Result;
 }
 
 void PlatformGetMutex(platform_mutex_handle* MutexHandle)
@@ -786,12 +770,6 @@ void PlatformFreeMutex(platform_mutex_handle* MutexHandle)
 	CloseHandle(MutexHandle->Mutex);
 	VirtualFree(MutexHandle, 0, MEM_RELEASE);
 }
-
-struct platform_event_handle
-{
-	// TODO: move this out to platform.h and allocate using our allocators
-	HANDLE Event;
-};
 
 void InitJobQueue(platform_job_queue* JobQueue, uint32_t ThreadCount)
 {

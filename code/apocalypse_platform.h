@@ -161,11 +161,24 @@ platform_read_socket_result PlatformSocketRead(
 #endif // NOTE: APOCALYPSE_INTERNAL
 
 // SECTION START: Threading Code
-struct platform_mutex_handle;
-struct platform_semaphore_handle;
-struct platform_event_handle;
 
-platform_mutex_handle* PlatformCreateMutex();
+#if _MSC_VER
+struct platform_semaphore_handle
+{
+	HANDLE Semaphore;
+};
+struct platform_mutex_handle
+{
+	HANDLE Mutex;
+};
+struct platform_event_handle
+{
+	// TODO: move this out to platform.h and allocate using our allocators
+	HANDLE Event;
+};
+#endif
+
+void PlatformCreateMutex(platform_mutex_handle* Result);
 void PlatformGetMutex(platform_mutex_handle* MutexHandle);
 void PlatformReleaseMutex(platform_mutex_handle* MutexHandle);
 void PlatformFreeMutex(platform_mutex_handle* MutexHandle);

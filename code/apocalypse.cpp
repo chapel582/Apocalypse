@@ -149,8 +149,14 @@ void GameUpdateAndRender(
 		*Assets = {}; 
 		Assets->Arena = AssetArena;
 		Assets->JobQueue = Memory->DefaultJobQueue;
-		Assets->ArenaLock = PlatformCreateMutex();
-		Assets->AvailableListLock = PlatformCreateMutex();
+		Assets->ArenaLock = PushStruct(
+			&GameState->Arena, platform_mutex_handle
+		);
+		PlatformCreateMutex(Assets->ArenaLock);
+		Assets->AvailableListLock = PushStruct(
+			&GameState->Arena, platform_mutex_handle
+		);
+		PlatformCreateMutex(Assets->AvailableListLock);
 
 		Memory->IsInitialized = true;
 

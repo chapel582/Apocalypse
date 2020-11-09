@@ -170,6 +170,19 @@ struct card_stack_entry
 	};
 };
 
+typedef enum
+{
+	CardGameEvent_TimeUpdate,
+	CardGameEvent_TurnChange
+} card_game_event_type;
+
+struct card_game_event_header
+{
+	card_game_event_type EventType;
+	uint32_t SequenceNum;
+	uint32_t DataSize;
+};
+
 struct card_game_state
 {
 	ui_context UiContext;

@@ -882,6 +882,8 @@ int CALLBACK WinMain(
 	int ShowCode
 )
 {
+	TestHeap();
+	
 	uint32_t ThreadCount = MAX_THREAD_COUNT - 1;
 	HANDLE* ThreadHandles = (HANDLE*) VirtualAlloc(
 		0, ThreadCount * sizeof(HANDLE), MEM_COMMIT, PAGE_READWRITE

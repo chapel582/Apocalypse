@@ -11,6 +11,7 @@
 #include "apocalypse_particles.h"
 #include "apocalypse_opengl.h"
 
+#include "apocalypse_binary_heap.cpp"
 #include "apocalypse_host_game.cpp"
 #include "apocalypse_join_game.cpp"
 #include "apocalypse_deck_selector.cpp"

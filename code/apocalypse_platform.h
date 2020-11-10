@@ -178,6 +178,8 @@ struct platform_event_handle
 };
 #endif
 
+#include "apocalypse_binary_heap.h"
+
 void PlatformCreateMutex(platform_mutex_handle* Result);
 void PlatformGetMutex(platform_mutex_handle* MutexHandle);
 void PlatformReleaseMutex(platform_mutex_handle* MutexHandle);

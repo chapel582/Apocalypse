@@ -49,21 +49,17 @@ loaded_bitmap MakeEmptyBitmap(
 	return MakeEmptyBitmap(Memory, Width, Height);
 }
 
-void GameUpdateAndRender(
+void GameInitMemory(
 	game_memory* Memory,
+	platform_job_queue* JobQueue,
 	uint32_t WindowWidth,
-	uint32_t WindowHeight,
-	game_mouse_events* MouseEvents,
-	game_keyboard_events* KeyboardEvents,
-	float DtForFrame
+	uint32_t WindowHeight
 )
 {
-	TIMED_BLOCK();
-
 	ASSERT(sizeof(game_state) <= Memory->PermanentStorageSize);
-	game_state* GameState = (game_state*) Memory->PermanentStorage;
 	if(!Memory->IsInitialized)
 	{
+		game_state* GameState = (game_state*) Memory->PermanentStorage;
 #if APOCALYPSE_INTERNAL
 		// NOTE: initialize debug code
 		// TODO: get your own virtual memory hunk for this!
@@ -145,11 +141,12 @@ void GameUpdateAndRender(
 			)
 		);
 		GameState->Time = 0;
+		GameState->JobQueue = JobQueue;
 
 		assets* Assets = &GameState->Assets; 
 		*Assets = {}; 
 		Assets->Arena = AssetArena;
-		Assets->JobQueue = Memory->DefaultJobQueue;
+		Assets->JobQueue = GameState->JobQueue;
 		Assets->ArenaLock = PushStruct(
 			&GameState->Arena, platform_mutex_handle
 		);
@@ -165,6 +162,21 @@ void GameUpdateAndRender(
 		GameState->Scene = SceneType_MainMenu;
 		GameState->LastFrameScene = GameState->Scene;
 	}
+}
+
+void GameUpdateAndRender(
+	game_memory* Memory,
+	uint32_t WindowWidth,
+	uint32_t WindowHeight,
+	game_mouse_events* MouseEvents,
+	game_keyboard_events* KeyboardEvents,
+	float DtForFrame
+)
+{
+	TIMED_BLOCK();
+
+	ASSERT(sizeof(game_state) <= Memory->PermanentStorageSize);
+	game_state* GameState = (game_state*) Memory->PermanentStorage;
 
 	GameState->Time += DtForFrame;
 

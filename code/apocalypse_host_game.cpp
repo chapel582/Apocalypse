@@ -65,7 +65,7 @@ void UpdateAndRenderHostGame(
 		RenderGroup,
 		Assets,
 		FontHandle_TestFont,
-		"Waiting for connection from client",
+		"Connected to client",
 		64,
 		50.0f,
 		SceneState->ScreenDimInWorld / 2.0f,

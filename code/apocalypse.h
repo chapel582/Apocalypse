@@ -12,6 +12,14 @@
 
 typedef enum
 {
+	JobPriority_Asset,
+	JobPriority_ParallelCompute,
+	JobPriority_SendNetworkPacket,
+	JobPriority_Other
+} default_job_priorities;
+
+typedef enum
+{
 	SceneType_CardGame,
 	SceneType_MainMenu,
 	SceneType_DeckEditor,
@@ -35,6 +43,8 @@ struct game_state
 	memory_arena RenderArena;
 	// NOTE: an arena for scene args
 	memory_arena SceneArgsArena;
+
+	platform_job_queue* JobQueue;
 
 	assets Assets;
 

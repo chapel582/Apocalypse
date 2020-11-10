@@ -62,7 +62,7 @@ void UpdateAndRenderJoinGame(
 		RenderGroup,
 		Assets,
 		FontHandle_TestFont,
-		"Waiting to connect to server",
+		"Connected to server",
 		64,
 		50.0f,
 		SceneState->ScreenDimInWorld / 2.0f,

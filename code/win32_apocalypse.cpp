@@ -1004,7 +1004,12 @@ int CALLBACK WinMain(
 				OutputDebugStringA("Unable to allocate game memory\n");
 				goto end;
 			}
-			GameMemory.DefaultJobQueue = &JobQueue;
+			GameInitMemory(
+				&GameMemory,
+				&JobQueue,
+				GlobalWindowWidth,
+				GlobalWindowHeight
+			);
 
 			user_event_index UserEventIndex = 0;
 			game_mouse_events MouseEvents = {};

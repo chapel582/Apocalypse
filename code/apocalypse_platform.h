@@ -260,8 +260,6 @@ struct game_memory
 
 	size_t TransientStorageSize;
 	void* TransientStorage;
-
-	platform_job_queue* DefaultJobQueue;
 };
 
 struct game_sound_output_buffer
@@ -333,6 +331,12 @@ struct keyboard_state
 	// TODO: caps lock, other stateful things?
 };
 
+void GameInitMemory(
+	game_memory* Memory,
+	platform_job_queue* JobQueue,
+	uint32_t WindowWidth,
+	uint32_t WindowHeight
+);
 void GameUpdateAndRender(
 	game_memory* Memory,
 	uint32_t WindowWidth,

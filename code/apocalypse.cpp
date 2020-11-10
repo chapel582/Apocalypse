@@ -11,6 +11,8 @@
 #include "apocalypse_particles.h"
 #include "apocalypse_opengl.h"
 
+// TODO: move the source includes above the headers
+#include "apocalypse_socket.cpp"
 #include "apocalypse_binary_heap.cpp"
 #include "apocalypse_host_game.cpp"
 #include "apocalypse_join_game.cpp"
@@ -291,7 +293,7 @@ void GameUpdateAndRender(
 				KeyboardEvents,
 				DtForFrame
 			);
-			GameState->LastFrameScene = SceneType_DeckSelector;
+			GameState->LastFrameScene = SceneType_HostGame;
 			break;
 		}
 		case(SceneType_JoinGame):
@@ -305,7 +307,7 @@ void GameUpdateAndRender(
 				KeyboardEvents,
 				DtForFrame
 			);
-			GameState->LastFrameScene = SceneType_DeckSelector;
+			GameState->LastFrameScene = SceneType_JoinGame;
 			break;
 		}
 		default:

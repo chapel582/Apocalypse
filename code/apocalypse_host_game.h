@@ -1,8 +1,14 @@
 #ifndef APOCALYPSE_HOST_GAME_H
 
+#include "apocalypse_socket.h"
+#include "apocalypse_platform.h"
+
 struct host_game_state
 {
 	vector2 ScreenDimInWorld;
+	socket_send_data_args* SendDataArgs;
+	platform_socket* ListenSocket;
+	platform_socket* ClientSocket;
 };
 
 void StartHostGamePrep(game_state* GameState);

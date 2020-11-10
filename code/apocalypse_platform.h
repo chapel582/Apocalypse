@@ -69,7 +69,7 @@ inline uint32_t SafeTruncateUInt64(uint64_t Value)
 // CONT: they are intended for debug purposes only
 
 // TODO: figure out how to set up ports in an easy way
-#define DEFAULT_PORT "27015"
+#define DEFAULT_PORT "27016"
 
 // TODO: handle non-windows max path
 #define PLATFORM_MAX_PATH 260
@@ -143,10 +143,13 @@ platform_socket_result PlatformCreateClient(
 );
 void PlatformClientDisconnect(platform_socket* ConnectSocket);
 platform_send_socket_result PlatformSocketSend(
-	platform_socket* Socket, void* Buffer, uint32_t BufferLength
+	platform_socket* Socket, void* Buffer, uint32_t DataSize
 );
 platform_read_socket_result PlatformSocketRead(
-	platform_socket* Socket, void* Buffer, uint32_t BufferLength
+	platform_socket* Socket,
+	void* Buffer,
+	uint32_t BufferSize,
+	uint32_t* TotalBytesRead
 );
 
 #if APOCALYPSE_INTERNAL
@@ -245,6 +248,9 @@ void PlatformAddJob(
 	uint32_t Priority
 );
 void PlatformCompleteAllJobs(platform_job_queue* JobQueue);
+void PlatformCompleteAllJobsAtPriority(
+	platform_job_queue* JobQueue, uint32_t Priority
+);
 // SECTION STOP: Threading Code
 
 // SECTION START: Network code

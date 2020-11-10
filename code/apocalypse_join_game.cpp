@@ -30,18 +30,24 @@ void StartJoinGame(
 	);
 
 	// TODO: move this out to a thread
-	platform_socket* ConnectSocket = PushStruct(
+	SceneState->ConnectSocket = PushStruct(
 		&GameState->TransientArena, platform_socket
 	);
 
-	platform_socket_result ServerResult = PlatformCreateClient(
-		"127.0.0.1", ConnectSocket
+	platform_socket_result ConnectResult = PlatformCreateClient(
+		"127.0.0.1", SceneState->ConnectSocket
 	);
-	if(ServerResult != PlatformSocketResult_Success)
+	if(ConnectResult != PlatformSocketResult_Success)
 	{
 		// TODO: logging
 		ASSERT(false);
 	}
+
+	SceneState->PacketBufferSize = 256;
+	SceneState->PacketBuffer = PushSize(
+		&GameState->TransientArena,
+		SceneState->PacketBufferSize
+	);
 }
 
 void UpdateAndRenderJoinGame(
@@ -58,6 +64,15 @@ void UpdateAndRenderJoinGame(
 	render_group* RenderGroup = &GameState->RenderGroup;
 	assets* Assets = &GameState->Assets;
 
+	uint32_t BytesRead = 0;
+	PlatformSocketRead(
+		SceneState->ConnectSocket,
+		SceneState->PacketBuffer,
+		SceneState->PacketBufferSize,
+		&BytesRead
+	);
+
+	PushClear(RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
 	PushText(
 		RenderGroup,
 		Assets,

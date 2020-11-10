@@ -256,7 +256,7 @@ platform_socket_result PlatformCreateServer(
 	}
 
 	// TODO: we might need to pull this out to a function that doesn't block?
-	if(listen(Win32ListenSocket, 1) == SOCKET_ERROR)
+	if(listen(Win32ListenSocket, SOMAXCONN) == SOCKET_ERROR)
 	{
 		// TODO: logging
 		Result = PlatformSocketResult_ListenSocketFail;
@@ -369,6 +369,8 @@ platform_socket_result PlatformCreateClient(
 		goto error;
 	}
 
+	ConnectSocket->Socket = Win32ConnectSocket;
+
 	goto end;
 
 error:
@@ -401,12 +403,12 @@ void PlatformClientDisconnect(platform_socket* ConnectSocket)
 }
 
 platform_send_socket_result PlatformSocketSend(
-	platform_socket* Socket, void* Buffer, uint32_t BufferLength
+	platform_socket* Socket, void* Buffer, uint32_t DataSize
 )
 {
 	platform_send_socket_result Result = PlatformSendSocketResult_Success;
 	int SendResult = send(
-		Socket->Socket, (const char*) Buffer, BufferLength, 0
+		Socket->Socket, (const char*) Buffer, DataSize, 0
 	);
 	if(SendResult == SOCKET_ERROR)
 	{
@@ -417,15 +419,25 @@ platform_send_socket_result PlatformSocketSend(
 }
 
 platform_read_socket_result PlatformSocketRead(
-	platform_socket* Socket, void* Buffer, uint32_t BufferLength
+	platform_socket* Socket,
+	void* Buffer,
+	uint32_t BufferSize,
+	uint32_t* TotalBytesRead
 )
 {
 	platform_read_socket_result ReadResult = PlatformReadSocketResult_Success;
-	int RemainingLength = BufferLength;
+	int RemainingLength = BufferSize;
 	int RecvResult = 0;
 	int BytesRead = 0;
 	do
 	{
+		uint32_t BytesAvailable = 0;
+		ioctlsocket(Socket->Socket, FIONREAD, (u_long*) &BytesAvailable);
+		if(BytesAvailable == 0)
+		{
+			break;
+		}
+
 		RecvResult = recv(Socket->Socket, (char*) Buffer, RemainingLength, 0);
 		if(RecvResult >= 0)
 		{
@@ -439,6 +451,7 @@ platform_read_socket_result PlatformSocketRead(
 		}
 	} while(BytesRead > 0);
 
+	*TotalBytesRead = BufferSize - RemainingLength;
 	return ReadResult;
 }
 
@@ -844,6 +857,21 @@ void PlatformCompleteAllJobs(platform_job_queue* JobQueue)
 	while(true)
 	{
 		if(IsEmpty(&JobQueue->JobsToDo))
+		{
+			break;
+		}
+		WaitForSingleObject(JobQueue->JobDone->Event, INFINITE);
+	}
+}
+
+void PlatformCompleteAllJobsAtPriority(
+	platform_job_queue* JobQueue, uint32_t Priority
+)
+{
+	heap* JobsToDo = &JobQueue->JobsToDo;
+	while(true)
+	{
+		if(IsEmpty(JobsToDo) || PeekKey(JobsToDo) > Priority)
 		{
 			break;
 		}

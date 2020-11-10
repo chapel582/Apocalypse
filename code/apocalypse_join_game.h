@@ -6,6 +6,9 @@
 struct join_game_state
 {
 	vector2 ScreenDimInWorld;
+	platform_socket* ConnectSocket;
+	void* PacketBuffer;
+	uint32_t PacketBufferSize;
 };
 
 void StartJoinGamePrep(game_state* GameState);

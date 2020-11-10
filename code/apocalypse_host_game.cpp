@@ -4,6 +4,7 @@
 #include "apocalypse_memory_arena.h"
 #include "apocalypse_platform.h"
 #include "apocalypse_render_group.h"
+#include "apocalypse_socket.h"
 
 void StartHostGamePrep(game_state* GameState)
 {
@@ -30,21 +31,31 @@ void StartHostGame(
 	);
 
 	// TODO: spawn a thread that does this
-	platform_socket* ListenSocket = PushStruct(
+	SceneState->ListenSocket = PushStruct(
 		&GameState->TransientArena, platform_socket
 	);
-	platform_socket* ClientSocket = PushStruct(
+	SceneState->ClientSocket = PushStruct(
 		&GameState->TransientArena, platform_socket
 	);
 
 	platform_socket_result ServerResult = PlatformCreateServer(
-		ListenSocket, ClientSocket
+		SceneState->ListenSocket, SceneState->ClientSocket
 	);
 	if(ServerResult != PlatformSocketResult_Success)
 	{
 		// TODO: logging
 		ASSERT(false);
 	}
+
+	SceneState->SendDataArgs = PushStruct(
+		&GameState->TransientArena, socket_send_data_args
+	);
+	SceneState->SendDataArgs->Socket = SceneState->ClientSocket;
+	SceneState->SendDataArgs->BufferSize = 256;
+	SceneState->SendDataArgs->Buffer = PushSize(
+		&GameState->TransientArena,
+		SceneState->SendDataArgs->BufferSize
+	);
 }
 
 void UpdateAndRenderHostGame(
@@ -61,6 +72,26 @@ void UpdateAndRenderHostGame(
 	render_group* RenderGroup = &GameState->RenderGroup;
 	assets* Assets = &GameState->Assets;
 
+	{
+		char* CharBuffer = (char*) SceneState->SendDataArgs->Buffer;
+		*CharBuffer++ = 'a';
+		*CharBuffer++ = 'b';
+		*CharBuffer++ = 'c';
+		*CharBuffer++ = '1';
+		*CharBuffer++ = '2';
+		*CharBuffer++ = '3';
+		*CharBuffer++ = 0;
+
+		SceneState->SendDataArgs->DataSize = 7;
+		PlatformAddJob(
+			GameState->JobQueue,
+			SocketSendDataJob,
+			SceneState->SendDataArgs,
+			JobPriority_SendPacket
+		);
+	}
+
+	PushClear(RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
 	PushText(
 		RenderGroup,
 		Assets,
@@ -71,5 +102,9 @@ void UpdateAndRenderHostGame(
 		SceneState->ScreenDimInWorld / 2.0f,
 		Vector4(1.0f, 1.0f, 1.0f, 1.0f),
 		FrameArena
+	);
+
+	PlatformCompleteAllJobsAtPriority(
+		GameState->JobQueue, JobPriority_SendPacket
 	);
 }

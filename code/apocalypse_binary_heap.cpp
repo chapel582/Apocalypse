@@ -23,6 +23,7 @@ inline void SwapEntries(heap_entry* Entry1, heap_entry* Entry2)
 	*Entry1 = *Entry2;
 	*Entry2 = Temp;
 }
+
 void MinInsert(heap* Heap, uint32_t Key, uint32_t DataIndex)
 {
 	ASSERT(Heap->MaxEntries > Heap->EntryCount);
@@ -48,6 +49,11 @@ void MinInsert(heap* Heap, uint32_t Key, uint32_t DataIndex)
 			break;
 		}
 	}
+}
+
+inline uint32_t PeekKey(heap* Heap)
+{
+	return Heap->Entries[0].Key;
 }
 
 uint32_t ExtractMinRoot(heap* Heap)

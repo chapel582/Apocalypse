@@ -18,6 +18,7 @@ struct heap
 bool IsEmpty(heap* Heap);
 void MinInsert(heap* Heap, uint32_t Key, uint32_t DataIndex);
 uint32_t ExtractMinRoot(heap* Heap);
+uint32_t PeekKey(heap* Heap);
 
 // TODO: remove TestHeap from non-internal builds
 void TestHeap();

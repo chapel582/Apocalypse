@@ -774,17 +774,21 @@ void PlatformFreeMutex(platform_mutex_handle* MutexHandle)
 void InitJobQueue(platform_job_queue* JobQueue, uint32_t ThreadCount)
 {
 	*JobQueue = {};
-	for(int Index = 0; Index < ARRAY_COUNT(JobQueue->Entries); Index++)
+	heap* JobsToDo = &JobQueue->JobsToDo;
+	JobsToDo->Entries = JobQueue->JobsToDoEntries;
+	JobsToDo->MaxEntries = JOB_QUEUE_ENTRIES_COUNT;
+
+	JobQueue->EmptyEntriesStart = 0;
+	JobQueue->EmptyEntriesCount = JOB_QUEUE_ENTRIES_COUNT;
+	for(int Index = 0; Index < JOB_QUEUE_ENTRIES_COUNT; Index++)
 	{
-		platform_job_queue_entry* Entry = &JobQueue->Entries[Index];
-		Entry->Next = JobQueue->EmptyHead;
-		JobQueue->EmptyHead = Entry;
+		JobQueue->EmptyEntries[Index] = Index;
 	}
 
-	JobQueue->UsingFilled = (platform_mutex_handle*) VirtualAlloc(
+	JobQueue->UsingJobsToDo = (platform_mutex_handle*) VirtualAlloc(
 		0, sizeof(platform_mutex_handle), MEM_COMMIT, PAGE_READWRITE
 	);
-	JobQueue->UsingFilled->Mutex = CreateMutexA(NULL, false, NULL);
+	JobQueue->UsingJobsToDo->Mutex = CreateMutexA(NULL, false, NULL);
 	JobQueue->UsingEmpty = (platform_mutex_handle*) VirtualAlloc(
 		0, sizeof(platform_mutex_handle), MEM_COMMIT, PAGE_READWRITE
 	);
@@ -816,21 +820,22 @@ void InitJobQueue(platform_job_queue* JobQueue, uint32_t ThreadCount)
 void PlatformAddJob(
 	platform_job_queue* JobQueue,
 	platform_job_callback* Callback,
-	void* Data
+	void* Data,
+	uint32_t Priority
 )
 {
 	WaitForSingleObject(JobQueue->EmptySemaphore->Semaphore, INFINITE);
 	WaitForSingleObject(JobQueue->UsingEmpty->Mutex, INFINITE);
-	platform_job_queue_entry* Entry = JobQueue->EmptyHead;
-	JobQueue->EmptyHead = JobQueue->EmptyHead->Next;
+	uint32_t NextEmptyIndex = GetNextEmpty(JobQueue);
+	platform_job_queue_entry* Entry = JobQueue->Entries + NextEmptyIndex;
 	ReleaseMutex(JobQueue->UsingEmpty->Mutex);
 
-	WaitForSingleObject(JobQueue->UsingFilled->Mutex, INFINITE);
-	Entry->Next = JobQueue->FilledHead;
-	JobQueue->FilledHead = Entry; 
+	WaitForSingleObject(JobQueue->UsingJobsToDo->Mutex, INFINITE);
+	// NOTE: Entry - JobQueue->Entries gets the index of Entry
+	MinInsert(&JobQueue->JobsToDo, Priority, NextEmptyIndex);
 	Entry->Callback = Callback;
 	Entry->Data = Data;
-	ReleaseMutex(JobQueue->UsingFilled->Mutex);
+	ReleaseMutex(JobQueue->UsingJobsToDo->Mutex);
 	ReleaseSemaphore(JobQueue->FilledSemaphore->Semaphore, 1, NULL);
 }
 
@@ -838,7 +843,7 @@ void PlatformCompleteAllJobs(platform_job_queue* JobQueue)
 {
 	while(true)
 	{
-		if(JobQueue->FilledHead == NULL)
+		if(IsEmpty(&JobQueue->JobsToDo))
 		{
 			break;
 		}
@@ -856,10 +861,10 @@ DWORD WINAPI WorkerThread(LPVOID LpParam)
 	{
 		// NOTE: Get job
 		WaitForSingleObject(JobQueue->FilledSemaphore->Semaphore, INFINITE);
-		WaitForSingleObject(JobQueue->UsingFilled->Mutex, INFINITE);
-		platform_job_queue_entry* Entry = JobQueue->FilledHead;
-		JobQueue->FilledHead = JobQueue->FilledHead->Next;
-		ReleaseMutex(JobQueue->UsingFilled->Mutex);
+		WaitForSingleObject(JobQueue->UsingJobsToDo->Mutex, INFINITE);
+		uint32_t EntryIndex = ExtractMinRoot(&JobQueue->JobsToDo);
+		platform_job_queue_entry* Entry = JobQueue->Entries + EntryIndex;		
+		ReleaseMutex(JobQueue->UsingJobsToDo->Mutex);
 
 		// NOTE: Do job
 		Entry->Callback(Entry->Data);
@@ -867,8 +872,7 @@ DWORD WINAPI WorkerThread(LPVOID LpParam)
 
 		// NOTE: open up an entry in the queue
 		WaitForSingleObject(JobQueue->UsingEmpty, INFINITE);
-		Entry->Next = JobQueue->EmptyHead;
-		JobQueue->EmptyHead = Entry;
+		AddEmpty(JobQueue, EntryIndex);
 		ReleaseMutex(JobQueue->UsingEmpty);
 		ReleaseSemaphore(JobQueue->EmptySemaphore->Semaphore, 1, NULL);
 	}
@@ -882,8 +886,6 @@ int CALLBACK WinMain(
 	int ShowCode
 )
 {
-	TestHeap();
-	
 	uint32_t ThreadCount = MAX_THREAD_COUNT - 1;
 	HANDLE* ThreadHandles = (HANDLE*) VirtualAlloc(
 		0, ThreadCount * sizeof(HANDLE), MEM_COMMIT, PAGE_READWRITE

@@ -15,6 +15,7 @@ struct heap
 	uint32_t EntryCount;
 };
 
+bool IsEmpty(heap* Heap);
 void MinInsert(heap* Heap, uint32_t Key, uint32_t DataIndex);
 uint32_t ExtractMinRoot(heap* Heap);
 

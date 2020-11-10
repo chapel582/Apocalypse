@@ -162,7 +162,7 @@ loaded_bitmap* GetBitmap(assets* Assets, bitmap_handle BitmapHandle)
 				Job, Assets, &Assets->Bitmaps[BitmapHandle], Info
 			);
 			
-			PlatformAddJob(Assets->JobQueue, LoadBmpJob, Job);
+			PlatformAddJob(Assets->JobQueue, LoadBmpJob, Job, 1);
 		}
 		return NULL;
 	}
@@ -233,7 +233,7 @@ loaded_wav* GetWav(assets* Assets, wav_handle WavHandle)
 
 			InitAssetJobCommon(Job, Assets, &Assets->Wavs[WavHandle], Info);
 
-			PlatformAddJob(Assets->JobQueue, LoadWavJob, Job);
+			PlatformAddJob(Assets->JobQueue, LoadWavJob, Job, 1);
 		}
 		Result = NULL;
 	}
@@ -314,7 +314,7 @@ loaded_font* GetFont(assets* Assets, font_handle FontHandle)
 		}
 		Info->State = AssetState_Loading;
 		InitAssetJobCommon(Job, Assets, &Assets->Fonts[FontHandle], Info);
-		PlatformAddJob(Assets->JobQueue, LoadFontJob, Job);
+		PlatformAddJob(Assets->JobQueue, LoadFontJob, Job, 1);
 	}
 
 	return Result;
@@ -413,7 +413,7 @@ loaded_glyph* GetGlyph(
 			Job->FontHandle = FontHandle;
 			Job->CodePoint = CodePoint;
 
-			PlatformAddJob(Assets->JobQueue, LoadGlyphJob, Job);
+			PlatformAddJob(Assets->JobQueue, LoadGlyphJob, Job, 1);
 		}
 		return NULL;
 	}

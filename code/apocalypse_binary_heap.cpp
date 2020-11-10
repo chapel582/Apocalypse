@@ -94,6 +94,11 @@ uint32_t ExtractMinRoot(heap* Heap)
 	return Result;
 }
 
+inline bool IsEmpty(heap* Heap)
+{
+	return Heap->EntryCount == 0;
+} 
+
 void TestHeap()
 {
 	heap_entry Entries[256];

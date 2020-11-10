@@ -192,27 +192,57 @@ struct platform_job_queue_entry
 {
 	platform_job_callback* Callback;
 	void* Data;
-
-	platform_job_queue_entry* Next;
 };
+
+// TODO: see if this would be better defined dynamically
+#define JOB_QUEUE_ENTRIES_COUNT 256
 
 struct platform_job_queue
 {
-	platform_job_queue_entry Entries[256];
+	platform_job_queue_entry Entries[JOB_QUEUE_ENTRIES_COUNT];
+	heap_entry JobsToDoEntries[JOB_QUEUE_ENTRIES_COUNT];
+	heap JobsToDo;
+	uint32_t EmptyEntries[JOB_QUEUE_ENTRIES_COUNT];
+	uint32_t EmptyEntriesStart;
+	uint32_t EmptyEntriesCount;
+
 	platform_event_handle* JobDone;
 	platform_semaphore_handle* EmptySemaphore;
 	platform_semaphore_handle* FilledSemaphore;
-	platform_mutex_handle* UsingFilled; // NOTE: for making mods to FilledQueue
+	platform_mutex_handle* UsingJobsToDo; // NOTE: for making mods to JobsToDo
 	platform_mutex_handle* UsingEmpty; // NOTE: for making mods to EmptyQueue
-	platform_job_queue_entry* FilledHead; // NOTE: Jobs to do
-	platform_job_queue_entry* EmptyHead; // NOTE: entries available for jobs
 	uint32_t ThreadIds[MAX_THREAD_COUNT];
 };
+
+inline int32_t GetNextEmpty(platform_job_queue* JobQueue)
+{
+	if(JobQueue->EmptyEntriesCount == 0)
+	{
+		return -1;
+	}
+	uint32_t Result = JobQueue->EmptyEntries[JobQueue->EmptyEntriesStart];
+	JobQueue->EmptyEntriesStart++;
+	if(JobQueue->EmptyEntriesStart >= JOB_QUEUE_ENTRIES_COUNT)
+	{
+		JobQueue->EmptyEntriesStart = 0;	
+	}
+	JobQueue->EmptyEntriesCount--;
+	return (int32_t) Result;
+}
+
+inline void AddEmpty(platform_job_queue* JobQueue, uint32_t NewEmpty)
+{
+	ASSERT(JobQueue->EmptyEntriesCount < JOB_QUEUE_ENTRIES_COUNT);
+	JobQueue->EmptyEntries[JobQueue->EmptyEntriesCount] = NewEmpty;
+	JobQueue->EmptyEntriesCount++;
+	ASSERT(JobQueue->EmptyEntriesCount <= JOB_QUEUE_ENTRIES_COUNT);
+}
 
 void PlatformAddJob(
 	platform_job_queue* JobQueue,
 	platform_job_callback* Callback,
-	void* Data
+	void* Data,
+	uint32_t Priority
 );
 void PlatformCompleteAllJobs(platform_job_queue* JobQueue);
 // SECTION STOP: Threading Code

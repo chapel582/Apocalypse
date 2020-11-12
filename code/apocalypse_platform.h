@@ -110,6 +110,7 @@ typedef enum
 	PlatformSocketResult_BindSocketFail,
 	PlatformSocketResult_ListenSocketFail,
 	PlatformSocketResult_AcceptFail,
+	PlatformSocketResult_NoPendingConnections,
 	PlatformSocketResult_ConnectSocketFail
 } platform_socket_result;
 
@@ -132,8 +133,9 @@ struct platform_socket
 };
 #endif
 
-platform_socket_result PlatformCreateServer(
-	platform_socket* ListenSocket, platform_socket* ClientSocket
+platform_socket_result PlatformCreateListen(platform_socket* ListenSocket);
+platform_socket_result PlatformAcceptConnection(
+	platform_socket* ListenSocket, platform_socket* ClientSocketResult
 );
 void PlatformServerDisconnect(
 	platform_socket* ListenSocket, platform_socket* ClientSocket

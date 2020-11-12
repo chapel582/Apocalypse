@@ -6,6 +6,25 @@
 #include "apocalypse_render_group.h"
 #include "apocalypse_card_game.h"
 
+void ConnectJob(void* Data)
+{
+	connect_to_server_args* Args = (connect_to_server_args*) Data;
+	platform_socket* ConnectSocket = Args->ConnectSocket;
+	
+	platform_socket_result ConnectResult = PlatformCreateClient(
+		"127.0.0.1", ConnectSocket
+	);
+	if(ConnectResult != PlatformSocketResult_Success)
+	{
+		// TODO: logging
+		Args->ConnectionResult = ConnectToServerResult_Error;
+	}
+	else
+	{
+		Args->ConnectionResult = ConnectToServerResult_Complete;
+	}
+}
+
 void StartJoinGamePrep(game_state* GameState)
 {
 	GameState->SceneArgs = NULL;
@@ -35,14 +54,20 @@ void StartJoinGame(
 		&GameState->TransientArena, platform_socket
 	);
 
-	platform_socket_result ConnectResult = PlatformCreateClient(
-		"127.0.0.1", SceneState->ConnectSocket
+	SceneState->ConnectToServerArgs = PushStruct(
+		&GameState->TransientArena, connect_to_server_args
 	);
-	if(ConnectResult != PlatformSocketResult_Success)
-	{
-		// TODO: logging
-		ASSERT(false);
-	}
+	*SceneState->ConnectToServerArgs = {};
+	SceneState->ConnectToServerArgs->ConnectSocket = SceneState->ConnectSocket;
+	SceneState->ConnectToServerArgs->ConnectionResult = (
+		ConnectToServerResult_InProgress
+	);
+	PlatformAddJob(
+		GameState->JobQueue,
+		ConnectJob,
+		SceneState->ConnectToServerArgs,
+		JobPriority_Other
+	);
 
 	SceneState->PacketBufferSize = 256;
 	SceneState->PacketBuffer = PushSize(
@@ -66,19 +91,26 @@ void UpdateAndRenderJoinGame(
 	assets* Assets = &GameState->Assets;
 
 	uint32_t BytesRead = 0;
-	PlatformSocketRead(
-		SceneState->ConnectSocket,
-		SceneState->PacketBuffer,
-		SceneState->PacketBufferSize,
-		&BytesRead
-	);
+	if(
+		SceneState->ConnectToServerArgs->ConnectionResult == 
+		ConnectToServerResult_Complete
+	)
+	{
+		PlatformSocketRead(
+			SceneState->ConnectSocket,
+			SceneState->PacketBuffer,
+			SceneState->PacketBufferSize,
+			&BytesRead
+		);
+	}
 
 	PushClear(RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
+
 	PushText(
 		RenderGroup,
 		Assets,
 		FontHandle_TestFont,
-		"Connected to server",
+		"Connecting to server",
 		64,
 		50.0f,
 		SceneState->ScreenDimInWorld / 2.0f,

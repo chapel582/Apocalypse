@@ -12,8 +12,8 @@
 
 typedef enum
 {
-	JobPriority_Asset,
 	JobPriority_SendPacket,
+	JobPriority_Asset,
 	JobPriority_Other
 } default_job_priorities;
 

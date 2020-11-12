@@ -5,6 +5,7 @@
 
 struct host_game_state
 {
+	bool Listening;
 	vector2 ScreenDimInWorld;
 	socket_send_data_args* SendDataArgs;
 	platform_socket* ListenSocket;

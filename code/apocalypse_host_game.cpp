@@ -34,19 +34,22 @@ void StartHostGame(
 	SceneState->ListenSocket = PushStruct(
 		&GameState->TransientArena, platform_socket
 	);
+	*SceneState->ListenSocket = {};
 	SceneState->ClientSocket = PushStruct(
 		&GameState->TransientArena, platform_socket
 	);
+	*SceneState->ClientSocket = {};
 
 	// TODO: spawn a thread that waits for the connection
-	platform_socket_result ServerResult = PlatformCreateServer(
-		SceneState->ListenSocket, SceneState->ClientSocket
+	platform_socket_result ServerResult = PlatformCreateListen(
+		SceneState->ListenSocket
 	);
 	if(ServerResult != PlatformSocketResult_Success)
 	{
 		// TODO: logging
 		ASSERT(false);
 	}
+	SceneState->Listening = true;
 
 	SceneState->SendDataArgs = PushStruct(
 		&GameState->TransientArena, socket_send_data_args
@@ -73,6 +76,17 @@ void UpdateAndRenderHostGame(
 	render_group* RenderGroup = &GameState->RenderGroup;
 	assets* Assets = &GameState->Assets;
 
+	if(SceneState->Listening)
+	{
+		platform_socket_result SocketResult = PlatformAcceptConnection(
+			SceneState->ListenSocket, SceneState->ClientSocket
+		);
+		if(SocketResult == PlatformSocketResult_Success)
+		{
+			SceneState->Listening = false;
+		}
+	}
+	else
 	{
 		char* CharBuffer = (char*) SceneState->SendDataArgs->Buffer;
 		*CharBuffer++ = 'a';
@@ -97,7 +111,7 @@ void UpdateAndRenderHostGame(
 		RenderGroup,
 		Assets,
 		FontHandle_TestFont,
-		"Connected to client",
+		"Waiting for client",
 		64,
 		50.0f,
 		SceneState->ScreenDimInWorld / 2.0f,

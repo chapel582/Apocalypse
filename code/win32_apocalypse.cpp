@@ -199,15 +199,12 @@ void PlatformDeleteFile(char* File)
 	DeleteFileA(File);
 }
 
-platform_socket_result PlatformCreateServer(
-	platform_socket* ListenSocket, platform_socket* ClientSocket
-)
+platform_socket_result PlatformCreateListen(platform_socket* ListenSocket)
 {
 	platform_socket_result Result = PlatformSocketResult_Success;
 	
 	addrinfo* AddrInfo = NULL;
 	SOCKET Win32ListenSocket = INVALID_SOCKET;
-	SOCKET Win32ClientSocket = INVALID_SOCKET;
 
 	WSADATA WsaData = {};
 	int WsaResult = WSAStartup(MAKEWORD(2, 2), &WsaData);
@@ -244,6 +241,9 @@ platform_socket_result PlatformCreateServer(
 		// TODO: logging
 		goto error;
 	}
+	u_long ListenSocketMode = 1;  // NOTE: 1 to enable non-blocking socket
+	ioctlsocket(Win32ListenSocket, FIONBIO, &ListenSocketMode);
+	
 
 	int BindResult = bind(
 		Win32ListenSocket, AddrInfo->ai_addr, (int) AddrInfo->ai_addrlen
@@ -263,17 +263,7 @@ platform_socket_result PlatformCreateServer(
 		goto error;
 	}
 
-	// TODO: move this out to a thread?
-	Win32ClientSocket = accept(Win32ListenSocket, NULL, NULL);
-	if(Win32ClientSocket == INVALID_SOCKET)
-	{
-		// TODO: logging
-		Result = PlatformSocketResult_AcceptFail;
-		goto error;
-	}
-
 	ListenSocket->Socket = Win32ListenSocket;
-	ClientSocket->Socket = Win32ClientSocket; 
 
 	goto end;
 
@@ -281,10 +271,6 @@ error:
 	if(Win32ListenSocket != INVALID_SOCKET)
 	{
 		closesocket(Win32ListenSocket);
-	}
-	if(Win32ClientSocket != INVALID_SOCKET)
-	{
-		closesocket(Win32ClientSocket);
 	}
 	if(WsaResult != 0)
 	{
@@ -296,6 +282,44 @@ end:
 	{
 		freeaddrinfo(AddrInfo);
 	}
+	return Result;
+}
+
+platform_socket_result PlatformAcceptConnection(
+	platform_socket* ListenSocket, platform_socket* ClientSocketResult
+)
+{
+	// TODO: should we stop listening after this happens?
+
+	SOCKET Win32ClientSocket = INVALID_SOCKET;
+	platform_socket_result Result = PlatformSocketResult_Success;
+
+	Win32ClientSocket = accept(ListenSocket->Socket, NULL, NULL);
+	if(Win32ClientSocket == INVALID_SOCKET)
+	{
+		int LastError = WSAGetLastError();
+		if(LastError == WSAEWOULDBLOCK)
+		{
+			Result = PlatformSocketResult_NoPendingConnections;
+		}
+		else
+		{
+			// TODO: logging
+			Result = PlatformSocketResult_AcceptFail;
+		}
+		goto error;
+	}
+
+	ClientSocketResult->Socket = Win32ClientSocket;
+
+	goto end;
+
+error:
+	if(Win32ClientSocket != INVALID_SOCKET)
+	{
+		closesocket(Win32ClientSocket);
+	}
+end:
 	return Result;
 }
 

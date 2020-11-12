@@ -3,12 +3,28 @@
 #include "apocalypse.h"
 #include "apocalypse_platform.h"
 
+typedef enum
+{
+	ConnectToServerResult_InProgress,
+	ConnectToServerResult_Complete,	
+	ConnectToServerResult_Error
+} connect_to_server_result;
+
+struct connect_to_server_args
+{
+	platform_socket* ConnectSocket;
+	connect_to_server_result ConnectionResult;
+};
+
 struct join_game_state
 {
 	vector2 ScreenDimInWorld;
 	platform_socket* ConnectSocket;
+	
 	void* PacketBuffer;
 	uint32_t PacketBufferSize;
+
+	connect_to_server_args* ConnectToServerArgs;
 };
 
 void StartJoinGamePrep(game_state* GameState);

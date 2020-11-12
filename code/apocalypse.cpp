@@ -163,6 +163,8 @@ void GameInitMemory(
 		StartMainMenu(GameState, WindowWidth, WindowHeight);
 		GameState->Scene = SceneType_MainMenu;
 		GameState->LastFrameScene = GameState->Scene;
+
+		GameState->FrameCount = 0;
 	}
 }
 
@@ -184,6 +186,7 @@ void GameUpdateAndRender(
 
 	if(GameState->LastFrameScene != GameState->Scene)
 	{
+		GameState->FrameCount = 0;
 		switch(GameState->Scene)
 		{
 			case(SceneType_CardGame):
@@ -319,6 +322,8 @@ void GameUpdateAndRender(
 	RenderGroupToOutput(&GameState->RenderGroup, WindowWidth, WindowHeight);
 
 	ResetMemArena(&GameState->FrameArena);
+
+	GameState->FrameCount++;
 }
 
 void GameFillSound(game_memory* Memory, game_sound_output_buffer* SoundBuffer)

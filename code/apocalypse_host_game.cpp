@@ -5,6 +5,7 @@
 #include "apocalypse_platform.h"
 #include "apocalypse_render_group.h"
 #include "apocalypse_socket.h"
+#include "apocalypse_card_game.h"
 
 void StartHostGamePrep(game_state* GameState)
 {
@@ -30,7 +31,6 @@ void StartHostGame(
 		Vector2(WindowWidth, WindowHeight)
 	);
 
-	// TODO: spawn a thread that does this
 	SceneState->ListenSocket = PushStruct(
 		&GameState->TransientArena, platform_socket
 	);
@@ -38,6 +38,7 @@ void StartHostGame(
 		&GameState->TransientArena, platform_socket
 	);
 
+	// TODO: spawn a thread that waits for the connection
 	platform_socket_result ServerResult = PlatformCreateServer(
 		SceneState->ListenSocket, SceneState->ClientSocket
 	);

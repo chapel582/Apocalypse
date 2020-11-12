@@ -43,6 +43,9 @@ struct game_state
 	// NOTE: an arena for scene args
 	memory_arena SceneArgsArena;
 
+	// NOTE: number of frames that have passed in this scene
+	uint64_t FrameCount;
+
 	platform_job_queue* JobQueue;
 
 	assets Assets;

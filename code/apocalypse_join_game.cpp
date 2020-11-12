@@ -4,6 +4,7 @@
 #include "apocalypse_memory_arena.h"
 #include "apocalypse_platform.h"
 #include "apocalypse_render_group.h"
+#include "apocalypse_card_game.h"
 
 void StartJoinGamePrep(game_state* GameState)
 {

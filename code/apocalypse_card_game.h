@@ -17,6 +17,8 @@
 #include "apocalypse_player_id.h"
 #include "apocalypse_deck_storage.h"
 #include "apocalypse_alert.h"
+#include "apocalypse_ui.h"
+#include "apocalypse_scroll.h"
 
 typedef enum
 {

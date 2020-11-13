@@ -92,7 +92,7 @@ void StartDeckSelectorPrep(
 )
 {
 	start_deck_selector_args* SceneArgs = PushStruct(
-		&GameState->TransientArena, start_deck_selector_args
+		&GameState->SceneArgsArena, start_deck_selector_args
 	);
 
 	SceneArgs->ToStart = ToStart;

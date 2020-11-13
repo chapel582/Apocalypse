@@ -66,14 +66,14 @@ void ResetAssets(assets* Assets)
 load_asset_job* GetJob(assets* Assets)
 {
 	load_asset_job* Job = NULL;
+	PlatformGetMutex(Assets->AvailableListLock);
 	if(Assets->AvailableHead)
 	{
-		PlatformGetMutex(Assets->AvailableListLock);
 		Job = Assets->AvailableHead; 
 		Assets->AvailableHead = Assets->AvailableHead->Next;
-		PlatformReleaseMutex(Assets->AvailableListLock);
 	}
-	else
+	PlatformReleaseMutex(Assets->AvailableListLock);
+	if(Job == NULL)
 	{
 		PlatformGetMutex(Assets->ArenaLock);
 		Job = PushStruct(&Assets->Arena, load_asset_job);

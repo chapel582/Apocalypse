@@ -46,7 +46,14 @@ void DeleteDeck(game_state* GameState, char* DeckName)
 	char PathToDeck[256];
 	FormatDeckPath(PathToDeck, sizeof(PathToDeck), DeckName);
 	DeleteDeck(PathToDeck);
-	StartDeckSelectorPrep(GameState, SceneType_DeckEditor);
+	StartDeckSelectorPrep(
+		GameState,
+		SceneType_DeckEditor,
+		false,
+		false,
+		NULL,
+		NULL
+	);
 }
 
 uint32_t GetNumCardsInDeck(deck_editor_cards* DeckCards)

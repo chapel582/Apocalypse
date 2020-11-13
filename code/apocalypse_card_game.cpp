@@ -508,18 +508,39 @@ void SetTurnTimer(card_game_state* SceneState, float Value)
 }
 
 void StartCardGamePrep(
-	game_state* GameState, char* P1DeckName, char* P2DeckName
+	game_state* GameState,
+	char* P1DeckName,
+	char* P2DeckName,
+	bool NetworkGame,
+	bool IsLeader,
+	platform_socket* ListenSocket,
+	platform_socket* ConnectSocket
 )
 {
 	start_card_game_args* SceneArgs = PushStruct(
 		&GameState->SceneArgsArena, start_card_game_args
 	);
+	*SceneArgs = {};
 
 	char Buffer[PLATFORM_MAX_PATH];
 	FormatDeckPath(Buffer, sizeof(Buffer), P1DeckName);
 	SceneArgs->P1Deck = LoadDeck(Buffer);
 	FormatDeckPath(Buffer, sizeof(Buffer), P2DeckName);
 	SceneArgs->P2Deck = LoadDeck(Buffer);
+
+	if(NetworkGame)
+	{
+		SceneArgs->IsLeader = IsLeader;
+		if(ListenSocket)
+		{
+			SceneArgs->ListenSocket = *ListenSocket;
+		}
+		if(ConnectSocket)
+		{
+			SceneArgs->ConnectSocket = *ConnectSocket;
+		}
+		SceneArgs->NetworkGame = true;
+	}
 
 	GameState->SceneArgs = SceneArgs;
 	GameState->Scene = SceneType_CardGame; 
@@ -754,6 +775,11 @@ void StartCardGame(
 		),
 		PlayerLifeRectDim
 	);
+
+	SceneState->NetworkGame = SceneArgs->NetworkGame;
+	SceneState->IsLeader = SceneArgs->IsLeader;
+	SceneState->ListenSocket = SceneArgs->ListenSocket;
+	SceneState->ConnectSocket = SceneArgs->ConnectSocket;
 
 	// TODO: remove me!
 	// PlaySound(

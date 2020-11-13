@@ -10,6 +10,11 @@
 struct start_deck_selector_args
 {
 	scene_type ToStart;
+
+	bool NetworkGame;
+	bool IsLeader;
+	platform_socket ListenSocket;
+	platform_socket ConnectSocket;
 };
 
 struct load_deck_button
@@ -38,9 +43,21 @@ struct deck_selector_state
 	alert Alert;
 
 	ui_context UiContext;
+
+	bool IsLeader;
+	bool NetworkGame;
+	platform_socket ListenSocket;
+	platform_socket ConnectSocket;
 };
 
-void StartDeckSelectorPrep(game_state* GameState, scene_type ToStart);
+void StartDeckSelectorPrep(
+	game_state* GameState,
+	scene_type ToStart,
+	bool NetworkGame,
+	bool IsLeader,
+	platform_socket* ListenSocket,
+	platform_socket* ConnectSocket
+);
 void UpdateAndRenderDeckSelector(
 	game_state* GameState,
 	deck_selector_state* SceneState,

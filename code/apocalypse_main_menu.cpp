@@ -89,7 +89,14 @@ void UpdateAndRenderMainMenu(
 			);
 			if(Result == ButtonHandleEvent_TakeAction)
 			{
-				StartDeckSelectorPrep(GameState, SceneType_CardGame);				
+				StartDeckSelectorPrep(
+					GameState,
+					SceneType_CardGame,
+					false,
+					false,
+					NULL,
+					NULL
+				);
 			}
 			Result = ButtonHandleEvent(
 				&SceneState->UiContext,
@@ -119,7 +126,14 @@ void UpdateAndRenderMainMenu(
 			);
 			if(Result == ButtonHandleEvent_TakeAction)
 			{
-				StartDeckSelectorPrep(GameState, SceneType_DeckEditor);
+				StartDeckSelectorPrep(
+					GameState,
+					SceneType_DeckEditor,
+					false,
+					false,
+					NULL,
+					NULL
+				);
 			}
 			
 			UserEventIndex++;

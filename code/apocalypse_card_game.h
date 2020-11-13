@@ -221,15 +221,31 @@ struct card_game_state
 	float StackYStart;
 	vector2 StackEntryInfoDim;
 	scroll_bar StackScrollBar;
+
+	// NOTE: server is assumed to be leader (has final say on game state)
+	bool IsLeader;
+	bool NetworkGame;
+	platform_socket ListenSocket;
+	platform_socket ConnectSocket;
 };
 
 struct start_card_game_args
 {
 	loaded_deck P1Deck;
 	loaded_deck P2Deck;
+	platform_socket ListenSocket;
+	platform_socket ConnectSocket;
+	bool IsLeader;
+	bool NetworkGame;
 };
 void StartCardGamePrep(
-	game_state* GameState, char* P1DeckName, char* P2DeckName
+	game_state* GameState,
+	char* P1DeckName,
+	char* P2DeckName,
+	bool NetworkGame,
+	bool IsLeader,
+	platform_socket* ListenSocket,
+	platform_socket* ConnectSocket
 );
 
 #define APOCALYPSE_CARD_GAME_H

@@ -5,6 +5,7 @@
 #include "apocalypse_platform.h"
 #include "apocalypse_render_group.h"
 #include "apocalypse_card_game.h"
+#include "apocalypse_deck_selector.h"
 
 void ConnectJob(void* Data)
 {
@@ -96,11 +97,13 @@ void UpdateAndRenderJoinGame(
 		ConnectToServerResult_Complete
 	)
 	{
-		PlatformSocketRead(
-			SceneState->ConnectSocket,
-			SceneState->PacketBuffer,
-			SceneState->PacketBufferSize,
-			&BytesRead
+		StartDeckSelectorPrep(
+			GameState,
+			SceneType_CardGame,
+			true,
+			false,
+			NULL,
+			SceneState->ConnectSocket
 		);
 	}
 

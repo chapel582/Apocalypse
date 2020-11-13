@@ -6,6 +6,7 @@
 #include "apocalypse_render_group.h"
 #include "apocalypse_socket.h"
 #include "apocalypse_card_game.h"
+#include "apocalypse_deck_selector.h"
 
 void StartHostGamePrep(game_state* GameState)
 {
@@ -88,21 +89,13 @@ void UpdateAndRenderHostGame(
 	}
 	else
 	{
-		char* CharBuffer = (char*) SceneState->SendDataArgs->Buffer;
-		*CharBuffer++ = 'a';
-		*CharBuffer++ = 'b';
-		*CharBuffer++ = 'c';
-		*CharBuffer++ = '1';
-		*CharBuffer++ = '2';
-		*CharBuffer++ = '3';
-		*CharBuffer++ = 0;
-
-		SceneState->SendDataArgs->DataSize = 7;
-		PlatformAddJob(
-			GameState->JobQueue,
-			SocketSendDataJob,
-			SceneState->SendDataArgs,
-			JobPriority_SendPacket
+		StartDeckSelectorPrep(
+			GameState,
+			SceneType_CardGame,
+			true,
+			true,
+			SceneState->ListenSocket,
+			SceneState->ClientSocket
 		);
 	}
 

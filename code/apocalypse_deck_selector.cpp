@@ -18,7 +18,21 @@ void DeckSelectorPrepNextScene(
 		{
 			if(AlreadyExists)
 			{
-				StartCardGamePrep(GameState, SceneState->DeckName, "P2Deck");
+				char* P2Deck = "P2Deck";
+				if(SceneState->NetworkGame)
+				{
+					P2Deck = SceneState->DeckName;
+					// TODO: might be good to clean up dummy deck
+				}
+				StartCardGamePrep(
+					GameState,
+					SceneState->DeckName,
+					P2Deck,
+					SceneState->NetworkGame,
+					SceneState->IsLeader,
+					&SceneState->ListenSocket,
+					&SceneState->ConnectSocket
+				);
 			}
 			else
 			{
@@ -49,13 +63,31 @@ float GetDeckScrollBoxLeft(rectangle DeckNameInputRectangle)
 	return GetRight(DeckNameInputRectangle) + 10.0f;
 }
 
-void StartDeckSelectorPrep(game_state* GameState, scene_type ToStart)
+void StartDeckSelectorPrep(
+	game_state* GameState,
+	scene_type ToStart,
+	bool NetworkGame,
+	bool IsLeader,
+	platform_socket* ListenSocket,
+	platform_socket* ConnectSocket
+)
 {
 	start_deck_selector_args* SceneArgs = PushStruct(
 		&GameState->TransientArena, start_deck_selector_args
 	);
 
 	SceneArgs->ToStart = ToStart;
+
+	SceneArgs->NetworkGame = NetworkGame;
+	SceneArgs->IsLeader = IsLeader;
+	if(ListenSocket)
+	{
+		SceneArgs->ListenSocket = *ListenSocket;
+	}
+	if(ConnectSocket)
+	{
+		SceneArgs->ConnectSocket = *ConnectSocket;
+	}
 
 	GameState->SceneArgs = SceneArgs;
 	GameState->Scene = SceneType_DeckSelector; 
@@ -141,6 +173,11 @@ void StartDeckSelector(
 		30.0f,
 		DeckScrollBox
 	);
+
+	SceneState->IsLeader = Args->IsLeader;
+	SceneState->NetworkGame = Args->NetworkGame;
+	SceneState->ListenSocket = Args->ListenSocket;
+	SceneState->ConnectSocket = Args->ConnectSocket;
 }
 
 void UpdateAndRenderDeckSelector(

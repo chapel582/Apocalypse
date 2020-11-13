@@ -63,6 +63,25 @@ float GetDeckScrollBoxLeft(rectangle DeckNameInputRectangle)
 	return GetRight(DeckNameInputRectangle) + 10.0f;
 }
 
+void StartWaiting(
+	game_state* GameState, deck_selector_state* SceneState
+)
+{
+	SceneState->WaitingForOpponent = true;
+	packet_header* Packet = PushStruct(&GameState->FrameArena, packet_header);
+	*Packet = {};
+	Packet->Type = Packet_Ready;
+	Packet->DataSize = sizeof(packet_header);
+	platform_send_socket_result SendResult = PlatformSocketSend(
+		&SceneState->ConnectSocket, Packet, Packet->DataSize
+	);
+
+	// TODO: error handling
+	ASSERT(
+		SendResult == PlatformSendSocketResult_Success
+	);
+}
+
 void StartDeckSelectorPrep(
 	game_state* GameState,
 	scene_type ToStart,
@@ -102,6 +121,11 @@ void StartDeckSelector(
 	);
 	scene_type ToStart = Args->ToStart;
 
+	bool IsLeader = Args->IsLeader;
+	bool NetworkGame = Args->NetworkGame;
+	platform_socket ListenSocket = Args->ListenSocket;
+	platform_socket ConnectSocket = Args->ConnectSocket;
+
 	ResetMemArena(&GameState->TransientArena);
 	
 	GameState->SceneState = PushStruct(
@@ -112,6 +136,11 @@ void StartDeckSelector(
 		GameState->SceneState
 	);
 	SceneState->ToStart = ToStart;
+
+	SceneState->ScreenDimInWorld = TransformVectorToBasis(
+		&GameState->WorldToCamera,
+		Vector2(WindowWidth, WindowHeight)
+	);
 
 	InitUiContext(&SceneState->UiContext);
 	ui_context* UiContext = &SceneState->UiContext;
@@ -174,10 +203,11 @@ void StartDeckSelector(
 		DeckScrollBox
 	);
 
-	SceneState->IsLeader = Args->IsLeader;
-	SceneState->NetworkGame = Args->NetworkGame;
-	SceneState->ListenSocket = Args->ListenSocket;
-	SceneState->ConnectSocket = Args->ConnectSocket;
+	SceneState->IsLeader = IsLeader;
+	SceneState->NetworkGame = NetworkGame;
+	SceneState->ListenSocket = ListenSocket;
+	SceneState->ConnectSocket = ConnectSocket;
+	SceneState->WaitingForOpponent = false;
 }
 
 void UpdateAndRenderDeckSelector(
@@ -252,202 +282,264 @@ void UpdateAndRenderDeckSelector(
 	int KeyboardEventIndex = 0;
 
 	ui_context* UiContext = &SceneState->UiContext;
-	while(
-		(MouseEventIndex < MouseEvents->Length) ||
-		(KeyboardEventIndex < KeyboardEvents->Length)
-	)
+	if(!(SceneState->NetworkGame && SceneState->WaitingForOpponent))
 	{
-		for(; MouseEventIndex < MouseEvents->Length; MouseEventIndex++)
+		while(
+			(MouseEventIndex < MouseEvents->Length) ||
+			(KeyboardEventIndex < KeyboardEvents->Length)
+		)
 		{
-			game_mouse_event* MouseEvent = (
-				&MouseEvents->Events[MouseEventIndex]
-			);
-
-			if(MouseEvent->UserEventIndex != UserEventIndex)
+			for(; MouseEventIndex < MouseEvents->Length; MouseEventIndex++)
 			{
-				break;
-			}
+				game_mouse_event* MouseEvent = (
+					&MouseEvents->Events[MouseEventIndex]
+				);
 
-			vector2 MouseEventWorldPos = TransformPosFromBasis(
-				&GameState->WorldToCamera,
-				TransformPosFromBasis(
-					&GameState->CameraToScreen, 
-					Vector2(MouseEvent->XPos, MouseEvent->YPos)
-				)
-			);
-			
-			TextInputHandleMouse(
-				UiContext,
-				&SceneState->DeckNameInput,
-				*DeckNameInputRectangle,
-				MouseEvent,
-				MouseEventWorldPos
-			);
-
-			vector2 Dim = SceneState->LoadDeckButtonDim;
-			load_deck_button* LoadDeckButtons = SceneState->LoadDeckButtons;
-			char* CurrentDeckName = SceneState->DeckNames;
-			flat_string_array_reader FlatArrayReader;
-			InitFlatStringArrayReader(
-				&FlatArrayReader,
-				CurrentDeckName,
-				SceneState->DeckNamesSize
-			);
-			for(
-				uint32_t ButtonIndex = 0;
-				ButtonIndex < ARRAY_COUNT(SceneState->LoadDeckButtons);
-				ButtonIndex++
-			)
-			{
-				if(CurrentDeckName == NULL)
+				if(MouseEvent->UserEventIndex != UserEventIndex)
 				{
 					break;
 				}
-				load_deck_button* LoadDeckButton = (
-					LoadDeckButtons + ButtonIndex
-				);
-				rectangle Rectangle = MakeNextRectangle(
-					GetDeckScrollBoxLeft(*DeckNameInputRectangle),
-					SceneState->LoadDeckButtonsYStart,
-					SceneState->LoadDeckButtonsYMargin,
-					SceneState->LoadDeckButtonDim,
-					ButtonIndex
-				);
 
-				button_handle_event_result Result = ButtonHandleEvent(
+				vector2 MouseEventWorldPos = TransformPosFromBasis(
+					&GameState->WorldToCamera,
+					TransformPosFromBasis(
+						&GameState->CameraToScreen, 
+						Vector2(MouseEvent->XPos, MouseEvent->YPos)
+					)
+				);
+				
+				TextInputHandleMouse(
 					UiContext,
-					LoadDeckButton->UiId,
-					Rectangle,
+					&SceneState->DeckNameInput,
+					*DeckNameInputRectangle,
 					MouseEvent,
 					MouseEventWorldPos
 				);
-				if(Result == ButtonHandleEvent_TakeAction)
-				{
-					uint32_t DotIndex = FindIndex(
-						CurrentDeckName, '.', FlatArrayReader.BytesRemaining
-					);
-					strcpy_s(
-						SceneState->DeckName,
-						SceneState->DeckNameBufferSize,
-						CurrentDeckName
-					);
-					SceneState->DeckName[DotIndex] = 0;
 
-					DeckSelectorPrepNextScene(GameState, SceneState, true);
-					break;
-				}
-				else
-				{
-					CurrentDeckName = GetNextString(&FlatArrayReader); 
-				}
-			}
-
-			float MinY = 0.0f;
-			scroll_handle_mouse_code ScrollResult = ScrollHandleMouse(
-				UiContext,
-				&SceneState->DeckScrollBar,
-				MouseEvent,
-				MouseEventWorldPos,
-				MinY, 
-				SceneState->DeckScrollBar.Trough.Dim.Y
-			);
-			if(ScrollResult == ScrollHandleMouse_Moved)
-			{
-				SceneState->LoadDeckButtonsYStart = GetElementsYStart(
-					&SceneState->DeckScrollBar, AllElementsHeight
+				vector2 Dim = SceneState->LoadDeckButtonDim;
+				load_deck_button* LoadDeckButtons = SceneState->LoadDeckButtons;
+				char* CurrentDeckName = SceneState->DeckNames;
+				flat_string_array_reader FlatArrayReader;
+				InitFlatStringArrayReader(
+					&FlatArrayReader,
+					CurrentDeckName,
+					SceneState->DeckNamesSize
 				);
-			}
-
-			UserEventIndex++;
-		}
-
-		for(; KeyboardEventIndex < KeyboardEvents->Length; KeyboardEventIndex++)
-		{
-			game_keyboard_event* KeyboardEvent = (
-				&KeyboardEvents->Events[KeyboardEventIndex]
-			);
-			if(KeyboardEvent->UserEventIndex != UserEventIndex)
-			{
-				break;
-			}
-
-			if(KeyboardEvent->IsDown != KeyboardEvent->WasDown)
-			{
-				// NOTE: :common keyboard actions across all states
-				switch(KeyboardEvent->Code)
+				for(
+					uint32_t ButtonIndex = 0;
+					ButtonIndex < ARRAY_COUNT(SceneState->LoadDeckButtons);
+					ButtonIndex++
+				)
 				{
-					case(0x1B): // NOTE: Escape V-code
+					if(CurrentDeckName == NULL)
 					{
-						GameState->Scene = SceneType_MainMenu; 
 						break;
 					}
-				}
-
-				text_input_kb_result KeyboardResult = (
-					TextInputHandleKeyboard(
-						UiContext, &SceneState->DeckNameInput, KeyboardEvent
-					)
-				);
-				if(KeyboardResult == TextInputKbResult_Submit)
-				{
-					bool AlreadyExists = false;
-					char* CurrentDeckName = SceneState->DeckNames;
-					flat_string_array_reader FlatArrayReader;
-					InitFlatStringArrayReader(
-						&FlatArrayReader,
-						CurrentDeckName,
-						SceneState->DeckNamesSize
+					load_deck_button* LoadDeckButton = (
+						LoadDeckButtons + ButtonIndex
 					);
-					for(
-						uint32_t ButtonIndex = 0;
-						(
-							ButtonIndex < 
-							ARRAY_COUNT(SceneState->LoadDeckButtons)
-						);
-						ButtonIndex++
-					)
+					rectangle Rectangle = MakeNextRectangle(
+						GetDeckScrollBoxLeft(*DeckNameInputRectangle),
+						SceneState->LoadDeckButtonsYStart,
+						SceneState->LoadDeckButtonsYMargin,
+						SceneState->LoadDeckButtonDim,
+						ButtonIndex
+					);
+
+					button_handle_event_result Result = ButtonHandleEvent(
+						UiContext,
+						LoadDeckButton->UiId,
+						Rectangle,
+						MouseEvent,
+						MouseEventWorldPos
+					);
+					if(Result == ButtonHandleEvent_TakeAction)
 					{
-						if(CurrentDeckName == NULL)
-						{
-							break;
-						}
-
-						uint32_t StopAt = FindIndex(
-							CurrentDeckName, 
-							'.', 
-							FlatArrayReader.BytesRemaining
+						uint32_t DotIndex = FindIndex(
+							CurrentDeckName, '.', FlatArrayReader.BytesRemaining
 						);
+						strcpy_s(
+							SceneState->DeckName,
+							SceneState->DeckNameBufferSize,
+							CurrentDeckName
+						);
+						SceneState->DeckName[DotIndex] = 0;
 
-						if(
-							StrCmp(								
-								CurrentDeckName,
-								SceneState->DeckName,
-								StopAt
-							)
-						)
+						if(SceneState->NetworkGame)
 						{
-							// NOTE: the name the user typed in is already 
-							// CONT: a deck. load that deck
-							AlreadyExists = true;
-							break;
+							StartWaiting(GameState, SceneState);
 						}
-
-						CurrentDeckName = GetNextString(&FlatArrayReader);
+						else
+						{
+							DeckSelectorPrepNextScene(
+								GameState, SceneState, true
+							);
+						}
+						break;
 					}
-					DeckSelectorPrepNextScene(
-						GameState, SceneState, AlreadyExists
+					else
+					{
+						CurrentDeckName = GetNextString(&FlatArrayReader); 
+					}
+				}
+
+				float MinY = 0.0f;
+				scroll_handle_mouse_code ScrollResult = ScrollHandleMouse(
+					UiContext,
+					&SceneState->DeckScrollBar,
+					MouseEvent,
+					MouseEventWorldPos,
+					MinY, 
+					SceneState->DeckScrollBar.Trough.Dim.Y
+				);
+				if(ScrollResult == ScrollHandleMouse_Moved)
+				{
+					SceneState->LoadDeckButtonsYStart = GetElementsYStart(
+						&SceneState->DeckScrollBar, AllElementsHeight
 					);
 				}
+
+				UserEventIndex++;
 			}
 
-			UserEventIndex++;
+			for(
+				;
+				KeyboardEventIndex < KeyboardEvents->Length;
+				KeyboardEventIndex++
+			)
+			{
+				game_keyboard_event* KeyboardEvent = (
+					&KeyboardEvents->Events[KeyboardEventIndex]
+				);
+				if(KeyboardEvent->UserEventIndex != UserEventIndex)
+				{
+					break;
+				}
+
+				if(KeyboardEvent->IsDown != KeyboardEvent->WasDown)
+				{
+					// NOTE: :common keyboard actions across all states
+					switch(KeyboardEvent->Code)
+					{
+						case(0x1B): // NOTE: Escape V-code
+						{
+							GameState->Scene = SceneType_MainMenu; 
+							break;
+						}
+					}
+
+					text_input_kb_result KeyboardResult = (
+						TextInputHandleKeyboard(
+							UiContext, &SceneState->DeckNameInput, KeyboardEvent
+						)
+					);
+					if(KeyboardResult == TextInputKbResult_Submit)
+					{
+						bool AlreadyExists = false;
+						char* CurrentDeckName = SceneState->DeckNames;
+						flat_string_array_reader FlatArrayReader;
+						InitFlatStringArrayReader(
+							&FlatArrayReader,
+							CurrentDeckName,
+							SceneState->DeckNamesSize
+						);
+						for(
+							uint32_t ButtonIndex = 0;
+							(
+								ButtonIndex < 
+								ARRAY_COUNT(SceneState->LoadDeckButtons)
+							);
+							ButtonIndex++
+						)
+						{
+							if(CurrentDeckName == NULL)
+							{
+								break;
+							}
+
+							uint32_t StopAt = FindIndex(
+								CurrentDeckName, 
+								'.', 
+								FlatArrayReader.BytesRemaining
+							);
+
+							if(
+								StrCmp(								
+									CurrentDeckName,
+									SceneState->DeckName,
+									StopAt
+								)
+							)
+							{
+								// NOTE: the name the user typed in is already 
+								// CONT: a deck. load that deck
+								AlreadyExists = true;
+								break;
+							}
+
+							CurrentDeckName = GetNextString(&FlatArrayReader);
+						}
+						if(SceneState->NetworkGame)
+						{
+							if(AlreadyExists)
+							{
+								StartWaiting(GameState, SceneState);
+							}
+							else
+							{
+								DisplayMessageFor(
+									GameState,
+									&SceneState->Alert,
+									"Cannot load non-existent deck",
+									1.0f
+								);
+							}
+						}
+						else
+						{
+							DeckSelectorPrepNextScene(
+								GameState, SceneState, AlreadyExists
+							);
+						}
+					}
+				}
+
+				UserEventIndex++;
+			}
 		}
 	}
 
-	UpdateTextInput(UiContext, &SceneState->DeckNameInput, DtForFrame);
+	if(SceneState->NetworkGame && SceneState->WaitingForOpponent)
+	{
+		packet_header* HeaderReceived = PushStruct(
+			&GameState->FrameArena, packet_header
+		);
+		uint32_t BytesRead = 0;
+		platform_read_socket_result ReadResult = PlatformSocketRead(
+			&SceneState->ConnectSocket,
+			HeaderReceived,
+			sizeof(packet_header),
+			&BytesRead
+		);
+		if(
+			ReadResult == PlatformReadSocketResult_Success && 
+			BytesRead == sizeof(packet_header)
+		)
+		{
+			if(HeaderReceived->Type == Packet_Ready)
+			{
+				DeckSelectorPrepNextScene(GameState, SceneState, true);
+			}
+		}
+	}
+	else
+	{
+		UpdateTextInput(UiContext, &SceneState->DeckNameInput, DtForFrame);
+	}
 
 	render_group* DefaultRenderGroup = &GameState->RenderGroup;
 	assets* Assets = &GameState->Assets;
+
 	PushClear(DefaultRenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
 	
 	vector4 White = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -455,74 +547,91 @@ void UpdateAndRenderDeckSelector(
 
 	vector4 FontColor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 	vector4 BackgroundColor = Vector4(0.1f, 0.1f, 0.1f, 1.0f);
-	bitmap_handle Background = BitmapHandle_TestCard2;
-	PushTextInput(
-		UiContext,
-		&SceneState->DeckNameInput,
-		FontColor,
-		*DeckNameInputRectangle,
-		Background,
-		BackgroundColor,
-		Assets,
-		DefaultRenderGroup,
-		&GameState->FrameArena
-	);
-
-	vector2 Dim = SceneState->LoadDeckButtonDim;
-	load_deck_button* LoadDeckButtons = SceneState->LoadDeckButtons;
-	flat_string_array_reader FlatArrayReader;
-	char* CurrentDeckName = SceneState->DeckNames;
-	InitFlatStringArrayReader(
-		&FlatArrayReader, CurrentDeckName, SceneState->DeckNamesSize
-	);
-	for(
-		uint32_t ButtonIndex = 0;
-		ButtonIndex < ARRAY_COUNT(SceneState->LoadDeckButtons);
-		ButtonIndex++
-	)
+	if(SceneState->NetworkGame && SceneState->WaitingForOpponent)
 	{
-		if(CurrentDeckName == NULL)
-		{
-			break;
-		}
-		load_deck_button* LoadDeckButton = (
-			LoadDeckButtons + ButtonIndex
-		);
-		rectangle Rectangle = MakeNextRectangle(
-			GetDeckScrollBoxLeft(*DeckNameInputRectangle),
-			SceneState->LoadDeckButtonsYStart,
-			SceneState->LoadDeckButtonsYMargin,
-			SceneState->LoadDeckButtonDim,
-			ButtonIndex
-		);
-
-		uint32_t StopAt = FindIndex(
-			CurrentDeckName, '.', FlatArrayReader.BytesRemaining
-		);
-		PushButtonToRenderGroup(
-			Rectangle,
-			BitmapHandle_TestCard2,
+		PushTextCentered(
 			DefaultRenderGroup,
-			Assets, 
-			CurrentDeckName,
-			StopAt,
+			Assets,
 			FontHandle_TestFont,
-			Black,
+			"Waiting for opponent",
+			64,
+			50.0f,
+			SceneState->ScreenDimInWorld / 2.0f,
+			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+			&GameState->FrameArena
+		);
+	}
+	else
+	{
+		bitmap_handle Background = BitmapHandle_TestCard2;
+		PushTextInput(
+			UiContext,
+			&SceneState->DeckNameInput,
+			FontColor,
+			*DeckNameInputRectangle,
+			Background,
+			BackgroundColor,
+			Assets,
+			DefaultRenderGroup,
 			&GameState->FrameArena
 		);
 
-		CurrentDeckName = GetNextString(&FlatArrayReader);
-	}
-
-	PushCenteredAlert(&SceneState->Alert, GameState, ScreenDimInWorld);
-
-	if(CanScroll(&SceneState->DeckScrollBar))
-	{
-		PushScrollBarToRenderGroup(
-			SceneState->DeckScrollBar.Rect,
-			BitmapHandle_TestCard2,
-			DefaultRenderGroup,
-			Assets
+		vector2 Dim = SceneState->LoadDeckButtonDim;
+		load_deck_button* LoadDeckButtons = SceneState->LoadDeckButtons;
+		flat_string_array_reader FlatArrayReader;
+		char* CurrentDeckName = SceneState->DeckNames;
+		InitFlatStringArrayReader(
+			&FlatArrayReader, CurrentDeckName, SceneState->DeckNamesSize
 		);
+		for(
+			uint32_t ButtonIndex = 0;
+			ButtonIndex < ARRAY_COUNT(SceneState->LoadDeckButtons);
+			ButtonIndex++
+		)
+		{
+			if(CurrentDeckName == NULL)
+			{
+				break;
+			}
+			load_deck_button* LoadDeckButton = (
+				LoadDeckButtons + ButtonIndex
+			);
+			rectangle Rectangle = MakeNextRectangle(
+				GetDeckScrollBoxLeft(*DeckNameInputRectangle),
+				SceneState->LoadDeckButtonsYStart,
+				SceneState->LoadDeckButtonsYMargin,
+				SceneState->LoadDeckButtonDim,
+				ButtonIndex
+			);
+
+			uint32_t StopAt = FindIndex(
+				CurrentDeckName, '.', FlatArrayReader.BytesRemaining
+			);
+			PushButtonToRenderGroup(
+				Rectangle,
+				BitmapHandle_TestCard2,
+				DefaultRenderGroup,
+				Assets, 
+				CurrentDeckName,
+				StopAt,
+				FontHandle_TestFont,
+				Black,
+				&GameState->FrameArena
+			);
+
+			CurrentDeckName = GetNextString(&FlatArrayReader);
+		}
+
+		PushCenteredAlert(&SceneState->Alert, GameState, ScreenDimInWorld);
+
+		if(CanScroll(&SceneState->DeckScrollBar))
+		{
+			PushScrollBarToRenderGroup(
+				SceneState->DeckScrollBar.Rect,
+				BitmapHandle_TestCard2,
+				DefaultRenderGroup,
+				Assets
+			);
+		}
 	}
 }

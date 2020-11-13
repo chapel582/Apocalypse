@@ -26,6 +26,8 @@ struct deck_selector_state
 {
 	scene_type ToStart;
 
+	vector2 ScreenDimInWorld;
+
 	text_input DeckNameInput;
 	rectangle DeckNameInputRectangle;
 	char* DeckName;
@@ -44,6 +46,7 @@ struct deck_selector_state
 
 	ui_context UiContext;
 
+	bool WaitingForOpponent;
 	bool IsLeader;
 	bool NetworkGame;
 	platform_socket ListenSocket;

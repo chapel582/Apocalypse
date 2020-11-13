@@ -637,8 +637,8 @@ push_text_result PushTextCentered(
 	vector2 Center,
 	vector4 Color,
 	memory_arena* FrameArena,
-	uint32_t Layer = 1,
-	uint32_t ClipRectIndex = 0
+	uint32_t Layer,
+	uint32_t ClipRectIndex
 )
 {
 	// NOTE: FontHeight is in world units

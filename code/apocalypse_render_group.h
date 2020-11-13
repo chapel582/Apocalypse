@@ -160,6 +160,19 @@ push_text_result PushText(
 	uint32_t Layer = 1,
 	uint32_t ClipRectIndex = 0
 );
+push_text_result PushTextCentered(
+	render_group* Group,
+	assets* Assets,
+	font_handle FontHandle,
+	char* CodePoints,
+	uint32_t MaxCodePointCount,
+	float FontHeight, 
+	vector2 Center,
+	vector4 Color,
+	memory_arena* FrameArena,
+	uint32_t Layer = 1,
+	uint32_t ClipRectIndex = 0
+);
 void PushClear(render_group* Group, vector4 Color, uint32_t Layer = 0);
 vector2 TransformPosFromBasis(basis* Basis, vector2 Vector);
 vector2 TransformVectorToBasis(basis* Basis, vector2 Vector);

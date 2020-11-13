@@ -51,16 +51,6 @@ void StartHostGame(
 		ASSERT(false);
 	}
 	SceneState->Listening = true;
-
-	SceneState->SendDataArgs = PushStruct(
-		&GameState->TransientArena, socket_send_data_args
-	);
-	SceneState->SendDataArgs->Socket = SceneState->ClientSocket;
-	SceneState->SendDataArgs->BufferSize = 256;
-	SceneState->SendDataArgs->Buffer = PushSize(
-		&GameState->TransientArena,
-		SceneState->SendDataArgs->BufferSize
-	);
 }
 
 void UpdateAndRenderHostGame(
@@ -110,9 +100,5 @@ void UpdateAndRenderHostGame(
 		SceneState->ScreenDimInWorld / 2.0f,
 		Vector4(1.0f, 1.0f, 1.0f, 1.0f),
 		FrameArena
-	);
-
-	PlatformCompleteAllJobsAtPriority(
-		GameState->JobQueue, JobPriority_SendPacket
 	);
 }

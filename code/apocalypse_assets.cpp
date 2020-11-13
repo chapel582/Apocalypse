@@ -12,6 +12,7 @@ void ResetAssets(assets* Assets)
 	PlatformGetMutex(Assets->AvailableListLock);
 	PlatformGetMutex(Assets->ArenaLock);
 	
+	// TODO: probably just want to complete asset jobs?
 	PlatformCompleteAllJobs(Assets->JobQueue);
 	for(
 		int InfoIndex = 0;

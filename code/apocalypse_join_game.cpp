@@ -97,6 +97,9 @@ void UpdateAndRenderJoinGame(
 		ConnectToServerResult_Complete
 	)
 	{
+		// TODO: probably want to just join a thread/check for a particular job
+		// CONT: finishing, instead of all jobs
+		PlatformCompleteAllJobs(GameState->JobQueue);
 		StartDeckSelectorPrep(
 			GameState,
 			SceneType_CardGame,

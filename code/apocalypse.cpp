@@ -113,7 +113,7 @@ void GameInitMemory(
 		InitMemArena(
 			&AssetArena,
 			TransientStorageDivision,
-			GetEndOfArena(&GameState->FrameArena)
+			GetEndOfArena(&GameState->SceneArgsArena)
 		);
 
 		GameState->WorldToCamera = MakeBasis(

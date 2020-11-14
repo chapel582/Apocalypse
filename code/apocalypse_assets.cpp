@@ -75,9 +75,9 @@ load_asset_job* GetJob(assets* Assets)
 	PlatformReleaseMutex(Assets->AvailableListLock);
 	if(Job == NULL)
 	{
-		PlatformGetMutex(Assets->ArenaLock);
-		Job = PushStruct(&Assets->Arena, load_asset_job);
-		PlatformReleaseMutex(Assets->ArenaLock);
+		// PlatformGetMutex(Assets->ArenaLock);
+		Job = PushStruct(&Assets->JobArena, load_asset_job);
+		// PlatformReleaseMutex(Assets->ArenaLock);
 	}
 	return Job;
 }

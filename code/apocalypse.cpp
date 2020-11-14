@@ -87,8 +87,7 @@ void GameInitMemory(
 		);
 
 		// TODO: do we want to be extra and make sure we pick up that last byte?
-		memory_arena AssetArena;
-		size_t TransientStorageDivision = Memory->TransientStorageSize / 5;
+		size_t TransientStorageDivision = Memory->TransientStorageSize / 6;
 		InitMemArena(
 			&GameState->TransientArena,
 			TransientStorageDivision,
@@ -110,10 +109,17 @@ void GameInitMemory(
 			GetEndOfArena(&GameState->FrameArena)
 		);
 		// TODO: Asset arena probably needs to be bigger than most arenas
+		memory_arena AssetArena = {};
 		InitMemArena(
 			&AssetArena,
 			TransientStorageDivision,
 			GetEndOfArena(&GameState->SceneArgsArena)
+		);
+		memory_arena JobArena = {};
+		InitMemArena(
+			&JobArena,
+			TransientStorageDivision,
+			GetEndOfArena(&AssetArena)
 		);
 
 		GameState->WorldToCamera = MakeBasis(
@@ -148,6 +154,7 @@ void GameInitMemory(
 		assets* Assets = &GameState->Assets; 
 		*Assets = {}; 
 		Assets->Arena = AssetArena;
+		Assets->JobArena = JobArena;
 		Assets->JobQueue = GameState->JobQueue;
 		Assets->ArenaLock = PushStruct(
 			&GameState->Arena, platform_mutex_handle

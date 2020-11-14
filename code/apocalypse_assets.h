@@ -84,7 +84,9 @@ struct loaded_glyph
 
 struct assets
 {
+	memory_arena JobArena;
 	memory_arena Arena;
+	
 	platform_mutex_handle* ArenaLock;
 	
 	platform_job_queue* JobQueue;

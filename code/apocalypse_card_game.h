@@ -185,6 +185,18 @@ struct card_game_event_header
 	uint32_t DataSize;
 };
 
+#pragma pack(push, 1)
+struct state_update_payload
+{
+	float TurnTimer;
+};
+struct state_update_packet
+{
+	packet_header Header;
+	state_update_payload Payload;
+};
+#pragma pack(pop)
+
 struct card_game_state
 {
 	ui_context UiContext;
@@ -227,6 +239,9 @@ struct card_game_state
 	bool NetworkGame;
 	platform_socket ListenSocket;
 	platform_socket ConnectSocket;
+
+	// NOTE: last frame received from master
+	uint64_t LastFrame;
 };
 
 struct start_card_game_args

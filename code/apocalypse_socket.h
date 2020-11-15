@@ -5,7 +5,8 @@
 // TODO: can we make this terse?
 typedef enum
 {
-	Packet_Ready
+	Packet_Ready,
+	Packet_StateUpdate
 } packet_type;
 
 /* TODO: make sure we handle all the following endianness cases
@@ -19,6 +20,7 @@ Big -> Little
 struct packet_header
 {
 	packet_type Type;
+	uint64_t FrameId;
 	uint32_t DataSize;
 };
 #pragma pack(pop)

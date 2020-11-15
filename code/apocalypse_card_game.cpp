@@ -780,6 +780,7 @@ void StartCardGame(
 	SceneState->IsLeader = SceneArgs->IsLeader;
 	SceneState->ListenSocket = SceneArgs->ListenSocket;
 	SceneState->ConnectSocket = SceneArgs->ConnectSocket;
+	SceneState->LastFrame = 0;
 
 	// TODO: remove me!
 	// PlaySound(
@@ -1416,6 +1417,73 @@ void UpdateAndRenderCardGame(
 
 	bool EndTurn = false;
 
+	// SECTION START: Read leader state
+	if(SceneState->NetworkGame && !SceneState->IsLeader)
+	{
+		// TODO: handle packets coming in pieces
+		packet_header* Header = PushStruct(FrameArena, packet_header);
+
+		uint32_t BytesRead = 0;
+		while(true)
+		{
+			platform_read_socket_result SocketReadResult = PlatformSocketRead(
+				&SceneState->ConnectSocket,
+				Header,
+				sizeof(packet_header),
+				&BytesRead
+			);
+			if(
+				SocketReadResult == PlatformReadSocketResult_Success && 
+				BytesRead > 0
+			)
+			{
+				// NOTE: read the rest of our packet from the socket buffer
+				uint32_t DataRemaining = (
+					Header->DataSize - sizeof(packet_header)
+				);
+				void* Payload = PushSize(FrameArena, DataRemaining);
+				SocketReadResult = PlatformSocketRead(
+					&SceneState->ConnectSocket,
+					Payload,
+					DataRemaining,
+					&BytesRead
+				);
+				ASSERT(
+					SocketReadResult ==
+					PlatformReadSocketResult_Success
+				);
+				ASSERT(BytesRead > 0);
+
+				// NOTE: check that the frame is a new frame to handle
+				if(Header->FrameId > SceneState->LastFrame)
+				{
+					SceneState->LastFrame = Header->FrameId;
+					switch(Header->Type)
+					{
+						case(Packet_StateUpdate):
+						{
+							state_update_payload* LeaderState = (
+								(state_update_payload*) Payload
+							);
+							SceneState->TurnTimer = LeaderState->TurnTimer;
+							break;
+						}
+						default:
+						{
+							// TODO: logging
+							ASSERT(false);
+						}
+					}
+				}
+			}
+			else
+			{
+				break;
+			}
+		} while (BytesRead > 0); 
+	}
+	// SECTION STOP: Read leader state
+
 	// SECTION START: User input
 	// TODO: move to game memory
 	user_event_index UserEventIndex = 0;
@@ -1841,6 +1909,35 @@ void UpdateAndRenderCardGame(
 	// SECTION STOP: Card update
 	// SECTION STOP: Updating game state
 
+	// SECTION START: Send data to follower
+	if(SceneState->NetworkGame && SceneState->IsLeader)
+	{
+		state_update_packet* StatePacket = PushStruct(
+			FrameArena, state_update_packet
+		);
+		packet_header* Header = &StatePacket->Header;
+		Header->Type = Packet_StateUpdate;
+		Header->DataSize = sizeof(state_update_packet);
+		Header->FrameId = GameState->FrameCount;
+		state_update_payload* Payload = &StatePacket->Payload;
+		Payload->TurnTimer = SceneState->TurnTimer;
+
+		socket_send_data_args* SendStatePacketArgs = PushStruct(
+			FrameArena, socket_send_data_args
+		);
+		SendStatePacketArgs->Socket = &SceneState->ConnectSocket;
+		SendStatePacketArgs->Buffer = StatePacket;
+		SendStatePacketArgs->BufferSize = Header->DataSize;
+		SendStatePacketArgs->DataSize = Header->DataSize;
+		PlatformAddJob(
+			GameState->JobQueue,
+			SocketSendDataJob,
+			SendStatePacketArgs,
+			JobPriority_SendPacket
+		);
+	}
+	// SECTION STOP: Send data to follower
+
 	// SECTION START: Push render entries
 	render_group* RenderGroup = &GameState->RenderGroup;
 	PushClear(RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
@@ -2063,4 +2160,8 @@ void UpdateAndRenderCardGame(
 			Assets
 		);
 	}
+
+	PlatformCompleteAllJobsAtPriority(
+		GameState->JobQueue, JobPriority_SendPacket
+	);
 }

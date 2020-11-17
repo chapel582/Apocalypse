@@ -188,7 +188,9 @@ struct card_game_event_header
 #pragma pack(push, 1)
 struct state_update_payload
 {
+	player_id CurrentTurn;
 	float TurnTimer;
+	float NextTurnTimer;
 };
 struct state_update_packet
 {

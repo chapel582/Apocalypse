@@ -1465,7 +1465,13 @@ void UpdateAndRenderCardGame(
 							state_update_payload* LeaderState = (
 								(state_update_payload*) Payload
 							);
+							SceneState->CurrentTurn = GetOpponent(
+								LeaderState->CurrentTurn
+							);
 							SceneState->TurnTimer = LeaderState->TurnTimer;
+							SceneState->NextTurnTimer = (
+								LeaderState->NextTurnTimer
+							);
 							break;
 						}
 						default:
@@ -1920,7 +1926,9 @@ void UpdateAndRenderCardGame(
 		Header->DataSize = sizeof(state_update_packet);
 		Header->FrameId = GameState->FrameCount;
 		state_update_payload* Payload = &StatePacket->Payload;
+		Payload->CurrentTurn = SceneState->CurrentTurn;
 		Payload->TurnTimer = SceneState->TurnTimer;
+		Payload->NextTurnTimer = SceneState->NextTurnTimer;
 
 		socket_send_data_args* SendStatePacketArgs = PushStruct(
 			FrameArena, socket_send_data_args

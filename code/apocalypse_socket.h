@@ -6,7 +6,8 @@
 typedef enum
 {
 	Packet_Ready,
-	Packet_StateUpdate
+	Packet_StateUpdate,
+	Packet_CardUpdate
 } packet_type;
 
 /* TODO: make sure we handle all the following endianness cases

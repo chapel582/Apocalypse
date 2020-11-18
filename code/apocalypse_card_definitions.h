@@ -96,6 +96,14 @@ struct card_definitions
 	card_definition* Array;
 };
 
+inline card_definition* GetCardDefinition(
+	card_definitions* Definitions, uint32_t DefId
+)
+{
+	ASSERT(DefId < Definitions->NumCards);
+	return Definitions->Array + DefId;
+}
+
 inline void InitCard(
 	card_definition* Card,
 	uint32_t Id,

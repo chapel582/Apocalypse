@@ -124,6 +124,8 @@ void OutDeckToInDeck(deck* Deck, deck_card* DeckCard)
 
 struct card
 {
+	uint64_t LastFrame; // NOTE: last frame that leader updated this card on
+	uint32_t CardId; // NOTE: distinct from definition ID
 	card_definition* Definition;
 	player_resources PlayDelta[Player_Count];
 	player_resources TapDelta[Player_Count];
@@ -186,11 +188,25 @@ struct card_game_event_header
 };
 
 #pragma pack(push, 1)
+struct card_update_payload
+{
+	uint32_t CardId;
+	uint32_t DefId;
+	player_id Owner;
+	card_set_type SetType;
+};
+struct card_update_packet
+{
+	packet_header Header;
+	card_update_payload Payload;
+};
+
 struct state_update_payload
 {
 	player_id CurrentTurn;
 	float TurnTimer;
 	float NextTurnTimer;
+	uint32_t NextId;
 };
 struct state_update_packet
 {
@@ -203,6 +219,7 @@ struct card_game_state
 {
 	ui_context UiContext;
 
+	uint32_t NextId;
 	player_id CurrentTurn;
 	int16_t LastWholeSecond;
 	float TurnTimer;
@@ -212,7 +229,7 @@ struct card_game_state
 	player_resources* PlayerResources;
 	card* Cards;
 	card* SelectedCard;
-	int MaxCards;
+	uint32_t MaxCards;
 	deck* Decks;
 	card_set* Hands;
 	card_set* Tableaus;

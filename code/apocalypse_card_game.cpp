@@ -178,11 +178,11 @@ void RemoveCardAndAlign(card_game_state* SceneState, card* Card)
 	RemoveCardAndAlign(CardSet, Card);
 }
 
-card* GetInactiveCard(card_game_state* SceneState)
+card* GetInactiveCard(card_game_state* SceneState, int32_t CardId = -1)
 {
 	card* Card = NULL;
 	for(
-		int SearchIndex = 0;
+		uint32_t SearchIndex = 0;
 		SearchIndex < SceneState->MaxCards;
 		SearchIndex++
 	)
@@ -206,14 +206,20 @@ card* GetInactiveCard(card_game_state* SceneState)
 	Color->R = 1.0f;
 	Color->G = 1.0f;
 	Color->B = 1.0f;
+	if(CardId == -1)
+	{
+		Card->CardId = SceneState->NextId++;
+	}
+	else
+	{
+		Card->CardId = CardId;
+	}
 	return Card;
 }
 
-void InitCardWithDeckCard(deck* Deck, card* Card, player_id Owner)
+void InitCardWithDef(card* Card, card_definition* Definition)
 {
-	deck_card* CardToDraw = Deck->InDeck;
-	ASSERT(CardToDraw != NULL);	
-	card_definition* Definition = CardToDraw->Definition;
+	Card->LastFrame = 0;
 	Card->Definition = Definition;
 
 	Card->TapsAvailable = Definition->TapsAvailable;
@@ -235,6 +241,22 @@ void InitCardWithDeckCard(deck* Deck, card* Card, player_id Owner)
 		Card->TurnStartPlayDelta[PlayerIndex] = Definition->PlayDelta[PlayerIndex];
 		Card->TurnStartTapDelta[PlayerIndex] = Definition->TapDelta[PlayerIndex];
 	}
+}
+void InitCardWithDef(
+	card* Card, card_definitions* Definitions, uint32_t DefId, player_id Owner
+)
+{
+	card_definition* Definition = GetCardDefinition(Definitions, DefId);
+	InitCardWithDef(Card, Definition);
+	Card->Owner = Owner;
+}
+
+void InitCardWithDeckCard(deck* Deck, card* Card, player_id Owner)
+{
+	deck_card* CardToDraw = Deck->InDeck;
+	ASSERT(CardToDraw != NULL);	
+	card_definition* Definition = CardToDraw->Definition;
+	InitCardWithDef(Card, Definition);
 	Card->Owner = Owner;
 	InDeckToOutDeck(Deck, CardToDraw);
 }
@@ -571,6 +593,19 @@ void StartCardGame(
 	);
 	memset(SceneState->Cards, 0, SceneState->MaxCards * sizeof(card));
 
+	// NOTE: set up game config stuff
+	SceneState->NetworkGame = SceneArgs->NetworkGame;
+	SceneState->IsLeader = SceneArgs->IsLeader;
+	SceneState->ListenSocket = SceneArgs->ListenSocket;
+	SceneState->ConnectSocket = SceneArgs->ConnectSocket;
+	SceneState->LastFrame = 0;
+
+	SceneState->NextId = 0;
+	if(SceneState->NetworkGame && !SceneState->IsLeader)
+	{
+		SceneState->NextId = 1 << 16;
+	}
+
 	{
 		SceneState->Definitions = DefineCards(&GameState->TransientArena);
 		SceneState->Decks = PushArray(
@@ -708,8 +743,12 @@ void StartCardGame(
 	SceneState->InfoCardXBound = Vector2(ScaledInfoCardDim.X, 0.0f);
 	SceneState->InfoCardYBound = Vector2(0.0f, ScaledInfoCardDim.Y);
 
-	DrawFullHand(SceneState, Player_One);
-	DrawFullHand(SceneState, Player_Two);
+	// TODO: remove this conditional. for test only
+	if(!SceneState->NetworkGame || SceneState->IsLeader)
+	{
+		DrawFullHand(SceneState, Player_One);
+		DrawFullHand(SceneState, Player_Two);
+	}
 
 	SetTurnTimer(SceneState, 20.0f);
 	SceneState->BaselineNextTurnTimer = (
@@ -775,12 +814,6 @@ void StartCardGame(
 		),
 		PlayerLifeRectDim
 	);
-
-	SceneState->NetworkGame = SceneArgs->NetworkGame;
-	SceneState->IsLeader = SceneArgs->IsLeader;
-	SceneState->ListenSocket = SceneArgs->ListenSocket;
-	SceneState->ConnectSocket = SceneArgs->ConnectSocket;
-	SceneState->LastFrame = 0;
 
 	// TODO: remove me!
 	// PlaySound(
@@ -904,6 +937,38 @@ void EndStackBuilding(card_game_state* SceneState)
 	}
 }
 
+bool AddCardToSet(
+	card_game_state* SceneState,
+	card_set_type CardSetType,
+	player_id Owner,
+	card* Card
+)
+{
+	// NOTE: utility function for adding a card to any set, ignoring any rules 
+	// CONT: checks (probably only used for network sync?)
+	card_set* CardSet = NULL;
+	if(CardSetType == CardSet_Hand)
+	{
+		CardSet = SceneState->Hands + Owner;
+	}
+	else if(CardSetType == CardSet_Tableau)
+	{
+		CardSet = SceneState->Tableaus + Owner;
+	}
+	else if(CardSetType == CardSet_Stack)
+	{
+		// NOTE: different return path for stack
+		AddCardToStack(SceneState, Card);
+		return true;
+	}
+	else
+	{
+		ASSERT(false);
+	}
+
+	return AddCardToSet(CardSet, Card);
+}
+
 void PushTurnTimer(
 	card_game_state* SceneState,
 	player_id Player,
@@ -987,7 +1052,7 @@ inline void StandardPrimaryUpHandler(
 	// NOTE: inlined function b/c this is only called once
 	card* Card = &SceneState->Cards[0];
 
-	for(int CardIndex = 0; CardIndex < SceneState->MaxCards; CardIndex++)
+	for(uint32_t CardIndex = 0; CardIndex < SceneState->MaxCards; CardIndex++)
 	{
 		if(
 			Card->Active &&
@@ -1244,7 +1309,7 @@ inline void StackBuildingPrimaryUpHandler(
 {
 	card* Card = &SceneState->Cards[0];
 
-	for(int CardIndex = 0; CardIndex < SceneState->MaxCards; CardIndex++)
+	for(uint32_t CardIndex = 0; CardIndex < SceneState->MaxCards; CardIndex++)
 	{
 		if(
 			Card->Active &&
@@ -1455,12 +1520,12 @@ void UpdateAndRenderCardGame(
 				ASSERT(BytesRead > 0);
 
 				// NOTE: check that the frame is a new frame to handle
-				if(Header->FrameId > SceneState->LastFrame)
+				
+				switch(Header->Type)
 				{
-					SceneState->LastFrame = Header->FrameId;
-					switch(Header->Type)
+					case(Packet_StateUpdate):
 					{
-						case(Packet_StateUpdate):
+						if(Header->FrameId > SceneState->LastFrame)
 						{
 							state_update_payload* LeaderState = (
 								(state_update_payload*) Payload
@@ -1472,13 +1537,87 @@ void UpdateAndRenderCardGame(
 							SceneState->NextTurnTimer = (
 								LeaderState->NextTurnTimer
 							);
+
+							SceneState->LastFrame = Header->FrameId;
+						}
+						break;
+					}
+					case(Packet_CardUpdate):
+					{
+						card_update_payload* CardUpdate = (
+							(card_update_payload*) Payload
+						);
+						uint32_t CardId = CardUpdate->CardId;
+						// NOTE: check if CardId exists
+						card* CardToChange = NULL;
+						for(
+							uint32_t CardIndex = 0;
+							CardIndex < SceneState->MaxCards;
+							CardIndex++
+						)
+						{
+							card* CardToCheck = (
+								SceneState->Cards + CardIndex
+							);
+							if(!CardToCheck->Active)
+							{
+								continue;
+							}
+							if(CardToCheck->CardId == CardId)
+							{
+								CardToChange = CardToCheck;
+								break;
+							}
+						}
+
+						player_id CardOwner = GetOpponent(
+							CardUpdate->Owner
+						);
+						bool IsNewCard = CardToChange == NULL;
+						if(IsNewCard)
+						{
+							CardToChange = GetInactiveCard(
+								SceneState, CardId
+							);
+							InitCardWithDef(
+								CardToChange,
+								SceneState->Definitions,
+								CardUpdate->DefId,
+								CardOwner
+							);
+						}
+						
+						if(
+							CardToChange->LastFrame >= Header->FrameId && 
+							!IsNewCard
+						)
+						{
 							break;
 						}
-						default:
+						else
 						{
-							// TODO: logging
-							ASSERT(false);
+							CardToChange->LastFrame = Header->FrameId;
 						}
+
+						if(
+							IsNewCard || 
+							CardToChange->SetType != CardUpdate->SetType
+						)
+						{
+							AddCardToSet(
+								SceneState,
+								CardUpdate->SetType,
+								CardOwner,
+								CardToChange
+							);
+						}
+
+						break;
+					}
+					default:
+					{
+						// TODO: logging
+						ASSERT(false);
 					}
 				}
 			}
@@ -1487,6 +1626,11 @@ void UpdateAndRenderCardGame(
 				break;
 			}
 		} while (BytesRead > 0); 
+
+		AlignCardSet(SceneState->Hands + Player_One);
+		AlignCardSet(SceneState->Hands + Player_Two);
+		AlignCardSet(SceneState->Tableaus + Player_One);
+		AlignCardSet(SceneState->Tableaus + Player_Two);
 	}
 	// SECTION STOP: Read leader state
 
@@ -1549,7 +1693,7 @@ void UpdateAndRenderCardGame(
 			{
 				card* Card = &SceneState->Cards[0];
 				for(
-					int CardIndex = 0;
+					uint32_t CardIndex = 0;
 					CardIndex < SceneState->MaxCards;
 					CardIndex++
 				)
@@ -1696,7 +1840,11 @@ void UpdateAndRenderCardGame(
 		SceneState->CurrentTurn = (
 			(SceneState->CurrentTurn == Player_Two) ? Player_One : Player_Two
 		);
-		for(int CardIndex = 0; CardIndex < SceneState->MaxCards; CardIndex++)
+		for(
+			uint32_t CardIndex = 0;
+			CardIndex < SceneState->MaxCards;
+			CardIndex++
+		)
 		{
 			card* Card = &SceneState->Cards[CardIndex];
 			if(Card->Active)
@@ -1781,7 +1929,7 @@ void UpdateAndRenderCardGame(
 	{
 		card* Card = &SceneState->Cards[0];
 		for(
-			int CardIndex = 0;
+			uint32_t CardIndex = 0;
 			CardIndex < SceneState->MaxCards;
 			CardIndex++
 		)
@@ -1918,31 +2066,73 @@ void UpdateAndRenderCardGame(
 	// SECTION START: Send data to follower
 	if(SceneState->NetworkGame && SceneState->IsLeader)
 	{
-		state_update_packet* StatePacket = PushStruct(
-			FrameArena, state_update_packet
-		);
-		packet_header* Header = &StatePacket->Header;
-		Header->Type = Packet_StateUpdate;
-		Header->DataSize = sizeof(state_update_packet);
-		Header->FrameId = GameState->FrameCount;
-		state_update_payload* Payload = &StatePacket->Payload;
-		Payload->CurrentTurn = SceneState->CurrentTurn;
-		Payload->TurnTimer = SceneState->TurnTimer;
-		Payload->NextTurnTimer = SceneState->NextTurnTimer;
+		{
+			state_update_packet* StatePacket = PushStruct(
+				FrameArena, state_update_packet
+			);
+			packet_header* Header = &StatePacket->Header;
+			Header->Type = Packet_StateUpdate;
+			Header->DataSize = sizeof(state_update_packet);
+			Header->FrameId = GameState->FrameCount;
+			state_update_payload* Payload = &StatePacket->Payload;
+			Payload->CurrentTurn = SceneState->CurrentTurn;
+			Payload->TurnTimer = SceneState->TurnTimer;
+			Payload->NextTurnTimer = SceneState->NextTurnTimer;
 
-		socket_send_data_args* SendStatePacketArgs = PushStruct(
-			FrameArena, socket_send_data_args
-		);
-		SendStatePacketArgs->Socket = &SceneState->ConnectSocket;
-		SendStatePacketArgs->Buffer = StatePacket;
-		SendStatePacketArgs->BufferSize = Header->DataSize;
-		SendStatePacketArgs->DataSize = Header->DataSize;
-		PlatformAddJob(
-			GameState->JobQueue,
-			SocketSendDataJob,
-			SendStatePacketArgs,
-			JobPriority_SendPacket
-		);
+			socket_send_data_args* SendStatePacketArgs = PushStruct(
+				FrameArena, socket_send_data_args
+			);
+			SendStatePacketArgs->Socket = &SceneState->ConnectSocket;
+			SendStatePacketArgs->Buffer = StatePacket;
+			SendStatePacketArgs->BufferSize = Header->DataSize;
+			SendStatePacketArgs->DataSize = Header->DataSize;
+			PlatformAddJob(
+				GameState->JobQueue,
+				SocketSendDataJob,
+				SendStatePacketArgs,
+				JobPriority_SendPacket
+			);
+		}
+
+		for(
+			uint32_t CardIndex = 0;
+			CardIndex < SceneState->MaxCards;
+			CardIndex++
+		)
+		{
+			card* Card = SceneState->Cards + CardIndex;
+			if(!Card->Active)
+			{
+				continue;
+			}
+
+			card_update_packet* CardPacket = PushStruct(
+				FrameArena, card_update_packet
+			);
+			packet_header* Header = &CardPacket->Header;
+			Header->Type = Packet_CardUpdate;
+			Header->DataSize = sizeof(card_update_packet);
+			Header->FrameId = GameState->FrameCount;
+			card_update_payload* Payload = &CardPacket->Payload;
+			Payload->CardId = Card->CardId;
+			Payload->DefId = Card->Definition->Id;
+			Payload->Owner = Card->Owner;
+			Payload->SetType = Card->SetType;
+
+			socket_send_data_args* SendCardPacketArgs = PushStruct(
+				FrameArena, socket_send_data_args
+			);
+			SendCardPacketArgs->Socket = &SceneState->ConnectSocket;
+			SendCardPacketArgs->Buffer = CardPacket;
+			SendCardPacketArgs->BufferSize = Header->DataSize;
+			SendCardPacketArgs->DataSize = Header->DataSize;
+			PlatformAddJob(
+				GameState->JobQueue,
+				SocketSendDataJob,
+				SendCardPacketArgs,
+				JobPriority_SendPacket
+			);
+		}
 	}
 	// SECTION STOP: Send data to follower
 
@@ -1957,7 +2147,7 @@ void UpdateAndRenderCardGame(
 	{
 		card* Card = &SceneState->Cards[0];
 		for(
-			int CardIndex = 0;
+			uint32_t CardIndex = 0;
 			CardIndex < SceneState->MaxCards;
 			CardIndex++
 		)

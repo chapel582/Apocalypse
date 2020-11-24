@@ -923,9 +923,9 @@ DWORD WINAPI WorkerThread(LPVOID LpParam)
 		SetEvent(JobQueue->JobDone->Event);
 
 		// NOTE: open up an entry in the queue
-		WaitForSingleObject(JobQueue->UsingEmpty, INFINITE);
+		WaitForSingleObject(JobQueue->UsingEmpty->Mutex, INFINITE);
 		AddEmpty(JobQueue, EntryIndex);
-		ReleaseMutex(JobQueue->UsingEmpty);
+		ReleaseMutex(JobQueue->UsingEmpty->Mutex);
 		ReleaseSemaphore(JobQueue->EmptySemaphore->Semaphore, 1, NULL);
 	}
 }

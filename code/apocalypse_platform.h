@@ -221,8 +221,11 @@ struct platform_job_queue
 
 inline int32_t GetNextEmpty(platform_job_queue* JobQueue)
 {
+	ASSERT(JobQueue->EmptyEntriesCount > 0);
 	if(JobQueue->EmptyEntriesCount == 0)
 	{
+		// TODO: handle errors
+		// TODO: logging
 		return -1;
 	}
 	uint32_t Result = JobQueue->EmptyEntries[JobQueue->EmptyEntriesStart];

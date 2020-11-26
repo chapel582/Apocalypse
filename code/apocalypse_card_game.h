@@ -125,6 +125,7 @@ void OutDeckToInDeck(deck* Deck, deck_card* DeckCard)
 struct card
 {
 	uint64_t LastFrame; // NOTE: last frame that leader updated this card on
+	uint32_t EntityId; // NOTE: which entity in the array we correspond to
 	uint32_t CardId; // NOTE: distinct from definition ID
 	card_definition* Definition;
 	player_resources PlayDelta[Player_Count];
@@ -187,39 +188,19 @@ struct card_game_event_header
 	uint32_t DataSize;
 };
 
-#pragma pack(push, 1)
-struct card_update_payload
+// NOTE: entity is for data that is common across all entities
+struct entity
 {
-	uint32_t CardId;
-	uint32_t DefId;
-	player_id Owner;
-	card_set_type SetType;
+	// TODO: as this list of flags gets large, change to bit flags instead of 
+	// CONT: bools
+	bool LeaderControl;
 };
-struct card_update_packet
-{
-	packet_header Header;
-	card_update_payload Payload;
-};
-
-struct state_update_payload
-{
-	player_id CurrentTurn;
-	float TurnTimer;
-	float NextTurnTimer;
-	uint32_t NextId;
-};
-struct state_update_packet
-{
-	packet_header Header;
-	state_update_payload Payload;
-};
-#pragma pack(pop)
 
 struct card_game_state
 {
 	ui_context UiContext;
 
-	uint32_t NextId;
+	uint32_t NextCardId;
 	player_id CurrentTurn;
 	int16_t LastWholeSecond;
 	float TurnTimer;
@@ -253,6 +234,10 @@ struct card_game_state
 	vector2 StackEntryInfoDim;
 	scroll_bar StackScrollBar;
 
+	entity* EntityData;
+	uint32_t EntityCount;
+	uint32_t MaxEntityCount;
+
 	// NOTE: server is assumed to be leader (has final say on game state)
 	bool IsLeader;
 	bool NetworkGame;
@@ -262,6 +247,20 @@ struct card_game_state
 	// NOTE: last frame received from master
 	uint64_t LastFrame;
 };
+
+inline uint32_t GetNewEntityHandle(card_game_state* SceneState)
+{
+	ASSERT(SceneState->EntityCount < SceneState->MaxEntityCount);
+	uint32_t Result = SceneState->EntityCount;
+	SceneState->EntityCount++;
+	return Result;
+}
+
+inline entity* GetEntity(card_game_state* SceneState, uint32_t EntityId)
+{
+	ASSERT(EntityId < SceneState->EntityCount);
+	return SceneState->EntityData + EntityId;
+}
 
 struct start_card_game_args
 {
@@ -276,6 +275,15 @@ void StartCardGamePrep(
 	game_state* GameState,
 	char* P1DeckName,
 	char* P2DeckName,
+	bool NetworkGame,
+	bool IsLeader,
+	platform_socket* ListenSocket,
+	platform_socket* ConnectSocket
+);
+void StartCardGamePrep(
+	game_state* GameState,
+	loaded_deck P1Deck,
+	loaded_deck P2Deck,
 	bool NetworkGame,
 	bool IsLeader,
 	platform_socket* ListenSocket,

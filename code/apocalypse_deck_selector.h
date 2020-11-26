@@ -46,6 +46,10 @@ struct deck_selector_state
 
 	ui_context UiContext;
 
+	// NOTE: these options exist for network games
+	loaded_deck P1Deck;
+	loaded_deck P2Deck;
+
 	bool WaitingForOpponent;
 	bool IsLeader;
 	bool NetworkGame;

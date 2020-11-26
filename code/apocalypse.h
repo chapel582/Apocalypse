@@ -46,6 +46,10 @@ struct game_state
 	// NOTE: number of frames that have passed in this scene
 	uint64_t FrameCount;
 
+	// NOTE: the state data needed in order to get the next packet id in 
+	// CONT: networked environments
+	uint64_t PacketIdTracker;
+
 	platform_job_queue* JobQueue;
 
 	assets Assets;

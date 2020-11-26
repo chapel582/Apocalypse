@@ -18,21 +18,31 @@ void DeckSelectorPrepNextScene(
 		{
 			if(AlreadyExists)
 			{
-				char* P2Deck = "P2Deck";
 				if(SceneState->NetworkGame)
 				{
-					P2Deck = SceneState->DeckName;
-					// TODO: might be good to clean up dummy deck
+					StartCardGamePrep(
+						GameState,
+						SceneState->P1Deck,
+						SceneState->P2Deck,
+						SceneState->NetworkGame,
+						SceneState->IsLeader,
+						&SceneState->ListenSocket,
+						&SceneState->ConnectSocket
+					);
 				}
-				StartCardGamePrep(
-					GameState,
-					SceneState->DeckName,
-					P2Deck,
-					SceneState->NetworkGame,
-					SceneState->IsLeader,
-					&SceneState->ListenSocket,
-					&SceneState->ConnectSocket
-				);
+				else
+				{
+					char* P2Deck = "P2Deck";
+					StartCardGamePrep(
+						GameState,
+						SceneState->DeckName,
+						P2Deck,
+						SceneState->NetworkGame,
+						SceneState->IsLeader,
+						&SceneState->ListenSocket,
+						&SceneState->ConnectSocket
+					);
+				}
 			}
 			else
 			{
@@ -68,18 +78,46 @@ void StartWaiting(
 )
 {
 	SceneState->WaitingForOpponent = true;
-	packet_header* Packet = PushStruct(&GameState->FrameArena, packet_header);
-	*Packet = {};
-	Packet->Type = Packet_Ready;
-	Packet->DataSize = sizeof(packet_header);
-	platform_send_socket_result SendResult = PlatformSocketSend(
-		&SceneState->ConnectSocket, Packet, Packet->DataSize
-	);
+	
+	// NOTE: send opponent our deck data
+	{
+		deck_data_packet* Packet = PushStruct(
+			&GameState->FrameArena, deck_data_packet
+		);
+		*Packet = {};
+		Packet->Header.Type = Packet_DeckData;
+		Packet->Header.DataSize = sizeof(deck_data_packet);
+		deck_data_payload* Payload = &Packet->Payload;
+		loaded_deck* Deck = &Payload->Deck;
+		char Buffer[PLATFORM_MAX_PATH];
+		FormatDeckPath(Buffer, sizeof(Buffer), SceneState->DeckName);
+		*Deck = LoadDeck(Buffer);
+		
+		SceneState->P1Deck = *Deck;
+		platform_send_socket_result SendResult = PlatformSocketSend(
+			&SceneState->ConnectSocket, Packet, Packet->Header.DataSize
+		);
+		ASSERT(
+			SendResult == PlatformSendSocketResult_Success
+		);
+	}
 
-	// TODO: error handling
-	ASSERT(
-		SendResult == PlatformSendSocketResult_Success
-	);
+	// NOTE: tell opponent that we're ready
+	{
+		packet_header* Packet = PushStruct(
+			&GameState->FrameArena, packet_header
+		);
+		*Packet = {};
+		Packet->Type = Packet_Ready;
+		Packet->DataSize = sizeof(packet_header);
+		platform_send_socket_result SendResult = PlatformSocketSend(
+			&SceneState->ConnectSocket, Packet, Packet->DataSize
+		);
+		// TODO: error handling
+		ASSERT(
+			SendResult == PlatformSendSocketResult_Success
+		);
+	}
 }
 
 void StartDeckSelectorPrep(
@@ -135,6 +173,7 @@ void StartDeckSelector(
 	deck_selector_state* SceneState = (deck_selector_state*) (
 		GameState->SceneState
 	);
+	*SceneState = {};
 	SceneState->ToStart = ToStart;
 
 	SceneState->ScreenDimInWorld = TransformVectorToBasis(
@@ -225,6 +264,7 @@ void UpdateAndRenderDeckSelector(
 		Vector2(WindowWidth, WindowHeight)
 	);
 
+	memory_arena* FrameArena = &GameState->FrameArena;
 	rectangle* DeckNameInputRectangle = &SceneState->DeckNameInputRectangle;
 
 	// NOTE: at start, we calculate the height of our stack of deck buttons
@@ -515,22 +555,53 @@ void UpdateAndRenderDeckSelector(
 			&GameState->FrameArena, packet_header
 		);
 		uint32_t BytesRead = 0;
-		platform_read_socket_result ReadResult = PlatformSocketRead(
-			&SceneState->ConnectSocket,
-			HeaderReceived,
-			sizeof(packet_header),
-			&BytesRead
-		);
-		if(
-			ReadResult == PlatformReadSocketResult_Success && 
-			BytesRead == sizeof(packet_header)
-		)
+		do
 		{
-			if(HeaderReceived->Type == Packet_Ready)
+			platform_read_socket_result ReadResult = PlatformSocketRead(
+				&SceneState->ConnectSocket,
+				HeaderReceived,
+				sizeof(packet_header),
+				&BytesRead
+			);
+			if(
+				ReadResult == PlatformReadSocketResult_Success &&
+				BytesRead == sizeof(packet_header)
+			)
 			{
-				DeckSelectorPrepNextScene(GameState, SceneState, true);
+				uint32_t DataRemaining = (
+					HeaderReceived->DataSize - sizeof(packet_header)
+				);
+				void* Payload = NULL;
+				if(DataRemaining > 0)
+				{
+					Payload = PushSize(FrameArena, DataRemaining);
+					platform_read_socket_result SocketReadResult = (
+						PlatformSocketRead(
+							&SceneState->ConnectSocket,
+							Payload,
+							DataRemaining,
+							&BytesRead
+						)
+					);
+				}
+
+				if(HeaderReceived->Type == Packet_DeckData)
+				{
+					deck_data_payload* DeckDataPayload = (
+						(deck_data_payload*) Payload
+					);
+					SceneState->P2Deck = DeckDataPayload->Deck;
+				}
+				else if(HeaderReceived->Type == Packet_Ready)
+				{
+					DeckSelectorPrepNextScene(GameState, SceneState, true);
+				}
 			}
-		}
+			else
+			{
+				break;
+			}
+		} while(BytesRead > 0);
 	}
 	else
 	{

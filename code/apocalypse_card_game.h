@@ -188,14 +188,6 @@ struct card_game_event_header
 	uint32_t DataSize;
 };
 
-// NOTE: entity is for data that is common across all entities
-struct entity
-{
-	// TODO: as this list of flags gets large, change to bit flags instead of 
-	// CONT: bools
-	bool LeaderControl;
-};
-
 struct card_game_state
 {
 	ui_context UiContext;
@@ -234,10 +226,6 @@ struct card_game_state
 	vector2 StackEntryInfoDim;
 	scroll_bar StackScrollBar;
 
-	entity* EntityData;
-	uint32_t EntityCount;
-	uint32_t MaxEntityCount;
-
 	// NOTE: server is assumed to be leader (has final say on game state)
 	bool IsLeader;
 	bool NetworkGame;
@@ -247,20 +235,6 @@ struct card_game_state
 	// NOTE: last frame received from master
 	uint64_t LastFrame;
 };
-
-inline uint32_t GetNewEntityHandle(card_game_state* SceneState)
-{
-	ASSERT(SceneState->EntityCount < SceneState->MaxEntityCount);
-	uint32_t Result = SceneState->EntityCount;
-	SceneState->EntityCount++;
-	return Result;
-}
-
-inline entity* GetEntity(card_game_state* SceneState, uint32_t EntityId)
-{
-	ASSERT(EntityId < SceneState->EntityCount);
-	return SceneState->EntityData + EntityId;
-}
 
 struct start_card_game_args
 {

@@ -4,7 +4,9 @@
 #include <intrin.h>
 #endif
 
+// NOTE: C std lib stuff
 #include <stdint.h>
+#include <time.h>
 
 // NOTE: compiler flags
 #if !defined(COMPILER_MSVC)
@@ -61,7 +63,7 @@
 
 inline uint32_t SafeTruncateUInt64(uint64_t Value)
 {
-	ASSERT(Value <= 0xFFFFFFFF);
+	ASSERT(Value <= UINT32_MAX);
 	return (uint32_t) Value;
 }
 

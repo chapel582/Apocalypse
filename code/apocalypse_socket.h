@@ -10,15 +10,11 @@
 typedef enum
 {
 	Packet_Ready,
+	Packet_SwitchLeader,
 	Packet_StateUpdate,
 	Packet_CardUpdate,
 	Packet_DeckData,
-	Packet_RandSeed,
-	Packet_PlayCard,
-	
-	// NOTE: once TakeControl packet is received, follower will stop ignoring 
-	// CONT: leader's updates for this entity
-	Packet_TakeControl
+	Packet_RandSeed
 } packet_type;
 
 /* TODO: make sure we handle all the following endianness cases
@@ -37,14 +33,14 @@ struct packet_header
 	uint32_t DataSize;
 };
 
-struct take_control_payload
-{
-	uint32_t EntityId;
-};
-struct take_control_packet
+struct ready_packet
 {
 	packet_header Header;
-	take_control_payload Payload;
+};
+
+struct switch_leader_packet
+{
+	packet_header Header;
 };
 
 struct card_update_payload
@@ -73,17 +69,6 @@ struct state_update_packet
 	state_update_payload Payload;
 };
 
-struct play_card_payload
-{
-	uint32_t CardId;
-	uint32_t EntityId;
-};
-struct play_card_packet
-{
-	packet_header Header;
-	play_card_payload Payload;
-};
-
 struct deck_data_payload
 {
 	loaded_deck Deck;
@@ -92,6 +77,16 @@ struct deck_data_packet
 {
 	packet_header Header;
 	deck_data_payload Payload;
+};
+
+struct rand_seed_payload
+{
+	uint32_t Seed;
+};
+struct rand_seed_packet
+{
+	packet_header Header;
+	rand_seed_payload Payload;
 };
 #pragma pack(pop)
 
@@ -104,6 +99,16 @@ void InitPacketHeader(
 	Header->Type = Type;
 	switch(Type)
 	{
+		case(Packet_Ready):
+		{
+			Header->DataSize = sizeof(ready_packet);
+			break;
+		}
+		case(Packet_SwitchLeader):
+		{
+			Header->DataSize = sizeof(switch_leader_packet);
+			break;
+		}
 		case(Packet_StateUpdate):
 		{
 			Header->DataSize = sizeof(state_update_packet);
@@ -119,14 +124,9 @@ void InitPacketHeader(
 			Header->DataSize = sizeof(deck_data_packet);
 			break;
 		}
-		case(Packet_PlayCard):
+		case(Packet_RandSeed):
 		{
-			Header->DataSize = sizeof(play_card_packet);
-			break;
-		}
-		case(Packet_TakeControl):
-		{
-			Header->DataSize = sizeof(take_control_packet);
+			Header->DataSize = sizeof(rand_seed_packet);
 			break;
 		}
 		default:

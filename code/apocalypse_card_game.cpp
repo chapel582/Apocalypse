@@ -254,11 +254,6 @@ void InitCardWithDef(
 	Card->TurnStartHealth = Definition->Health;
 	Card->TableauTags = Definition->TableauTags;
 	Card->StackTags = Definition->StackTags;
-
-	Card->EntityId = GetNewEntityHandle(SceneState);
-	entity* Entity = GetEntity(SceneState, Card->EntityId);
-	*Entity = {};
-	Entity->LeaderControl = true;
 	
 	for(
 		int PlayerIndex = 0;
@@ -494,28 +489,6 @@ bool CheckAndPlay(
 			ChangeTarget = &PlayerResources[Opp];
 			Delta = &Deltas[RelativePlayer_Opp];
 			ChangeResources(ChangeTarget, Delta);
-
-			if(SceneState->NetworkGame && !SceneState->IsLeader)
-			{
-				memory_arena* FrameArena = &GameState->FrameArena;
-				play_card_packet* PlayCardPacket = PushStruct(
-					FrameArena, play_card_packet
-				);
-				packet_header* Header = &PlayCardPacket->Header;
-				InitPacketHeader(GameState, Header, Packet_PlayCard);
-				play_card_payload* Payload = &PlayCardPacket->Payload;
-				Payload->CardId = Card->CardId;
-				Payload->EntityId = Card->EntityId;
-
-				entity* Entity = GetEntity(SceneState, Card->EntityId);
-				Entity->LeaderControl = false;
-
-				SocketSendData(
-					GameState, &SceneState->ConnectSocket, Header, FrameArena
-				);
-				// TODO: set up a timeout for restoring leader control if 
-				// CONT: we somehow never see its response packet
-			}
 		}
 	}
 	return Played;
@@ -817,15 +790,6 @@ void StartCardGame(
 		&GameState->TransientArena, SceneState->MaxCards, card
 	);
 	memset(SceneState->Cards, 0, SceneState->MaxCards * sizeof(card));
-
-	SceneState->MaxEntityCount = 1024; // TODO: think about this value more
-	SceneState->EntityData = PushArray(
-		&GameState->TransientArena, SceneState->MaxEntityCount, entity
-	);
-	memset(
-		SceneState->EntityData, 0, SceneState->MaxEntityCount * sizeof(entity)
-	);
-	SceneState->EntityCount = 0;
 	
 	// NOTE: set up game config stuff
 	SceneState->NetworkGame = SceneArgs->NetworkGame;
@@ -976,6 +940,24 @@ void StartCardGame(
 	vector2 ScaledInfoCardDim = 0.33f * Vector2(600.0f, 900.0f);
 	SceneState->InfoCardXBound = Vector2(ScaledInfoCardDim.X, 0.0f);
 	SceneState->InfoCardYBound = Vector2(0.0f, ScaledInfoCardDim.Y);
+
+	// TODO: this may not be a great way to seed. might be exploitable?
+	uint32_t Seed = (uint32_t) time(NULL);
+	srand(Seed);
+	if(SceneState->NetworkGame && SceneState->IsLeader)
+	{
+		memory_arena* FrameArena = &GameState->FrameArena;
+		rand_seed_packet* RandSeedPacket = PushStruct(
+			FrameArena, rand_seed_packet
+		);
+		packet_header* Header = &RandSeedPacket->Header; 
+		InitPacketHeader(GameState, Header, Packet_RandSeed);
+		RandSeedPacket->Payload.Seed = Seed;
+
+		SocketSendData(
+			GameState, &SceneState->ConnectSocket, Header, FrameArena
+		);
+	}
 
 	if(
 		!SceneState->NetworkGame || 
@@ -1647,22 +1629,31 @@ void UpdateAndRenderCardGame(
 				uint32_t DataRemaining = (
 					Header->DataSize - sizeof(packet_header)
 				);
-				void* Payload = PushSize(FrameArena, DataRemaining);
-				SocketReadResult = PlatformSocketRead(
-					&SceneState->ConnectSocket,
-					Payload,
-					DataRemaining,
-					&BytesRead
-				);
-				ASSERT(
-					SocketReadResult ==	PlatformReadSocketResult_Success
-				);
-				ASSERT(BytesRead > 0);
+				void* Payload = NULL;
+				if(DataRemaining)
+				{
+					Payload = PushSize(FrameArena, DataRemaining);
+					SocketReadResult = PlatformSocketRead(
+						&SceneState->ConnectSocket,
+						Payload,
+						DataRemaining,
+						&BytesRead
+					);
+					ASSERT(
+						SocketReadResult ==	PlatformReadSocketResult_Success
+					);
+					ASSERT(BytesRead > 0);
+				}
 
 				// NOTE: check that the frame is a new frame to handle
 				
 				switch(Header->Type)
 				{
+					case(Packet_SwitchLeader):
+					{
+						SceneState->IsLeader = true;
+						break;
+					}
 					case(Packet_StateUpdate):
 					{
 						if(Header->FrameId > SceneState->LastFrame)
@@ -1688,18 +1679,7 @@ void UpdateAndRenderCardGame(
 							(card_update_payload*) Payload
 						);
 						uint32_t CardId = CardUpdate->CardId;
-						card* CardToChange = GetCardWithId(SceneState, CardId);
-						// NOTE: don't update the card to change  
-						if(CardToChange)
-						{
-							entity* Entity = GetEntity(
-								SceneState, CardToChange->EntityId
-							);
-							if(!Entity->LeaderControl)
-							{
-								break;
-							}
-						}
+						card* CardToChange = GetCardWithId(SceneState, CardId);						
 
 						player_id CardOwner = GetOpponent(
 							CardUpdate->Owner
@@ -1747,15 +1727,12 @@ void UpdateAndRenderCardGame(
 
 						break;
 					}
-					case(Packet_TakeControl):
+					case(Packet_RandSeed):
 					{
-						take_control_payload* TakeControlPayload = (
-							(take_control_payload*) Payload
+						rand_seed_payload* RandSeedPayload = (
+							(rand_seed_payload*) Payload
 						);
-
-						uint32_t EntityId = TakeControlPayload->EntityId;
-						entity* Entity = GetEntity(SceneState, EntityId);
-						Entity->LeaderControl = true;
+						srand(RandSeedPayload->Seed);
 						break;
 					}
 					default:
@@ -1777,114 +1754,6 @@ void UpdateAndRenderCardGame(
 		AlignCardSet(SceneState->Tableaus + Player_Two);
 	}
 	// SECTION STOP: Read leader state
-	// SECTION START: leader reads events
-	else if(SceneState->NetworkGame)
-	{
-		packet_header* Header = PushStruct(FrameArena, packet_header);
-
-		uint32_t BytesRead = 0;
-		while(true)
-		{
-			platform_read_socket_result SocketReadResult = PlatformSocketRead(
-				&SceneState->ConnectSocket,
-				Header,
-				sizeof(packet_header),
-				&BytesRead
-			);
-			if(
-				SocketReadResult == PlatformReadSocketResult_Success && 
-				BytesRead > 0
-			)
-			{
-				// NOTE: read the rest of our packet from the socket buffer
-				uint32_t DataRemaining = (
-					Header->DataSize - sizeof(packet_header)
-				);
-				void* Payload = PushSize(FrameArena, DataRemaining);
-				SocketReadResult = PlatformSocketRead(
-					&SceneState->ConnectSocket,
-					Payload,
-					DataRemaining,
-					&BytesRead
-				);
-				ASSERT(
-					SocketReadResult == PlatformReadSocketResult_Success
-				);
-				ASSERT(BytesRead > 0);
-
-				// NOTE: check that the frame is a new frame to handle
-				
-				switch(Header->Type)
-				{
-					case(Packet_StateUpdate):
-					{
-						break;
-					}
-					case(Packet_CardUpdate):
-					{
-						break;
-					}
-					case(Packet_PlayCard):
-					{
-						play_card_payload* PlayCardPayload = (
-							(play_card_payload*) Payload
-						);
-						card* Card = GetCardWithId(
-							SceneState, PlayCardPayload->CardId
-						);
-						bool WasPlayed = CheckAndPlay(
-							GameState, SceneState, Card
-						);
-						if(WasPlayed)
-						{
-							if(!SceneState->StackBuilding)
-							{
-								NormalPlayCard(GameState, SceneState, Card);
-							}
-							else
-							{
-								StackBuildingPlayCard(
-									GameState, SceneState, Card
-								);
-							}
-						}
-
-						// NOTE: acquire control of follower
-						{
-							take_control_packet* TakeControlPacket = PushStruct(
-								FrameArena, take_control_packet
-							);
-							InitPacketHeader(
-								GameState,
-								&TakeControlPacket->Header,
-								Packet_TakeControl
-							);
-							TakeControlPacket->Payload.EntityId = (
-								PlayCardPayload->EntityId
-							);
-							SocketSendData(
-								GameState,
-								&SceneState->ConnectSocket,
-								&TakeControlPacket->Header,
-								FrameArena
-							);
-						}
-						break;
-					}
-					default:
-					{
-						// TODO: logging
-						ASSERT(false);
-					}
-				}
-			}
-			else
-			{
-				break;
-			}
-		} while (BytesRead > 0); 
-	}
-	// SECTION STOP: leader reads events
 
 	// SECTION START: User input
 	// TODO: move to game memory
@@ -2361,6 +2230,21 @@ void UpdateAndRenderCardGame(
 			SocketSendData(
 				GameState, &SceneState->ConnectSocket, Header, FrameArena
 			);
+		}
+
+		if(EndTurn)
+		{
+			// NOTE: switch leadership to follower
+			switch_leader_packet* SwitchLeaderPacket = PushStruct(
+				FrameArena, switch_leader_packet
+			);
+			packet_header* Header = &SwitchLeaderPacket->Header;
+			InitPacketHeader(GameState, Header, Packet_SwitchLeader);
+
+			SocketSendData(
+				GameState, &SceneState->ConnectSocket, Header, FrameArena
+			);
+			SceneState->IsLeader = false;
 		}
 	}
 	// SECTION STOP: Send data to follower

@@ -1670,6 +1670,15 @@ void UpdateAndRenderCardGame(
 							);
 
 							SceneState->LastFrame = Header->FrameId;
+
+							// NOTE: resources are organized relative to the 
+							// CONT: leader
+							SceneState->PlayerResources[Player_One] = (
+								LeaderState->PlayerResources[Player_Two]
+							);
+							SceneState->PlayerResources[Player_Two] = (
+								LeaderState->PlayerResources[Player_One]
+							);
 						}
 						break;
 					}
@@ -2197,6 +2206,12 @@ void UpdateAndRenderCardGame(
 			Payload->CurrentTurn = SceneState->CurrentTurn;
 			Payload->TurnTimer = SceneState->TurnTimer;
 			Payload->NextTurnTimer = SceneState->NextTurnTimer;
+			Payload->PlayerResources[Player_One] = (
+				SceneState->PlayerResources[Player_One]
+			);
+			Payload->PlayerResources[Player_Two] = (
+				SceneState->PlayerResources[Player_Two]
+			); 
 
 			SocketSendData(
 				GameState, &SceneState->ConnectSocket, Header, FrameArena

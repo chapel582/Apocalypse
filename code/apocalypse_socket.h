@@ -5,6 +5,7 @@
 #include "apocalypse_memory_arena.h"
 #include "apocalypse_player_id.h"
 #include "apocalypse_card_game.h"
+#include "apocalypse_player_resources.h"
 
 // TODO: can we make this terse?
 typedef enum
@@ -61,7 +62,7 @@ struct state_update_payload
 	player_id CurrentTurn;
 	float TurnTimer;
 	float NextTurnTimer;
-	uint32_t NextId;
+	player_resources PlayerResources[Player_Count];
 };
 struct state_update_packet
 {

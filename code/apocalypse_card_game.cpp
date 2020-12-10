@@ -1734,6 +1734,41 @@ void UpdateAndRenderCardGame(
 							);
 						}
 
+						// NOTE: player resource deltas are always relative,  
+						CardToChange->PlayDelta[RelativePlayer_Self] = (
+							CardUpdate->PlayDelta[RelativePlayer_Self]
+						);
+						CardToChange->PlayDelta[RelativePlayer_Opp] = (
+							CardUpdate->PlayDelta[RelativePlayer_Opp]
+						);
+						CardToChange->TapDelta[RelativePlayer_Self] = (
+							CardUpdate->TapDelta[RelativePlayer_Self]
+						);
+						CardToChange->TapDelta[RelativePlayer_Opp] = (
+							CardUpdate->TapDelta[RelativePlayer_Opp]
+						);
+						
+						CardToChange->TurnStartPlayDelta[RelativePlayer_Self] = (
+							CardUpdate->TurnStartPlayDelta[RelativePlayer_Self]
+						);
+						CardToChange->TurnStartPlayDelta[RelativePlayer_Opp] = (
+							CardUpdate->TurnStartPlayDelta[RelativePlayer_Opp]
+						);
+
+						CardToChange->TimeLeft = CardUpdate->TimeLeft;
+						CardToChange->TapsAvailable = CardUpdate->TapsAvailable;
+						CardToChange->TimesTapped = CardUpdate->TimesTapped;
+						CardToChange->Attack = CardUpdate->Attack;
+						CardToChange->TurnStartAttack= (
+							CardUpdate->TurnStartAttack
+						);
+						CardToChange->Health = CardUpdate->Health;
+						CardToChange->TurnStartHealth = (
+							CardUpdate->TurnStartHealth
+						);
+						CardToChange->TableauTags = CardUpdate->TableauTags;
+						CardToChange->StackTags = CardUpdate->StackTags;
+
 						break;
 					}
 					case(Packet_RandSeed):
@@ -2241,6 +2276,36 @@ void UpdateAndRenderCardGame(
 			Payload->DefId = Card->Definition->Id;
 			Payload->Owner = Card->Owner;
 			Payload->SetType = Card->SetType;
+
+			Payload->PlayDelta[RelativePlayer_Self] = (
+				Card->PlayDelta[RelativePlayer_Self]
+			);
+			Payload->PlayDelta[RelativePlayer_Opp] = (
+				Card->PlayDelta[RelativePlayer_Opp]
+			);
+			Payload->TapDelta[RelativePlayer_Self] = (
+				Card->TapDelta[RelativePlayer_Self]
+			);
+			Payload->TapDelta[RelativePlayer_Opp] = (
+				Card->TapDelta[RelativePlayer_Opp]
+			);
+			
+			Payload->TurnStartPlayDelta[RelativePlayer_Self] = (
+				Card->TurnStartPlayDelta[RelativePlayer_Self]
+			);
+			Payload->TurnStartPlayDelta[RelativePlayer_Opp] = (
+				Card->TurnStartPlayDelta[RelativePlayer_Opp]
+			);
+
+			Payload->TimeLeft = Card->TimeLeft;
+			Payload->TapsAvailable = Card->TapsAvailable;
+			Payload->TimesTapped = Card->TimesTapped;
+			Payload->Attack = Card->Attack;
+			Payload->TurnStartAttack= Card->TurnStartAttack;
+			Payload->Health = Card->Health;
+			Payload->TurnStartHealth = Card->TurnStartHealth;
+			Payload->TableauTags = Card->TableauTags;
+			Payload->StackTags = Card->StackTags;
 
 			SocketSendData(
 				GameState, &SceneState->ConnectSocket, Header, FrameArena

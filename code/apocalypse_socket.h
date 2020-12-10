@@ -50,6 +50,21 @@ struct card_update_payload
 	uint32_t DefId;
 	player_id Owner;
 	card_set_type SetType;
+	player_resources PlayDelta[Player_Count];
+	player_resources TapDelta[Player_Count];
+	
+	player_resources TurnStartPlayDelta[Player_Count];
+	player_resources TurnStartTapDelta[Player_Count];
+
+	float TimeLeft;
+	int32_t TapsAvailable;
+	int32_t TimesTapped;
+	int16_t Attack;
+	int16_t TurnStartAttack;
+	int16_t Health;
+	int16_t TurnStartHealth;
+	tableau_effect_tags TableauTags;
+	stack_effect_tags StackTags;
 };
 struct card_update_packet
 {

@@ -125,7 +125,6 @@ void OutDeckToInDeck(deck* Deck, deck_card* DeckCard)
 struct card
 {
 	uint64_t LastFrame; // NOTE: last frame that leader updated this card on
-	uint32_t EntityId; // NOTE: which entity in the array we correspond to
 	uint32_t CardId; // NOTE: distinct from definition ID
 	card_definition* Definition;
 	player_resources PlayDelta[Player_Count];
@@ -142,6 +141,7 @@ struct card
 	bool Active;
 	bool Visible;
 	bool HoveredOver;
+	bool Updated; // NOTE: updated by leader
 	player_id Owner;
 	int32_t TapsAvailable;
 	int32_t TimesTapped;

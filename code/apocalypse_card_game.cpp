@@ -141,6 +141,35 @@ void AddCardAndAlign(card_set* CardSet, card* Card)
 	}
 }
 
+void RemoveCardFromStack(card_game_state* SceneState, card* Card)
+{
+	card_stack_entry* FoundAt = NULL;
+	for(
+		uint32_t StackIndex = 0;
+		StackIndex < SceneState->StackSize;
+		StackIndex++
+	)
+	{
+		card_stack_entry* CardStackEntry = SceneState->Stack + StackIndex;
+		card* CardToCheck = CardStackEntry->Card;
+		if(CardToCheck == Card)
+		{
+			FoundAt = CardStackEntry;
+			break;
+		}
+	}
+	ASSERT(FoundAt != NULL);
+	SceneState->StackSize--;
+	memcpy(
+		FoundAt,
+		FoundAt + 1,
+		(
+			(SceneState->StackSize - (FoundAt - SceneState->Stack)) * 
+			sizeof(card_stack_entry)
+		)
+	);
+}
+
 bool RemoveCardFromSet(card_set* CardSet, card* Card)
 {
 	for(int Index = 0; Index < ARRAY_COUNT(CardSet->Cards); Index++)
@@ -170,8 +199,15 @@ bool RemoveCardFromSet(card_game_state* SceneState, card* Card)
 			CardSet = SceneState->Tableaus + Card->Owner;
 			break;
 		}
+		case(CardSet_Stack):
+		{
+			// NOTE: different flow for stack
+			RemoveCardFromStack(SceneState, Card);
+			return true;
+		}
 		default:
 		{
+			ASSERT(false);
 			break;
 		}
 	}
@@ -529,10 +565,14 @@ void SetStackPositions(card_game_state* SceneState)
 	}
 }
 
-void AddCardToStack(card_game_state* SceneState, card* Card)
+card_stack_entry* AddCardToStack(card_game_state* SceneState, card* Card)
 {
-	// NOTE: this handles putting the card on the stack w/r/t UI only
 	RemoveCardAndAlign(SceneState, Card);
+	
+	card_stack_entry* StackEntry = SceneState->Stack + SceneState->StackSize;
+	StackEntry->Card = Card;
+	SceneState->StackSize++;
+
 	Card->Rectangle.Dim = SceneState->StackEntryInfoDim;
 	Card->SetType = CardSet_Stack;
 	Card->Rectangle.Min.X = SceneState->StackScrollBar.ScrollBox.Min.X;
@@ -543,6 +583,8 @@ void AddCardToStack(card_game_state* SceneState, card* Card)
 		SceneState->StackYStart,
 		GetStackEntriesHeight(SceneState)
 	);
+
+	return StackEntry;
 }
 
 void SwitchStackTurns(game_state* GameState, card_game_state* SceneState)
@@ -573,18 +615,13 @@ void PlayStackCard(
 	game_state* GameState, card_game_state* SceneState, card* Card
 )
 {
-	// NOTE: play the stack card without checking HasAnyTag
-	card_stack_entry* StackEntry = SceneState->Stack + SceneState->StackSize;
-	StackEntry->Card = Card;
-	SceneState->StackSize++;
-	SceneState->StackBuilding = true;
-
+	// NOTE: this function plays the stack card without checking HasAnyTag
+	card_stack_entry* StackEntry = AddCardToStack(SceneState, Card);
 	if(HasTag(&Card->StackTags, StackEffect_HurtOpp))
 	{
 		StackEntry->PlayerTarget = GetOpponent(SceneState->CurrentTurn);
 	}
-	SceneState->StackTurn = Player_One;
-	AddCardToStack(SceneState, Card);
+	
 	SwitchStackTurns(GameState, SceneState);
 }
 
@@ -595,6 +632,8 @@ void NormalPlayCard(
 	// NOTE: handle cards that go onto the stack
 	if(HasAnyTag(&Card->StackTags))
 	{
+		SceneState->StackBuilding = true;
+		SceneState->StackTurn = SceneState->CurrentTurn;
 		PlayStackCard(GameState, SceneState, Card);
 	}
 	// NOTE: handle cards that go in the tableau
@@ -1135,27 +1174,13 @@ void PushTurnTimer(
 	}
 
 	int32_t TurnTimerCeil = 0;
-	if(SceneState->StackBuilding)
+	if(SceneState->CurrentTurn == Player)
 	{
-		if(SceneState->StackTurn == Player)
-		{
-			TurnTimerCeil = Int32Ceil(SceneState->TurnTimer);
-		}
-		else
-		{
-			TurnTimerCeil = Int32Ceil(SceneState->NextTurnTimer);
-		}
+		TurnTimerCeil = Int32Ceil(SceneState->TurnTimer);
 	}
 	else
 	{
-		if(SceneState->CurrentTurn == Player)
-		{
-			TurnTimerCeil = Int32Ceil(SceneState->TurnTimer);
-		}
-		else
-		{
-			TurnTimerCeil = Int32Ceil(SceneState->NextTurnTimer);
-		}
+		TurnTimerCeil = Int32Ceil(SceneState->NextTurnTimer);
 	}
 
 	uint32_t MaxTurnTimerCharacters = 10;
@@ -1608,6 +1633,18 @@ void UpdateAndRenderCardGame(
 	// SECTION START: Read leader state
 	if(SceneState->NetworkGame && !SceneState->IsLeader)
 	{
+		// NOTE: this only exists so we can remove cards that aren't touched by
+		// CONT: the leader
+		for(
+			uint32_t CardIndex = 0;
+			CardIndex < SceneState->MaxCards;
+			CardIndex++
+		)
+		{
+			card* Card = SceneState->Cards + CardIndex;
+			Card->Updated = false;
+		}
+
 		// TODO: handle packets coming in pieces
 		packet_header* Header = PushStruct(FrameArena, packet_header);
 
@@ -1668,6 +1705,18 @@ void UpdateAndRenderCardGame(
 							SceneState->NextTurnTimer = (
 								LeaderState->NextTurnTimer
 							);
+							SceneState->StackBuilding = (
+								LeaderState->StackBuilding
+							);
+							SceneState->StackTurn = GetOpponent(
+								LeaderState->StackTurn
+							);
+							SceneState->PlayerLife[Player_One] = (
+								LeaderState->PlayerLife[Player_Two]
+							);
+							SceneState->PlayerLife[Player_Two] = (
+								LeaderState->PlayerLife[Player_One]
+							);
 
 							SceneState->LastFrame = Header->FrameId;
 
@@ -1688,7 +1737,7 @@ void UpdateAndRenderCardGame(
 							(card_update_payload*) Payload
 						);
 						uint32_t CardId = CardUpdate->CardId;
-						card* CardToChange = GetCardWithId(SceneState, CardId);						
+						card* CardToChange = GetCardWithId(SceneState, CardId);
 
 						player_id CardOwner = GetOpponent(
 							CardUpdate->Owner
@@ -1707,7 +1756,8 @@ void UpdateAndRenderCardGame(
 								CardOwner
 							);
 						}
-						
+						CardToChange->Updated = true;
+
 						if(
 							CardToChange->LastFrame >= Header->FrameId && 
 							!IsNewCard
@@ -1725,7 +1775,10 @@ void UpdateAndRenderCardGame(
 							CardToChange->SetType != CardUpdate->SetType
 						)
 						{
-							RemoveCardFromSet(SceneState, CardToChange);
+							if(!IsNewCard)
+							{
+								RemoveCardFromSet(SceneState, CardToChange);
+							}
 							AddCardToSet(
 								SceneState,
 								CardUpdate->SetType,
@@ -1790,7 +1843,21 @@ void UpdateAndRenderCardGame(
 			{
 				break;
 			}
-		} while (BytesRead > 0); 
+		} while (BytesRead > 0);
+
+		for(
+			uint32_t CardIndex = 0;
+			CardIndex < SceneState->MaxCards;
+			CardIndex++
+		)
+		{
+			card* Card = SceneState->Cards + CardIndex;
+			if(Card->Active && !Card->Updated)
+			{
+				RemoveCardFromSet(SceneState, Card);
+				Card->Active = false;
+			}
+		}
 
 		AlignCardSet(SceneState->Hands + Player_One);
 		AlignCardSet(SceneState->Hands + Player_Two);
@@ -1798,6 +1865,10 @@ void UpdateAndRenderCardGame(
 		AlignCardSet(SceneState->Tableaus + Player_Two);
 	}
 	// SECTION STOP: Read leader state
+
+	// NOTE: storing frame start stack turn has to be done after updating 
+	// CONT: card game state
+	player_id FrameStartStackTurn = SceneState->StackTurn;
 
 	// SECTION START: User input
 	// TODO: move to game memory
@@ -2246,7 +2317,15 @@ void UpdateAndRenderCardGame(
 			);
 			Payload->PlayerResources[Player_Two] = (
 				SceneState->PlayerResources[Player_Two]
-			); 
+			);
+			Payload->StackTurn = SceneState->StackTurn;
+			Payload->StackBuilding = SceneState->StackBuilding;
+			Payload->PlayerLife[Player_One] = (
+				SceneState->PlayerLife[Player_One]
+			);
+			Payload->PlayerLife[Player_Two] = (
+				SceneState->PlayerLife[Player_Two]
+			);
 
 			SocketSendData(
 				GameState, &SceneState->ConnectSocket, Header, FrameArena
@@ -2312,8 +2391,15 @@ void UpdateAndRenderCardGame(
 			);
 		}
 
-		if(EndTurn)
+		if(EndTurn || FrameStartStackTurn != SceneState->StackTurn)
 		{
+			// NOTE: need to complete all send packet jobs because 
+			// CONT: otherwise we could have the far end become leader before
+			// CONT: state has synchronized
+			// CONT: TCP is ordered, threads are not
+			PlatformCompleteAllJobsAtPriority(
+				GameState->JobQueue, JobPriority_SendPacket
+			);
 			// NOTE: switch leadership to follower
 			switch_leader_packet* SwitchLeaderPacket = PushStruct(
 				FrameArena, switch_leader_packet

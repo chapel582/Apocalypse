@@ -77,7 +77,10 @@ struct state_update_payload
 	player_id CurrentTurn;
 	float TurnTimer;
 	float NextTurnTimer;
+	player_id StackTurn;
+	bool StackBuilding;
 	player_resources PlayerResources[Player_Count];
+	float PlayerLife[Player_Count];
 };
 struct state_update_packet
 {

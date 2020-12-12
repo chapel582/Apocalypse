@@ -255,6 +255,7 @@ card* GetInactiveCard(card_game_state* SceneState, int32_t CardId = -1)
 	ASSERT(Card != NULL);
 	ASSERT(!Card->Active);
 
+	*Card = {};
 	Card->Rectangle.Dim.X = SceneState->CardWidth;
 	Card->Rectangle.Dim.Y = SceneState->CardHeight;
 	Card->TimeLeft = 10.0f;
@@ -1642,7 +1643,7 @@ void UpdateAndRenderCardGame(
 		)
 		{
 			card* Card = SceneState->Cards + CardIndex;
-			Card->Updated = false;
+			Card->ConsecutiveMissedPackets++;
 		}
 
 		// TODO: handle packets coming in pieces
@@ -1756,7 +1757,7 @@ void UpdateAndRenderCardGame(
 								CardOwner
 							);
 						}
-						CardToChange->Updated = true;
+						CardToChange->ConsecutiveMissedPackets = 0;
 
 						if(
 							CardToChange->LastFrame >= Header->FrameId && 
@@ -1852,7 +1853,7 @@ void UpdateAndRenderCardGame(
 		)
 		{
 			card* Card = SceneState->Cards + CardIndex;
-			if(Card->Active && !Card->Updated)
+			if(Card->Active && Card->ConsecutiveMissedPackets > 5)
 			{
 				RemoveCardFromSet(SceneState, Card);
 				Card->Active = false;

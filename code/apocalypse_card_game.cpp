@@ -229,12 +229,75 @@ void RemoveCardAndAlign(card_game_state* SceneState, card* Card)
 	{
 		CardSet = SceneState->Hands + Card->Owner;
 	}
-	else
+	else if(Card->SetType == CardSet_Tableau)
 	{
 		CardSet = SceneState->Tableaus + Card->Owner; 
 	}
+	else
+	{
+		ASSERT(false);
+	}
 
 	RemoveCardAndAlign(CardSet, Card);
+}
+
+void SafeRemoveCardCommon(
+	game_state* GameState, card_game_state* SceneState, card* Card
+)
+{
+	Card->Active = false;
+	if(SceneState->NetworkGame && SceneState->IsLeader)
+	{
+		memory_arena* FrameArena = &GameState->FrameArena;
+		remove_card_packet* Packet = PushStruct(
+			FrameArena, remove_card_packet
+		);
+		packet_header* Header = &Packet->Header;
+		InitPacketHeader(GameState, Header, Packet_RemoveCard);
+
+		remove_card_payload* Payload = &Packet->Payload;
+		Payload->CardId = Card->CardId;
+
+		SocketSendData(
+			GameState, &SceneState->ConnectSocket, Header, FrameArena
+		);
+	}
+}
+
+void SafeRemoveCard(
+	game_state* GameState, card_game_state* SceneState, card* Card
+)
+{
+	// NOTE: a function for removing the card from its card set 
+	// CONT: without any concerns for speed. Card will no longer be active and 
+	// CONT: the card set will be decremented but not aligned
+	if(Card->SetType == CardSet_Stack)
+	{
+		RemoveCardFromStack(SceneState, Card);
+	}
+	else
+	{
+		RemoveCardFromSet(SceneState, Card);
+	}
+	SafeRemoveCardCommon(GameState, SceneState, Card);
+}
+
+void SafeRemoveCardAndAlign(
+	game_state* GameState, card_game_state* SceneState, card* Card
+)
+{
+	// NOTE: a function for removing the card from its card set 
+	// CONT: without any concerns for speed. Card will no longer be active and 
+	// CONT: the card set will be decremented and aligned
+	if(Card->SetType == CardSet_Stack)
+	{
+		RemoveCardFromStack(SceneState, Card);
+	}
+	else
+	{
+		RemoveCardAndAlign(SceneState, Card);
+	}
+	SafeRemoveCardCommon(GameState, SceneState, Card);
 }
 
 card* GetInactiveCard(card_game_state* SceneState, int32_t CardId = -1)
@@ -683,7 +746,10 @@ struct attack_card_result
 };
 
 attack_card_result AttackCard(
-	card_game_state* SceneState, card* AttackingCard, card* AttackedCard
+	game_state* GameState,
+	card_game_state* SceneState,
+	card* AttackingCard,
+	card* AttackedCard
 )
 {
 	// NOTE: this currently assumes cards must attack from the tableau
@@ -696,8 +762,7 @@ attack_card_result AttackCard(
 
 	if(AttackingCard->Health <= 0)
 	{
-		RemoveCardAndAlign(SceneState, AttackingCard);
-		AttackingCard->Active = false;
+		SafeRemoveCardAndAlign(GameState, SceneState, AttackingCard);
 		Result.AttackerDied = true;
 	}
 	else
@@ -707,8 +772,7 @@ attack_card_result AttackCard(
 
 	if(AttackedCard->Health <= 0)
 	{
-		RemoveCardAndAlign(SceneState, AttackedCard);
-		AttackedCard->Active = false;
+		SafeRemoveCardAndAlign(GameState, SceneState, AttackedCard);
 		Result.AttackedDied = true;
 	}
 	else
@@ -1269,7 +1333,7 @@ inline void StandardPrimaryUpHandler(
 								TableauEffect_SelfBurn
 							);
 							attack_card_result Result = AttackCard(
-								SceneState, SelectedCard, Card
+								GameState, SceneState, SelectedCard, Card
 							);
 							if(Result.AttackedDied)
 							{
@@ -1372,7 +1436,9 @@ inline void StandardPrimaryUpHandler(
 						if(Tapped)
 						{
 							DeselectCard(SceneState);
-							AttackCard(SceneState, SelectedCard, Card);
+							AttackCard(
+								GameState, SceneState, SelectedCard, Card
+							);
 						}
 					}
 					else if(
@@ -1393,7 +1459,7 @@ inline void StandardPrimaryUpHandler(
 							);
 
 							attack_card_result Result = AttackCard(
-								SceneState, SelectedCard, Card
+								GameState, SceneState, SelectedCard, Card
 							);
 							if(Result.AttackedDied)
 							{
@@ -1825,6 +1891,16 @@ void UpdateAndRenderCardGame(
 
 						break;
 					}
+					case(Packet_RemoveCard):
+					{
+						remove_card_payload* RemoveCardPayload = (
+							(remove_card_payload*) Payload
+						);
+						uint32_t CardId = RemoveCardPayload->CardId;
+						card* CardToRemove = GetCardWithId(SceneState, CardId);
+						SafeRemoveCard(GameState, SceneState, CardToRemove);
+						break;
+					}
 					case(Packet_RandSeed):
 					{
 						rand_seed_payload* RandSeedPayload = (
@@ -1855,8 +1931,7 @@ void UpdateAndRenderCardGame(
 			card* Card = SceneState->Cards + CardIndex;
 			if(Card->Active && Card->ConsecutiveMissedPackets > 5)
 			{
-				RemoveCardFromSet(SceneState, Card);
-				Card->Active = false;
+				SafeRemoveCard(GameState, SceneState, Card);
 			}
 		}
 
@@ -2228,8 +2303,7 @@ void UpdateAndRenderCardGame(
 						}
 						if(Card->Health <= 0)
 						{
-							RemoveCardAndAlign(SceneState, Card);
-							Card->Active = false;
+							SafeRemoveCardAndAlign(GameState, SceneState, Card);
 						}
 					}
 				}

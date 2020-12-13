@@ -14,6 +14,7 @@ typedef enum
 	Packet_SwitchLeader,
 	Packet_StateUpdate,
 	Packet_CardUpdate,
+	Packet_RemoveCard,
 	Packet_DeckData,
 	Packet_RandSeed
 } packet_type;
@@ -70,6 +71,16 @@ struct card_update_packet
 {
 	packet_header Header;
 	card_update_payload Payload;
+};
+
+struct remove_card_payload
+{
+	uint32_t CardId;
+};
+struct remove_card_packet
+{
+	packet_header Header;
+	remove_card_payload Payload;
 };
 
 struct state_update_payload
@@ -136,6 +147,11 @@ void InitPacketHeader(
 		case(Packet_CardUpdate):
 		{
 			Header->DataSize = sizeof(card_update_packet);
+			break;
+		}
+		case(Packet_RemoveCard):
+		{
+			Header->DataSize = sizeof(remove_card_packet);
 			break;
 		}
 		case(Packet_DeckData):

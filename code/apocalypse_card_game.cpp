@@ -1813,16 +1813,27 @@ void UpdateAndRenderCardGame(
 							SceneState->NextTurnTimer = (
 								LeaderState->NextTurnTimer
 							);
+
 							SceneState->StackBuilding = (
 								LeaderState->StackBuilding
 							);
-							if(
-								SceneState->StackTurn != 
-								GetOpponent(LeaderState->StackTurn)
-							)
+							if(SceneState->StackBuilding)
 							{
-								SwitchStackTurns(GameState, SceneState);
+								if(
+									SceneState->StackTurn != 
+									GetOpponent(LeaderState->StackTurn)
+								)
+								{
+									SwitchStackTurns(GameState, SceneState);
+								}
 							}
+							else
+							{
+								SceneState->StackTurn = GetOpponent(
+									LeaderState->StackTurn
+								);
+							}
+
 							SceneState->PlayerLife[Player_One] = (
 								LeaderState->PlayerLife[Player_Two]
 							);

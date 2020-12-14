@@ -651,26 +651,63 @@ card_stack_entry* AddCardToStack(card_game_state* SceneState, card* Card)
 	return StackEntry;
 }
 
+void SwitchTurns(game_state* GameState, card_game_state* SceneState)
+{
+	SceneState->CurrentTurn = GetOpponent(SceneState->CurrentTurn);
+	char Buffer[64];
+	if(SceneState->StackTurn == Player_One)
+	{
+		snprintf(Buffer, sizeof(Buffer), "P1's turn");
+	}
+	else
+	{
+		snprintf(Buffer, sizeof(Buffer), "P2's turn");
+	}
+	DisplayMessageFor(GameState, &SceneState->Alert, Buffer, 1.0f);
+}
+
 void SwitchStackTurns(game_state* GameState, card_game_state* SceneState)
 {
 	SceneState->StackTurn = GetOpponent(SceneState->StackTurn);
 
 	char Buffer[64];
-	if(SceneState->StackTurn == Player_One)
+	if(!SceneState->NetworkGame)
 	{
-		snprintf(
-			Buffer,
-			sizeof(Buffer),
-			"P1 can build on the stack (hit enter to trigger stack)"
-		);
+		if(SceneState->StackTurn == Player_One)
+		{
+			snprintf(
+				Buffer,
+				sizeof(Buffer),
+				"P1 can build on the stack (hit enter to trigger stack)"
+			);
+		}
+		else
+		{
+			snprintf(
+				Buffer,
+				sizeof(Buffer),
+				"P2 can build on the stack (hit enter to trigger stack)"
+			);
+		}
 	}
 	else
 	{
-		snprintf(
-			Buffer,
-			sizeof(Buffer),
-			"P2 can build on the stack (hit enter to trigger stack)"
-		);
+		if(SceneState->StackTurn == Player_One)
+		{
+			snprintf(
+				Buffer,
+				sizeof(Buffer),
+				"P1 can build on the stack (hit enter to trigger stack)"
+			);
+		}
+		else
+		{
+			snprintf(
+				Buffer,
+				sizeof(Buffer),
+				"P2 can build on the stack"
+			);
+		}
 	}
 	DisplayMessageFor(GameState, &SceneState->Alert, Buffer, 1.0f);
 }
@@ -1765,9 +1802,13 @@ void UpdateAndRenderCardGame(
 							state_update_payload* LeaderState = (
 								(state_update_payload*) Payload
 							);
-							SceneState->CurrentTurn = GetOpponent(
-								LeaderState->CurrentTurn
-							);
+							if(
+								SceneState->CurrentTurn != 
+								GetOpponent(LeaderState->CurrentTurn)
+							)
+							{
+								SwitchTurns(GameState, SceneState);
+							}
 							SceneState->TurnTimer = LeaderState->TurnTimer;
 							SceneState->NextTurnTimer = (
 								LeaderState->NextTurnTimer
@@ -1775,9 +1816,13 @@ void UpdateAndRenderCardGame(
 							SceneState->StackBuilding = (
 								LeaderState->StackBuilding
 							);
-							SceneState->StackTurn = GetOpponent(
-								LeaderState->StackTurn
-							);
+							if(
+								SceneState->StackTurn != 
+								GetOpponent(LeaderState->StackTurn)
+							)
+							{
+								SwitchStackTurns(GameState, SceneState);
+							}
 							SceneState->PlayerLife[Player_One] = (
 								LeaderState->PlayerLife[Player_Two]
 							);
@@ -2149,9 +2194,7 @@ void UpdateAndRenderCardGame(
 		}
 		SceneState->NextTurnTimer = SceneState->BaselineNextTurnTimer;
 
-		SceneState->CurrentTurn = (
-			(SceneState->CurrentTurn == Player_Two) ? Player_One : Player_Two
-		);
+		SwitchTurns(GameState, SceneState);
 		for(
 			uint32_t CardIndex = 0;
 			CardIndex < SceneState->MaxCards;

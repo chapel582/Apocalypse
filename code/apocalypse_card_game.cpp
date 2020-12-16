@@ -384,12 +384,20 @@ void InitCardWithDeckCard(
 	card_game_state* SceneState, deck* Deck, card* Card, player_id Owner
 )
 {
-	deck_card* CardToDraw = Deck->InDeck;
-	ASSERT(CardToDraw != NULL);	
+	ASSERT(Deck->InDeckCount > 0);
+	ASSERT(Deck->InDeck[0] < MAX_CARDS_IN_DECK);
+	deck_card* CardToDraw = Deck->Cards + Deck->InDeck[0];
+
+	// NOTE: remove the top card from the deck
+	Deck->InDeckCount--;
+	memcpy(
+		Deck->InDeck, Deck->InDeck + 1, Deck->InDeckCount * sizeof(uint32_t)
+	);
+
 	card_definition* Definition = CardToDraw->Definition;
+
 	InitCardWithDef(SceneState, Card, Definition);
 	Card->Owner = Owner;
-	InDeckToOutDeck(Deck, CardToDraw);
 }
 
 card* DrawCard(
@@ -967,23 +975,19 @@ void StartCardGame(
 			}
 			deck* Deck = &SceneState->Decks[PlayerIndex];
 			*Deck = {};
+			Deck->CardCount = LoadedDeck->Header.CardCount;
 
 			deck_card* DeckCard = &Deck->Cards[0];
 			*DeckCard = {};
 			InitDeckCard(
 				DeckCard, SceneState->Definitions, LoadedDeck->Ids[0]
 			);
-			DeckCard->Next = NULL;
-			DeckCard->Previous = NULL;
-			Deck->OutOfDeck = DeckCard;
-			Deck->OutOfDeckLength++;
 			for(
 				int CardIndex = 1;
 				CardIndex < LoadedDeck->Header.CardCount;
 				CardIndex++
 			)
 			{
-				deck_card* OldHead = Deck->OutOfDeck;
 				DeckCard = &Deck->Cards[CardIndex];
 				*DeckCard = {};
 				InitDeckCard(
@@ -991,12 +995,6 @@ void StartCardGame(
 					SceneState->Definitions,
 					LoadedDeck->Ids[CardIndex]
 				);
-
-				DeckCard->Next = OldHead;
-				DeckCard->Previous = NULL;
-				OldHead->Previous = DeckCard;
-				Deck->OutOfDeck = DeckCard;
-				Deck->OutOfDeckLength++;
 			}
 		}
 
@@ -1009,13 +1007,34 @@ void StartCardGame(
 		{
 			deck* Deck = &SceneState->Decks[PlayerIndex];
 
-			while(Deck->OutOfDeckLength > 0)
+			Deck->InDeckCount = 0;
+			uint32_t OutOfDeckCount = Deck->CardCount - Deck->InDeckCount;
+			while(OutOfDeckCount > 0)
 			{
-				int DeckCardIndex = rand() % Deck->OutOfDeckLength;
-				deck_card* CardToShuffle = GetDeckCard(
-					Deck->OutOfDeck, Deck->OutOfDeckLength, DeckCardIndex
-				);
-				OutDeckToInDeck(Deck, CardToShuffle);
+				int32_t ShuffleIndex = rand() % OutOfDeckCount;
+				int32_t CardToShuffleHandle = -1;
+				for(
+					int32_t CardIndex = 0;
+					CardIndex < ((int32_t) Deck->CardCount);
+					CardIndex++
+				)
+				{
+					deck_card* DeckCard = Deck->Cards + CardIndex;
+					if(!DeckCard->InDeck)
+					{
+						ShuffleIndex--;
+					}
+
+					if(ShuffleIndex < 0)
+					{
+						CardToShuffleHandle = CardIndex;
+						break;
+					}
+				}
+				ASSERT(CardToShuffleHandle != -1);
+				Deck->InDeck[Deck->InDeckCount] = CardToShuffleHandle;
+				Deck->InDeckCount++;
+				OutOfDeckCount = Deck->CardCount - Deck->InDeckCount;
 			}
 		}
 		// SECTION STOP: Shuffle deck

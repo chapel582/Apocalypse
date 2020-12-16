@@ -28,99 +28,20 @@ typedef enum
 	CardSet_Count
 } card_set_type;
 
-struct deck_card;
 struct deck_card
 {
 	card_definition* Definition;
-	deck_card* Next;
-	deck_card* Previous;
+	bool InDeck;
 };
 
 struct deck
 {
 	deck_card Cards[MAX_CARDS_IN_DECK];
-	// NOTE: these linked lists are doubly linked and circular 
-	deck_card* InDeck;
-	int InDeckLength;
-	deck_card* OutOfDeck;
-	int OutOfDeckLength;
+	uint32_t CardCount;
+	// NOTE: these arrays are handles into the Cards Array
+	uint32_t InDeck[MAX_CARDS_IN_DECK];
+	uint32_t InDeckCount;
 };
-
-deck_card* GetDeckCard(
-	deck_card* DeckCardListHead, int DeckCardListLen, int Index
-)
-{
-	ASSERT(Index < DeckCardListLen);
-	deck_card* DeckCard = DeckCardListHead;
-	for(int Pass = 0; Pass < Index; Pass++)
-	{
-		DeckCard = DeckCard->Next;
-	}
-	return DeckCard;
-}
-
-void InOutSwap(
-	deck* Deck,
-	deck_card* DeckCard,
-	deck_card* First,
-	int* ToIncrement,
-	int* ToDecrement
-)
-{
-	deck_card* OldPrevious = DeckCard->Previous;
-	deck_card* OldNext = DeckCard->Next;
-
-	if(OldPrevious != NULL)
-	{
-		OldPrevious->Next = OldNext;
-	}
-	if(OldNext != NULL)
-	{
-		OldNext->Previous = OldPrevious;
-	}
-	(*ToDecrement)--;
-
-	if(First != NULL)
-	{
-		First->Previous = DeckCard;
-	}
-
-	DeckCard->Next = First;
-	DeckCard->Previous = NULL;
-	(*ToIncrement)++;
-}
-
-void InDeckToOutDeck(deck* Deck, deck_card* DeckCard)
-{
-	if(Deck->InDeck == DeckCard)
-	{
-		Deck->InDeck = DeckCard->Next;
-	}
-	InOutSwap(
-		Deck,
-		DeckCard,
-		Deck->OutOfDeck,
-		&Deck->OutOfDeckLength,
-		&Deck->InDeckLength
-	);
-	Deck->OutOfDeck = DeckCard;
-}
-
-void OutDeckToInDeck(deck* Deck, deck_card* DeckCard)
-{
-	if(Deck->OutOfDeck == DeckCard)
-	{
-		Deck->OutOfDeck = DeckCard->Next;
-	}
-	InOutSwap(
-		Deck,
-		DeckCard,
-		Deck->InDeck,
-		&Deck->InDeckLength,
-		&Deck->OutOfDeckLength
-	);
-	Deck->InDeck = DeckCard;
-}
 
 struct card
 {

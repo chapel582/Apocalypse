@@ -16,6 +16,7 @@ typedef enum
 	Packet_CardUpdate,
 	Packet_RemoveCard,
 	Packet_DeckData,
+	Packet_DeckUpdate,
 	Packet_RandSeed
 } packet_type;
 
@@ -109,6 +110,18 @@ struct deck_data_packet
 	deck_data_payload Payload;
 };
 
+struct deck_update_payload
+{
+	player_id Owner;
+	uint32_t InDeckCount;
+	uint32_t Offset;
+};
+struct deck_update_packet
+{
+	packet_header Header;
+	deck_update_payload Payload;
+};
+
 struct rand_seed_payload
 {
 	uint32_t Seed;
@@ -157,6 +170,11 @@ void InitPacketHeader(
 		case(Packet_DeckData):
 		{
 			Header->DataSize = sizeof(deck_data_packet);
+			break;
+		}
+		case(Packet_DeckUpdate):
+		{
+			// NOTE: data size cannot be determined by common code
 			break;
 		}
 		case(Packet_RandSeed):

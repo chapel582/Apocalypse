@@ -1976,6 +1976,24 @@ void UpdateAndRenderCardGame(
 						SafeRemoveCard(GameState, SceneState, CardToRemove);
 						break;
 					}
+					case(Packet_DeckUpdate):
+					{
+						deck_update_payload* DeckUpdatePayload = (
+							(deck_update_payload*) Payload
+						);
+						player_id Owner = GetOpponent(DeckUpdatePayload->Owner);
+						deck* Deck = SceneState->Decks + Owner;
+						Deck->InDeckCount = DeckUpdatePayload->InDeckCount;
+						memcpy(
+							Deck->InDeck,
+							(
+								(uint8_t*) DeckUpdatePayload +
+								DeckUpdatePayload->Offset
+							),
+							sizeof(uint32_t) * Deck->InDeckCount
+						);
+						break;
+					}
 					case(Packet_RandSeed):
 					{
 						rand_seed_payload* RandSeedPayload = (
@@ -2478,6 +2496,44 @@ void UpdateAndRenderCardGame(
 			SocketSendData(
 				GameState, &SceneState->ConnectSocket, Header, FrameArena
 			);
+
+			for(uint32_t Owner = Player_One; Owner < Player_Count; Owner++)
+			{
+				deck* Deck = SceneState->Decks + Owner;
+				deck_update_packet* DeckUpdatePacket = PushStruct(
+					FrameArena, deck_update_packet
+				);
+				
+				packet_header* DeckUpdateHeader = &DeckUpdatePacket->Header;
+				InitPacketHeader(
+					GameState, DeckUpdateHeader, Packet_DeckUpdate
+				);
+				DeckUpdateHeader->DataSize = (
+					sizeof(deck_update_packet) +
+					Deck->InDeckCount * sizeof(uint32_t)
+				);
+
+				deck_update_payload* DeckUpdatePayload = (
+					&DeckUpdatePacket->Payload
+				);
+				uint32_t* InDeckHandles = PushArray(
+					FrameArena, Deck->InDeckCount, uint32_t
+				);
+				DeckUpdatePayload->Owner = (player_id) Owner;
+				DeckUpdatePayload->InDeckCount = Deck->InDeckCount;
+				DeckUpdatePayload->Offset = sizeof(deck_update_payload);
+				memcpy(
+					InDeckHandles,
+					Deck->InDeck,
+					sizeof(uint32_t) * Deck->InDeckCount
+				);
+				SocketSendData(
+					GameState,
+					&SceneState->ConnectSocket,
+					&DeckUpdatePacket->Header,
+					FrameArena
+				);
+			}
 		}
 
 		for(

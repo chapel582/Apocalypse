@@ -159,6 +159,18 @@ text_input_kb_result TextInputHandleKeyboard(
 			}
 			break;
 		}
+		case(0xBE):
+		{
+			// NOTE: period
+			PressAndHoldKeyboardEvent(
+				TextInput,
+				AddLetterToTextInput,
+				KeyboardEvent,
+				0x2e
+			);
+			Result = TextInputKbResult_TextChanged;
+			break;
+		}
 		case(0x0D):
 		{
 			// NOTE: Return

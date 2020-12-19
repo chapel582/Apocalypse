@@ -5,26 +5,32 @@
 
 typedef enum
 {
-	ConnectToServerResult_InProgress,
-	ConnectToServerResult_Complete,	
-	ConnectToServerResult_Error
-} connect_to_server_result;
+	ConnectionState_IpEntry,
+	ConnectionState_InProgress,
+	ConnectionState_Complete,	
+	ConnectionState_Error
+} connection_state;
 
-struct connect_to_server_args
+struct connection_args
 {
 	platform_socket* ConnectSocket;
-	connect_to_server_result ConnectionResult;
+	char IpAddress[32];
+	connection_state ConnectionState;
 };
 
 struct join_game_state
 {
+	ui_context UiContext;
+	text_input IpInput;
+	rectangle IpInputRectangle;
+
 	vector2 ScreenDimInWorld;
 	platform_socket* ConnectSocket;
 	
 	void* PacketBuffer;
 	uint32_t PacketBufferSize;
 
-	connect_to_server_args* ConnectToServerArgs;
+	connection_args ConnectionArgs;
 };
 
 void StartJoinGamePrep(game_state* GameState);

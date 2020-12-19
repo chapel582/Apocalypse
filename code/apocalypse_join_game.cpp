@@ -9,20 +9,23 @@
 
 void ConnectJob(void* Data)
 {
-	connect_to_server_args* Args = (connect_to_server_args*) Data;
+	connection_args* Args = (connection_args*) Data;
 	platform_socket* ConnectSocket = Args->ConnectSocket;
 	
+	// platform_socket_result ConnectResult = PlatformCreateClient(
+	// 	"127.0.0.1", ConnectSocket
+	// );
 	platform_socket_result ConnectResult = PlatformCreateClient(
-		"127.0.0.1", ConnectSocket
+		Args->IpAddress, ConnectSocket
 	);
 	if(ConnectResult != PlatformSocketResult_Success)
 	{
 		// TODO: logging
-		Args->ConnectionResult = ConnectToServerResult_Error;
+		Args->ConnectionState = ConnectionState_Error;
 	}
 	else
 	{
-		Args->ConnectionResult = ConnectToServerResult_Complete;
+		Args->ConnectionState = ConnectionState_Complete;
 	}
 }
 
@@ -50,31 +53,32 @@ void StartJoinGame(
 		Vector2(WindowWidth, WindowHeight)
 	);
 
-	// TODO: move this out to a thread
-	SceneState->ConnectSocket = PushStruct(
-		&GameState->TransientArena, platform_socket
-	);
+	memory_arena* TransientArena = &GameState->TransientArena;
+	SceneState->ConnectSocket = PushStruct(TransientArena, platform_socket);
 
-	SceneState->ConnectToServerArgs = PushStruct(
-		&GameState->TransientArena, connect_to_server_args
-	);
-	*SceneState->ConnectToServerArgs = {};
-	SceneState->ConnectToServerArgs->ConnectSocket = SceneState->ConnectSocket;
-	SceneState->ConnectToServerArgs->ConnectionResult = (
-		ConnectToServerResult_InProgress
-	);
-	PlatformAddJob(
-		GameState->JobQueue,
-		ConnectJob,
-		SceneState->ConnectToServerArgs,
-		JobPriority_Other
-	);
+	SceneState->ConnectionArgs = {};
+	SceneState->ConnectionArgs.ConnectSocket = SceneState->ConnectSocket;
+	SceneState->ConnectionArgs.ConnectionState = ConnectionState_IpEntry;
 
 	SceneState->PacketBufferSize = 256;
 	SceneState->PacketBuffer = PushSize(
-		&GameState->TransientArena,
-		SceneState->PacketBufferSize
+		TransientArena, SceneState->PacketBufferSize
 	);
+
+	InitUiContext(&SceneState->UiContext);
+	ui_context* UiContext = &SceneState->UiContext;
+	InitTextInput(
+		UiContext,
+		&SceneState->IpInput,
+		20.0f,
+		SceneState->ConnectionArgs.IpAddress,
+		sizeof(SceneState->ConnectionArgs.IpAddress)
+	);
+	SceneState->IpInputRectangle = MakeRectangleCentered(
+		Vector2(WindowWidth / 2.0f, WindowHeight / 2.0f),
+		Vector2(WindowWidth / 5.0f, SceneState->IpInput.FontHeight)
+	);
+	SetActive(UiContext, SceneState->IpInput.UiId);
 }
 
 void UpdateAndRenderJoinGame(
@@ -90,11 +94,104 @@ void UpdateAndRenderJoinGame(
 	memory_arena* FrameArena = &GameState->FrameArena;
 	render_group* RenderGroup = &GameState->RenderGroup;
 	assets* Assets = &GameState->Assets;
+	ui_context* UiContext = &SceneState->UiContext;
 
 	uint32_t BytesRead = 0;
 	if(
-		SceneState->ConnectToServerArgs->ConnectionResult == 
-		ConnectToServerResult_Complete
+		SceneState->ConnectionArgs.ConnectionState == ConnectionState_IpEntry
+	)
+	{
+		user_event_index UserEventIndex = 0;
+		int MouseEventIndex = 0;
+		int KeyboardEventIndex = 0;
+
+		while(
+			(MouseEventIndex < MouseEvents->Length) ||
+			(KeyboardEventIndex < KeyboardEvents->Length)
+		)
+		{
+			for(; MouseEventIndex < MouseEvents->Length; MouseEventIndex++)
+			{
+				game_mouse_event* MouseEvent = (
+					&MouseEvents->Events[MouseEventIndex]
+				);
+
+				if(MouseEvent->UserEventIndex != UserEventIndex)
+				{
+					break;
+				}
+
+				vector2 MouseEventWorldPos = TransformPosFromBasis(
+					&GameState->WorldToCamera,
+					TransformPosFromBasis(
+						&GameState->CameraToScreen, 
+						Vector2(MouseEvent->XPos, MouseEvent->YPos)
+					)
+				);
+				
+				TextInputHandleMouse(
+					UiContext,
+					&SceneState->IpInput,
+					SceneState->IpInputRectangle,
+					MouseEvent,
+					MouseEventWorldPos
+				);				
+
+				UserEventIndex++;
+			}
+
+			for(
+				;
+				KeyboardEventIndex < KeyboardEvents->Length;
+				KeyboardEventIndex++
+			)
+			{
+				game_keyboard_event* KeyboardEvent = (
+					&KeyboardEvents->Events[KeyboardEventIndex]
+				);
+				if(KeyboardEvent->UserEventIndex != UserEventIndex)
+				{
+					break;
+				}
+
+				if(KeyboardEvent->IsDown != KeyboardEvent->WasDown)
+				{
+					// NOTE: :common keyboard actions across all states
+					switch(KeyboardEvent->Code)
+					{
+						case(0x1B): // NOTE: Escape V-code
+						{
+							GameState->Scene = SceneType_MainMenu; 
+							break;
+						}
+					}
+
+					text_input_kb_result KeyboardResult = (TextInputHandleKeyboard(
+							UiContext,
+							&SceneState->IpInput,
+							KeyboardEvent
+						)
+					);
+					if(KeyboardResult == TextInputKbResult_Submit)
+					{
+						SceneState->ConnectionArgs.ConnectionState = (
+							ConnectionState_InProgress
+						);
+						PlatformAddJob(
+							GameState->JobQueue,
+							ConnectJob,
+							&SceneState->ConnectionArgs,
+							JobPriority_Other
+						);
+					}
+				}
+
+				UserEventIndex++;
+			}
+		}
+	}
+	else if(
+		SceneState->ConnectionArgs.ConnectionState == ConnectionState_Complete
 	)
 	{
 		// TODO: probably want to just join a thread/check for a particular job
@@ -112,15 +209,44 @@ void UpdateAndRenderJoinGame(
 
 	PushClear(RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
 
-	PushText(
-		RenderGroup,
-		Assets,
-		FontHandle_TestFont,
-		"Connecting to server",
-		64,
-		50.0f,
-		SceneState->ScreenDimInWorld / 2.0f,
-		Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-		FrameArena
-	);
+	if(
+		SceneState->ConnectionArgs.ConnectionState == ConnectionState_IpEntry
+	)
+	{
+		vector4 FontColor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+		vector4 BackgroundColor = Vector4(0.1f, 0.1f, 0.1f, 1.0f);
+		bitmap_handle Background = BitmapHandle_TestCard2;
+		PushTextInput(
+			UiContext,
+			&SceneState->IpInput,
+			FontColor,
+			SceneState->IpInputRectangle,
+			Background,
+			BackgroundColor,
+			Assets,
+			RenderGroup,
+			FrameArena
+		);
+	}
+	else if(
+		SceneState->ConnectionArgs.ConnectionState == ConnectionState_InProgress
+	)
+	{
+		PushText(
+			RenderGroup,
+			Assets,
+			FontHandle_TestFont,
+			"Connecting to server",
+			64,
+			50.0f,
+			SceneState->ScreenDimInWorld / 2.0f,
+			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+			FrameArena
+		);
+	}
+	else if(SceneState->ConnectionArgs.ConnectionState == ConnectionState_Error)
+	{
+		// TODO: recovery and logging
+		ASSERT(false);
+	}
 }

@@ -23,6 +23,7 @@ void InitTextInput(
 
 void AddLetterToTextInput(text_input* TextInput)
 {
+	// TODO: this should probably be named "AddCharacterToTextInput"
 	TextInput->Buffer[TextInput->CursorPos] = TextInput->CharDown;
 	TextInput->CursorPos++;
 	if(TextInput->CursorPos >= TextInput->BufferSize)
@@ -282,6 +283,23 @@ text_input_kb_result TextInputHandleKeyboard(
 		{
 			// NOTE: Delete
 			// TODO: implement
+			break;
+		}
+		case(0xBA): // NOTE: colon and semicolon
+		{
+			char Character = 0;
+			if(CheckFlag(TextInput, TextInput_ShiftIsDown))
+			{
+				Character = 0x3A; // NOTE: Colon 
+			}
+			else
+			{
+				Character = 0x3B; // NOTE: semicolon
+			}
+			PressAndHoldKeyboardEvent(
+				TextInput, AddLetterToTextInput, KeyboardEvent, Character
+			);
+			Result = TextInputKbResult_TextChanged;
 			break;
 		}
 	}

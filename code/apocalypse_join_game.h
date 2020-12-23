@@ -14,7 +14,7 @@ typedef enum
 struct connection_args
 {
 	platform_socket* ConnectSocket;
-	char IpAddress[32];
+	char IpAddress[64];
 	connection_state ConnectionState;
 };
 

@@ -12,9 +12,6 @@ void ConnectJob(void* Data)
 	connection_args* Args = (connection_args*) Data;
 	platform_socket* ConnectSocket = Args->ConnectSocket;
 	
-	// platform_socket_result ConnectResult = PlatformCreateClient(
-	// 	"127.0.0.1", ConnectSocket
-	// );
 	platform_socket_result ConnectResult = PlatformCreateClient(
 		Args->IpAddress, ConnectSocket
 	);
@@ -76,7 +73,7 @@ void StartJoinGame(
 	);
 	SceneState->IpInputRectangle = MakeRectangleCentered(
 		Vector2(WindowWidth / 2.0f, WindowHeight / 2.0f),
-		Vector2(WindowWidth / 5.0f, SceneState->IpInput.FontHeight)
+		Vector2(2.0f * WindowWidth / 5.0f, SceneState->IpInput.FontHeight)
 	);
 	SetActive(UiContext, SceneState->IpInput.UiId);
 }

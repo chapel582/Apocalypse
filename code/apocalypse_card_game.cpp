@@ -1772,7 +1772,7 @@ void UpdateAndRenderCardGame(
 		packet_header* Header = PushStruct(FrameArena, packet_header);
 
 		uint32_t BytesRead = 0;
-		while(true)
+		do
 		{
 			platform_read_socket_result SocketReadResult = PlatformSocketRead(
 				&SceneState->ConnectSocket,

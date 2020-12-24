@@ -491,25 +491,34 @@ platform_read_socket_result PlatformSocketRead(
 	int RemainingLength = BufferSize;
 	int RecvResult = 0;
 	int BytesRead = 0;
+	uint8_t* WriteTo = (uint8_t*) Buffer;
 	do
 	{
 		uint32_t BytesAvailable = 0;
-		ioctlsocket(Socket->Socket, FIONREAD, (u_long*) &BytesAvailable);
+		int PeekResult = ioctlsocket(
+			Socket->Socket, FIONREAD, (u_long*) &BytesAvailable
+		);
+		if(PeekResult == SOCKET_ERROR)
+		{
+			break;
+		}
 		if(BytesAvailable == 0)
 		{
 			break;
 		}
 
-		RecvResult = recv(Socket->Socket, (char*) Buffer, RemainingLength, 0);
+		RecvResult = recv(Socket->Socket, (char*) WriteTo, RemainingLength, 0);
 		if(RecvResult >= 0)
 		{
 			BytesRead = RecvResult;
+			WriteTo += BytesRead;
 			RemainingLength -= BytesRead;
 		}
 		else
 		{
 			// TODO: logging
 			ReadResult = PlatformReadSocketResult_Error;
+			break;
 		}
 	} while(BytesRead > 0);
 

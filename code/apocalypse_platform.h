@@ -113,7 +113,8 @@ typedef enum
 	PlatformSocketResult_ListenSocketFail,
 	PlatformSocketResult_AcceptFail,
 	PlatformSocketResult_NoPendingConnections,
-	PlatformSocketResult_ConnectSocketFail
+	PlatformSocketResult_ConnectSocketFail,
+	PlatformSocketResult_EnableIpv6Fail
 } platform_socket_result;
 
 typedef enum

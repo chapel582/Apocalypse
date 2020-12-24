@@ -217,7 +217,7 @@ platform_socket_result PlatformCreateListen(platform_socket* ListenSocket)
 	}
 
 	addrinfo Hints = {};
-	Hints.ai_family = AF_INET;
+	Hints.ai_family = AF_INET6;
 	Hints.ai_socktype = SOCK_STREAM;
 	Hints.ai_protocol = IPPROTO_TCP;
 	Hints.ai_flags = AI_PASSIVE;
@@ -244,6 +244,19 @@ platform_socket_result PlatformCreateListen(platform_socket* ListenSocket)
 	u_long ListenSocketMode = 1;  // NOTE: 1 to enable non-blocking socket
 	ioctlsocket(Win32ListenSocket, FIONBIO, &ListenSocketMode);
 	
+	int Ipv6Only = 0;
+	int SetSockOptResult = setsockopt(
+		Win32ListenSocket,
+		IPPROTO_IPV6,
+		IPV6_V6ONLY,
+		(char*) &Ipv6Only,
+		sizeof(Ipv6Only)
+	);
+	if(SetSockOptResult == SOCKET_ERROR)
+	{
+		Result = PlatformSocketResult_EnableIpv6Fail;
+		goto error;
+	}
 
 	int BindResult = bind(
 		Win32ListenSocket, AddrInfo->ai_addr, (int) AddrInfo->ai_addrlen
@@ -353,12 +366,21 @@ platform_socket_result PlatformCreateClient(
 	{
 		// TODO: logging
 		// TODO: see if this should be done during application startup?
-		return PlatformSocketResult_SocketModuleInitFail;
+		Result = PlatformSocketResult_SocketModuleInitFail;
 		goto error;
 	}
 
+	bool IsIpv6Address = strlen(ServerIp) > 16;
+
 	addrinfo Hints = {};
-	Hints.ai_family = AF_UNSPEC;
+	if(IsIpv6Address)
+	{
+		Hints.ai_family = AF_INET6;
+	}
+	else
+	{
+		Hints.ai_family = AF_INET;
+	}
 	Hints.ai_socktype = SOCK_STREAM;
 	Hints.ai_protocol = IPPROTO_TCP;
 
@@ -379,8 +401,24 @@ platform_socket_result PlatformCreateClient(
 	{
 		// TODO: logging
 		Result = PlatformSocketResult_MakeSocketFail;
-
 		goto error;
+	}
+
+	if(IsIpv6Address)
+	{
+		int Ipv6Only = 0;
+		int SetSockOptResult = setsockopt(
+			Win32ConnectSocket,
+			IPPROTO_IPV6,
+			IPV6_V6ONLY,
+			(char*) &Ipv6Only,
+			sizeof(Ipv6Only)
+		);
+		if(SetSockOptResult == SOCKET_ERROR)
+		{
+			Result = PlatformSocketResult_EnableIpv6Fail;
+			goto error;
+		}
 	}
 
 	int ConnectResult = connect(

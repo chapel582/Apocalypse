@@ -10,6 +10,7 @@
 // TODO: can we make this terse?
 typedef enum
 {
+	Packet_NotSet,
 	Packet_Ready,
 	Packet_SwitchLeader,
 	Packet_StateUpdate,

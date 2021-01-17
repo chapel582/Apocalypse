@@ -87,7 +87,7 @@ void GameInitMemory(
 		);
 
 		// TODO: do we want to be extra and make sure we pick up that last byte?
-		size_t TransientStorageDivision = Memory->TransientStorageSize / 6;
+		size_t TransientStorageDivision = Memory->TransientStorageSize / 7;
 		InitMemArena(
 			&GameState->TransientArena,
 			TransientStorageDivision,
@@ -104,9 +104,14 @@ void GameInitMemory(
 			GetEndOfArena(&GameState->RenderArena)
 		);
 		InitMemArena(
-			&GameState->SceneArgsArena,
+			&GameState->NetworkArena,
 			TransientStorageDivision,
 			GetEndOfArena(&GameState->FrameArena)
+		);
+		InitMemArena(
+			&GameState->SceneArgsArena,
+			TransientStorageDivision,
+			GetEndOfArena(&GameState->NetworkArena)
 		);
 		// TODO: Asset arena probably needs to be bigger than most arenas
 		memory_arena AssetArena = {};

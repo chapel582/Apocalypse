@@ -38,6 +38,8 @@ struct game_state
 	memory_arena TransientArena;
 	// NOTE: FrameArena is just for memory that will not be needed after EOF
 	memory_arena FrameArena;
+	// NOTE: NetworkArena is an arena for network packets after they arrive 
+	memory_arena NetworkArena;
 	// NOTE: render arena is just for the renderer
 	memory_arena RenderArena;
 	// NOTE: an arena for scene args

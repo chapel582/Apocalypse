@@ -87,11 +87,15 @@ struct platform_file_handle
 	// TODO: have a way to keep a file handle open
 };
 
+void PlatformMakeDirectory(char* Path);
 platform_read_file_result PlatformGetFileSize(
 	char* FileName, uint32_t* FileSize
 );
 platform_read_file_result PlatformReadFile(
 	char* FileName, void* Contents, uint32_t BytesToRead
+);
+bool PlatformAppendToFile(
+	char* FileName, void* Memory, uint32_t MemorySize
 );
 bool PlatformWriteEntireFile(
 	char* FileName, void* Memory, uint32_t MemorySize

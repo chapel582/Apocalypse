@@ -7,6 +7,7 @@
 #include "apocalypse_card_game.h"
 #include "apocalypse_player_resources.h"
 
+#define MAX_SEND_LOG_SIZE MEGABYTES(1)
 // TODO: can we make this terse?
 typedef enum
 {

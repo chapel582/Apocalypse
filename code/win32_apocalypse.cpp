@@ -53,6 +53,28 @@ inline float Win32GetSecondsElapsed(int64_t Start, int64_t End)
 }
 // STOP SECTION: Performance counters
 
+platform_read_file_result Win32GetFileSize(
+	HANDLE FileHandle, uint32_t* FileSize
+)
+{
+	platform_read_file_result Result = PlatformReadFileResult_Failure;
+
+	LARGE_INTEGER LargeFileSize;
+	if(!GetFileSizeEx(FileHandle, &LargeFileSize))
+	{
+		// TODO: logging with getlasterror
+		goto error;
+	}
+	
+	*FileSize = SafeTruncateUInt64(LargeFileSize.QuadPart);
+	Result = PlatformReadFileResult_Success;
+	goto end;
+
+error:
+end:
+	return Result;
+}
+
 platform_read_file_result PlatformGetFileSize(
 	char* FileName, uint32_t* FileSize
 )
@@ -64,15 +86,12 @@ platform_read_file_result PlatformGetFileSize(
 		FileName, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0
 	);
 
-	LARGE_INTEGER LargeFileSize;
-	if(!GetFileSizeEx(FileHandle, &LargeFileSize))
+	Result = Win32GetFileSize(FileHandle, FileSize);
+	if(Result != PlatformReadFileResult_Success)
 	{
-		// TODO: logging with getlasterror
 		goto error;
 	}
-	
-	*FileSize = SafeTruncateUInt64(LargeFileSize.QuadPart);
-	Result = PlatformReadFileResult_Success;
+
 	goto end;
 
 error:
@@ -141,7 +160,7 @@ bool PlatformWriteEntireFile(
 		goto error;
 	}
 
-	DWORD BytesWritten;
+	DWORD BytesWritten = 0;
 	if(!WriteFile(FileHandle, Memory, MemorySize, &BytesWritten, 0))
 	{
 		// TODO: logging
@@ -162,6 +181,67 @@ end:
 		CloseHandle(FileHandle);
 	}
 	return Result;
+}
+
+bool PlatformAppendToFile(
+	char* FileName, void* Memory, uint32_t MemorySize
+)
+{
+	bool Result = false;
+	HANDLE FileHandle = INVALID_HANDLE_VALUE;
+	FileHandle = CreateFileA(
+		FileName, GENERIC_WRITE, 0, 0, OPEN_ALWAYS, 0, 0
+	);
+	if(FileHandle == INVALID_HANDLE_VALUE)
+	{
+		// TODO: logging
+		goto error;
+	}
+
+	uint32_t FileSize = 0;
+	Win32GetFileSize(FileHandle, &FileSize);
+	SetFilePointer(FileHandle, FileSize, 0, FILE_BEGIN);
+
+	DWORD BytesWritten = 0;
+	if(!WriteFile(FileHandle, Memory, MemorySize, &BytesWritten, 0))
+	{
+		// TODO: logging
+		goto error;
+	}
+	if(BytesWritten != MemorySize)
+	{
+		goto error;
+	}
+	
+	Result = true;
+	goto end;
+
+error:
+end:
+	if(FileHandle != INVALID_HANDLE_VALUE)
+	{
+		CloseHandle(FileHandle);
+	}
+	return Result;
+}
+
+// TODO: error codes and handling
+void PlatformMakeDirectory(char* Path)
+{
+	LPSECURITY_ATTRIBUTES SecurityAttributes = NULL;
+	bool Result = CreateDirectoryA(Path, SecurityAttributes);
+	if(!Result)
+	{
+		if(GetLastError() == ERROR_ALREADY_EXISTS)
+		{
+			return;
+		}
+		else
+		{
+			// TODO: error handling
+		}
+	}
+	// TODO: handle success
 }
 
 void PlatformFindAllFiles(

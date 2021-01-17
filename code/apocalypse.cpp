@@ -177,6 +177,9 @@ void GameInitMemory(
 		GameState->LastFrameScene = GameState->Scene;
 
 		GameState->FrameCount = 0;
+
+		PlatformMakeDirectory(DECKS_PATH);
+		PlatformMakeDirectory(LOGS_PATH);
 	}
 }
 

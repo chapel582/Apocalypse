@@ -111,6 +111,7 @@ struct card_game_event_header
 	uint32_t DataSize;
 };
 
+struct packet_header;
 struct card_game_state
 {
 	ui_context UiContext;
@@ -154,6 +155,10 @@ struct card_game_state
 	bool NetworkGame;
 	platform_socket ListenSocket;
 	platform_socket ConnectSocket;
+	packet_header* PacketHeader;
+	uint32_t HeaderBytesRead;
+	void* PacketPayload;
+	uint32_t PayloadBytesRead;
 
 	// NOTE: last frame received from master
 	uint64_t LastFrame;

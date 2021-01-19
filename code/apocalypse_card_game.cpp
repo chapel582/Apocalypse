@@ -1755,6 +1755,7 @@ void UpdateAndRenderCardGame(
 	bool EndTurn = false;
 
 	// SECTION START: Read leader state
+	// TODO: refactor and reuse in other scenes that require packet reading?
 	if(SceneState->NetworkGame && !SceneState->IsLeader)
 	{
 		// NOTE: this only exists so we can remove cards that aren't touched by
@@ -1771,304 +1772,314 @@ void UpdateAndRenderCardGame(
 
 		// TODO: handle packets coming in pieces
 		uint32_t BytesRead = 0;
-		do
+		while(true)
 		{
-			packet_header* Header = PushStruct(NetworkArena, packet_header);
-
-			platform_read_socket_result SocketReadResult = PlatformSocketRead(
-				&SceneState->ConnectSocket,
-				Header,
-				sizeof(packet_header),
-				&BytesRead
-			);
-			if(
-				SocketReadResult == PlatformReadSocketResult_Success && 
-				BytesRead > 0
-			)
+			if(SceneState->PacketHeader == NULL)
 			{
-				bool FinishedReadingPacket = false;
-				// NOTE: read the rest of our packet from the socket buffer
-				uint32_t BytesRemaining = (
-					Header->DataSize - sizeof(packet_header)
+				// NOTE: need to read a packet
+				SceneState->PacketHeader = PushStruct(
+					NetworkArena, packet_header
 				);
-				void* Payload = NULL;
-				if(BytesRemaining)
-				{
-					Payload = PushSize(NetworkArena, BytesRemaining);
-					SocketReadResult = PlatformSocketRead(
-						&SceneState->ConnectSocket,
-						Payload,
-						BytesRemaining,
-						&BytesRead
-					);
+				SceneState->HeaderBytesRead = 0;
+				SceneState->PayloadBytesRead = 0;
+			}
+			while(SceneState->HeaderBytesRead < sizeof(packet_header))
+			{
+				// TODO: error handling
+				PlatformSocketRead(
+					&SceneState->ConnectSocket,
+					((uint8_t*) SceneState->PacketHeader) + SceneState->HeaderBytesRead,
+					sizeof(packet_header) - SceneState->HeaderBytesRead,
+					&BytesRead
+				);
+				SceneState->HeaderBytesRead += BytesRead;
 
-					uint32_t TotalBytesRead = BytesRead;
-					if(TotalBytesRead < BytesRemaining)
-					{
-						if(BytesRead > 0)
-						{
-							// NOTE: bytes were read, but packet wasn't complete
-							while(TotalBytesRead < BytesRemaining)
-							{
-								SocketReadResult = PlatformSocketRead(
-									&SceneState->ConnectSocket,
-									((uint8_t*) Payload) + TotalBytesRead,
-									BytesRemaining - TotalBytesRead,
-									&BytesRead
-								);
-								if(BytesRead == 0)
-								{
-									// NOTE: finished reading everything
-									// CONT: but packet wasn't complete
-									FinishedReadingPacket = false;
-									break;
-								}
-								else
-								{
-									TotalBytesRead += BytesRead;
-								}
-							}
-						}
-					}
-					else if(TotalBytesRead > BytesRemaining)
-					{
-						// NOTE: somehow, we read more bytes than we asked for
-						ASSERT(false);
-					}
-					FinishedReadingPacket = TotalBytesRead == BytesRemaining;
+				if(SceneState->HeaderBytesRead == sizeof(packet_header))
+				{
+					// NOTE: finished reading header
+					break;
 				}
 				else
 				{
-					FinishedReadingPacket = true;
-				}
-
-				// NOTE: check that the frame is a new frame to handle
-				
-				if(FinishedReadingPacket)
-				{
-					switch(Header->Type)
+					if(BytesRead == 0)
 					{
-						case(Packet_SwitchLeader):
+						break;
+					}
+				}
+			}
+			packet_header* Header = SceneState->PacketHeader;
+			
+			uint32_t PayloadSize = 0;
+			if(
+				Header == NULL ||
+				SceneState->HeaderBytesRead < sizeof(packet_header)
+			)
+			{
+				// NOTE: could not read packet, break
+				break;
+			}
+			else if(SceneState->PacketPayload == NULL)
+			{
+				// NOTE: need to read a packet
+				PayloadSize = Header->DataSize - sizeof(packet_header);
+				SceneState->PacketPayload = PushSize(
+					NetworkArena, Header->DataSize - sizeof(packet_header)
+				);
+			}
+			while(SceneState->PayloadBytesRead < PayloadSize)
+			{
+				platform_read_socket_result SocketReadResult = PlatformSocketRead(
+					&SceneState->ConnectSocket,
+					(
+						((uint8_t*) SceneState->PacketPayload) +
+						SceneState->PayloadBytesRead
+					),
+					PayloadSize - SceneState->PayloadBytesRead,
+					&BytesRead
+				);
+				SceneState->PayloadBytesRead += BytesRead;
+
+				if(SceneState->PayloadBytesRead == PayloadSize)
+				{
+					// NOTE: finished reading header
+					break;
+				}
+				else
+				{
+					if(BytesRead == 0)
+					{
+						// NOTE: read no bytes, and we're not finished. 
+						// CONT: time to give up
+						break;
+					}
+				}
+			}
+
+			if(SceneState->PayloadBytesRead == PayloadSize)
+			{
+				void* Payload = SceneState->PacketPayload;
+				switch(Header->Type)
+				{
+					case(Packet_SwitchLeader):
+					{
+						SceneState->IsLeader = true;
+						break;
+					}
+					case(Packet_StateUpdate):
+					{
+						if(Header->FrameId > SceneState->LastFrame)
 						{
-							SceneState->IsLeader = true;
-							break;
-						}
-						case(Packet_StateUpdate):
-						{
-							if(Header->FrameId > SceneState->LastFrame)
-							{
-								state_update_payload* LeaderState = (
-									(state_update_payload*) Payload
-								);
-								if(
-									SceneState->CurrentTurn != 
-									GetOpponent(LeaderState->CurrentTurn)
-								)
-								{
-									SwitchTurns(GameState, SceneState);
-								}
-								SceneState->TurnTimer = LeaderState->TurnTimer;
-								SceneState->NextTurnTimer = (
-									LeaderState->NextTurnTimer
-								);
-
-								SceneState->StackBuilding = (
-									LeaderState->StackBuilding
-								);
-								if(SceneState->StackBuilding)
-								{
-									if(
-										SceneState->StackTurn != 
-										GetOpponent(LeaderState->StackTurn)
-									)
-									{
-										SwitchStackTurns(GameState, SceneState);
-									}
-								}
-								else
-								{
-									SceneState->StackTurn = GetOpponent(
-										LeaderState->StackTurn
-									);
-								}
-
-								SceneState->PlayerLife[Player_One] = (
-									LeaderState->PlayerLife[Player_Two]
-								);
-								SceneState->PlayerLife[Player_Two] = (
-									LeaderState->PlayerLife[Player_One]
-								);
-
-								SceneState->LastFrame = Header->FrameId;
-
-								// NOTE: resources are organized relative to the 
-								// CONT: leader
-								SceneState->PlayerResources[Player_One] = (
-									LeaderState->PlayerResources[Player_Two]
-								);
-								SceneState->PlayerResources[Player_Two] = (
-									LeaderState->PlayerResources[Player_One]
-								);
-							}
-							break;
-						}
-						case(Packet_CardUpdate):
-						{
-							card_update_payload* CardUpdate = (
-								(card_update_payload*) Payload
+							state_update_payload* LeaderState = (
+								(state_update_payload*) Payload
 							);
-							uint32_t CardId = CardUpdate->CardId;
-							card* CardToChange = GetCardWithId(
-								SceneState, CardId
-							);
-
-							player_id CardOwner = GetOpponent(
-								CardUpdate->Owner
-							);
-							bool IsNewCard = CardToChange == NULL;
-							if(IsNewCard)
-							{
-								CardToChange = GetInactiveCard(
-									SceneState, CardId
-								);
-								InitCardWithDef(
-									SceneState,
-									CardToChange,
-									SceneState->Definitions,
-									CardUpdate->DefId,
-									CardOwner
-								);
-							}
-							CardToChange->ConsecutiveMissedPackets = 0;
-
 							if(
-								CardToChange->LastFrame >= Header->FrameId && 
-								!IsNewCard
+								SceneState->CurrentTurn != 
+								GetOpponent(LeaderState->CurrentTurn)
 							)
 							{
-								break;
+								SwitchTurns(GameState, SceneState);
+							}
+							SceneState->TurnTimer = LeaderState->TurnTimer;
+							SceneState->NextTurnTimer = (
+								LeaderState->NextTurnTimer
+							);
+
+							SceneState->StackBuilding = (
+								LeaderState->StackBuilding
+							);
+							if(SceneState->StackBuilding)
+							{
+								if(
+									SceneState->StackTurn != 
+									GetOpponent(LeaderState->StackTurn)
+								)
+								{
+									SwitchStackTurns(GameState, SceneState);
+								}
 							}
 							else
 							{
-								CardToChange->LastFrame = Header->FrameId;
-							}
-
-							if(
-								IsNewCard || 
-								CardToChange->SetType != CardUpdate->SetType
-							)
-							{
-								if(!IsNewCard)
-								{
-									RemoveCardFromSet(SceneState, CardToChange);
-								}
-								AddCardToSet(
-									SceneState,
-									CardUpdate->SetType,
-									CardOwner,
-									CardToChange
+								SceneState->StackTurn = GetOpponent(
+									LeaderState->StackTurn
 								);
 							}
 
-							// NOTE: player resource deltas are always relative,  
-							CardToChange->PlayDelta[RelativePlayer_Self] = (
-								CardUpdate->PlayDelta[RelativePlayer_Self]
+							SceneState->PlayerLife[Player_One] = (
+								LeaderState->PlayerLife[Player_Two]
 							);
-							CardToChange->PlayDelta[RelativePlayer_Opp] = (
-								CardUpdate->PlayDelta[RelativePlayer_Opp]
-							);
-							CardToChange->TapDelta[RelativePlayer_Self] = (
-								CardUpdate->TapDelta[RelativePlayer_Self]
-							);
-							CardToChange->TapDelta[RelativePlayer_Opp] = (
-								CardUpdate->TapDelta[RelativePlayer_Opp]
-							);
-							
-							CardToChange->TurnStartPlayDelta[RelativePlayer_Self] = (
-								CardUpdate->TurnStartPlayDelta[RelativePlayer_Self]
-							);
-							CardToChange->TurnStartPlayDelta[RelativePlayer_Opp] = (
-								CardUpdate->TurnStartPlayDelta[RelativePlayer_Opp]
+							SceneState->PlayerLife[Player_Two] = (
+								LeaderState->PlayerLife[Player_One]
 							);
 
-							CardToChange->TimeLeft = CardUpdate->TimeLeft;
-							CardToChange->TapsAvailable = CardUpdate->TapsAvailable;
-							CardToChange->TimesTapped = CardUpdate->TimesTapped;
-							CardToChange->Attack = CardUpdate->Attack;
-							CardToChange->TurnStartAttack= (
-								CardUpdate->TurnStartAttack
-							);
-							CardToChange->Health = CardUpdate->Health;
-							CardToChange->TurnStartHealth = (
-								CardUpdate->TurnStartHealth
-							);
-							CardToChange->TableauTags = CardUpdate->TableauTags;
-							CardToChange->StackTags = CardUpdate->StackTags;
+							SceneState->LastFrame = Header->FrameId;
 
-							break;
+							// NOTE: resources are organized relative to the 
+							// CONT: leader
+							SceneState->PlayerResources[Player_One] = (
+								LeaderState->PlayerResources[Player_Two]
+							);
+							SceneState->PlayerResources[Player_Two] = (
+								LeaderState->PlayerResources[Player_One]
+							);
 						}
-						case(Packet_RemoveCard):
+						break;
+					}
+					case(Packet_CardUpdate):
+					{
+						card_update_payload* CardUpdate = (
+							(card_update_payload*) Payload
+						);
+						uint32_t CardId = CardUpdate->CardId;
+						card* CardToChange = GetCardWithId(
+							SceneState, CardId
+						);
+
+						player_id CardOwner = GetOpponent(
+							CardUpdate->Owner
+						);
+						bool IsNewCard = CardToChange == NULL;
+						if(IsNewCard)
 						{
-							remove_card_payload* RemoveCardPayload = (
-								(remove_card_payload*) Payload
-							);
-							uint32_t CardId = RemoveCardPayload->CardId;
-							card* CardToRemove = GetCardWithId(
+							CardToChange = GetInactiveCard(
 								SceneState, CardId
 							);
-							SafeRemoveCard(GameState, SceneState, CardToRemove);
-							break;
+							InitCardWithDef(
+								SceneState,
+								CardToChange,
+								SceneState->Definitions,
+								CardUpdate->DefId,
+								CardOwner
+							);
 						}
-						case(Packet_DeckUpdate):
-						{
-							deck_update_payload* DeckUpdatePayload = (
-								(deck_update_payload*) Payload
-							);
-							player_id Owner = GetOpponent(
-								DeckUpdatePayload->Owner
-							);
-							deck* Deck = SceneState->Decks + Owner;
-							Deck->InDeckCount = DeckUpdatePayload->InDeckCount;
-							memcpy(
-								Deck->InDeck,
-								(
-									(uint8_t*) DeckUpdatePayload +
-									DeckUpdatePayload->Offset
-								),
-								sizeof(uint32_t) * Deck->InDeckCount
-							);
-							break;
-						}
-						case(Packet_RandSeed):
-						{
-							rand_seed_payload* RandSeedPayload = (
-								(rand_seed_payload*) Payload
-							);
-							srand(RandSeedPayload->Seed);
-							break;
-						}
-						case(Packet_Ready):
+						CardToChange->ConsecutiveMissedPackets = 0;
+
+						if(
+							CardToChange->LastFrame >= Header->FrameId && 
+							!IsNewCard
+						)
 						{
 							break;
 						}
-						default:
+						else
 						{
-							// TODO: logging
-							ASSERT(false);
+							CardToChange->LastFrame = Header->FrameId;
 						}
+
+						if(
+							IsNewCard || 
+							CardToChange->SetType != CardUpdate->SetType
+						)
+						{
+							if(!IsNewCard)
+							{
+								RemoveCardFromSet(SceneState, CardToChange);
+							}
+							AddCardToSet(
+								SceneState,
+								CardUpdate->SetType,
+								CardOwner,
+								CardToChange
+							);
+						}
+
+						// NOTE: player resource deltas are always relative,  
+						CardToChange->PlayDelta[RelativePlayer_Self] = (
+							CardUpdate->PlayDelta[RelativePlayer_Self]
+						);
+						CardToChange->PlayDelta[RelativePlayer_Opp] = (
+							CardUpdate->PlayDelta[RelativePlayer_Opp]
+						);
+						CardToChange->TapDelta[RelativePlayer_Self] = (
+							CardUpdate->TapDelta[RelativePlayer_Self]
+						);
+						CardToChange->TapDelta[RelativePlayer_Opp] = (
+							CardUpdate->TapDelta[RelativePlayer_Opp]
+						);
+						
+						CardToChange->TurnStartPlayDelta[RelativePlayer_Self] = (
+							CardUpdate->TurnStartPlayDelta[RelativePlayer_Self]
+						);
+						CardToChange->TurnStartPlayDelta[RelativePlayer_Opp] = (
+							CardUpdate->TurnStartPlayDelta[RelativePlayer_Opp]
+						);
+
+						CardToChange->TimeLeft = CardUpdate->TimeLeft;
+						CardToChange->TapsAvailable = CardUpdate->TapsAvailable;
+						CardToChange->TimesTapped = CardUpdate->TimesTapped;
+						CardToChange->Attack = CardUpdate->Attack;
+						CardToChange->TurnStartAttack= (
+							CardUpdate->TurnStartAttack
+						);
+						CardToChange->Health = CardUpdate->Health;
+						CardToChange->TurnStartHealth = (
+							CardUpdate->TurnStartHealth
+						);
+						CardToChange->TableauTags = CardUpdate->TableauTags;
+						CardToChange->StackTags = CardUpdate->StackTags;
+
+						break;
 					}
-					ResetMemArena(NetworkArena);
+					case(Packet_RemoveCard):
+					{
+						remove_card_payload* RemoveCardPayload = (
+							(remove_card_payload*) Payload
+						);
+						uint32_t CardId = RemoveCardPayload->CardId;
+						card* CardToRemove = GetCardWithId(
+							SceneState, CardId
+						);
+						SafeRemoveCard(GameState, SceneState, CardToRemove);
+						break;
+					}
+					case(Packet_DeckUpdate):
+					{
+						deck_update_payload* DeckUpdatePayload = (
+							(deck_update_payload*) Payload
+						);
+						player_id Owner = GetOpponent(
+							DeckUpdatePayload->Owner
+						);
+						deck* Deck = SceneState->Decks + Owner;
+						Deck->InDeckCount = DeckUpdatePayload->InDeckCount;
+						memcpy(
+							Deck->InDeck,
+							(
+								(uint8_t*) DeckUpdatePayload +
+								DeckUpdatePayload->Offset
+							),
+							sizeof(uint32_t) * Deck->InDeckCount
+						);
+						break;
+					}
+					case(Packet_RandSeed):
+					{
+						rand_seed_payload* RandSeedPayload = (
+							(rand_seed_payload*) Payload
+						);
+						srand(RandSeedPayload->Seed);
+						break;
+					}
+					case(Packet_Ready):
+					{
+						break;
+					}
+					default:
+					{
+						// TODO: logging
+						ASSERT(false);
+					}
 				}
-				else
-				{
-					break;
-				}
+
+				ResetMemArena(NetworkArena);
+				SceneState->PacketHeader = NULL;
+				SceneState->PacketPayload = NULL;
 			}
 			else
 			{
+				// NOTE: could not finish payload, break
 				break;
 			}
-		} while (BytesRead > 0);
+		}
 
 		for(
 			uint32_t CardIndex = 0;

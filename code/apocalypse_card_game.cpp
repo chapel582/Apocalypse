@@ -1112,7 +1112,7 @@ void StartCardGame(
 		InitPacketHeader(GameState, Header, Packet_RandSeed);
 		RandSeedPacket->Payload.Seed = Seed;
 
-		ThrottledSocketSendData(
+		SocketSendData(
 			GameState, &SceneState->ConnectSocket, Header
 		);
 	}
@@ -2540,6 +2540,9 @@ void UpdateAndRenderCardGame(
 	// SECTION START: Send data to follower
 	if(SceneState->NetworkGame && SceneState->IsLeader)
 	{
+		bool SwitchingLeader = (
+			EndTurn || (FrameStartStackTurn != SceneState->StackTurn)
+		);
 		{
 			state_update_packet* StatePacket = PushStruct(
 				FrameArena, state_update_packet
@@ -2565,9 +2568,18 @@ void UpdateAndRenderCardGame(
 				SceneState->PlayerLife[Player_Two]
 			);
 
-			ThrottledSocketSendData(
-				GameState, &SceneState->ConnectSocket, Header
-			);
+			if(SwitchingLeader)
+			{
+				SocketSendData(
+					GameState, &SceneState->ConnectSocket, Header
+				);
+			}
+			else
+			{
+				ThrottledSocketSendData(
+					GameState, &SceneState->ConnectSocket, Header
+				);
+			}
 
 			for(uint32_t Owner = Player_One; Owner < Player_Count; Owner++)
 			{
@@ -2599,11 +2611,22 @@ void UpdateAndRenderCardGame(
 					Deck->InDeck,
 					sizeof(uint32_t) * Deck->InDeckCount
 				);
-				ThrottledSocketSendData(
-					GameState,
-					&SceneState->ConnectSocket,
-					&DeckUpdatePacket->Header
-				);
+				if(SwitchingLeader)
+				{
+					SocketSendData(
+						GameState,
+						&SceneState->ConnectSocket,
+						&DeckUpdatePacket->Header
+					);
+				}
+				else
+				{
+					ThrottledSocketSendData(
+						GameState,
+						&SceneState->ConnectSocket,
+						&DeckUpdatePacket->Header
+					);
+				}
 			}
 		}
 
@@ -2661,12 +2684,21 @@ void UpdateAndRenderCardGame(
 			Payload->TableauTags = Card->TableauTags;
 			Payload->StackTags = Card->StackTags;
 
-			ThrottledSocketSendData(
-				GameState, &SceneState->ConnectSocket, Header
-			);
+			if(SwitchingLeader)
+			{
+				SocketSendData(
+					GameState, &SceneState->ConnectSocket, Header
+				);
+			}
+			else
+			{
+				ThrottledSocketSendData(
+					GameState, &SceneState->ConnectSocket, Header
+				);
+			}
 		}
 
-		if(EndTurn || FrameStartStackTurn != SceneState->StackTurn)
+		if(SwitchingLeader)
 		{
 			// NOTE: need to complete all send packet jobs because 
 			// CONT: otherwise we could have the far end become leader before

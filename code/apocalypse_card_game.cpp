@@ -1793,6 +1793,7 @@ void UpdateAndRenderCardGame(
 					&BytesRead
 				);
 				SceneState->HeaderBytesRead += BytesRead;
+				ASSERT(SceneState->HeaderBytesRead <= sizeof(packet_header));
 
 				if(SceneState->HeaderBytesRead == sizeof(packet_header))
 				{
@@ -1815,12 +1816,12 @@ void UpdateAndRenderCardGame(
 				SceneState->HeaderBytesRead < sizeof(packet_header)
 			)
 			{
-				// NOTE: could not read packet, break
+				// NOTE: could not read header, break
 				break;
 			}
 			else if(SceneState->PacketPayload == NULL)
 			{
-				// NOTE: need to read a packet
+				// NOTE: need to read a new payload
 				PayloadSize = Header->DataSize - sizeof(packet_header);
 				SceneState->PacketPayload = PushSize(
 					NetworkArena, Header->DataSize - sizeof(packet_header)
@@ -1838,10 +1839,11 @@ void UpdateAndRenderCardGame(
 					&BytesRead
 				);
 				SceneState->PayloadBytesRead += BytesRead;
+				ASSERT(SceneState->PayloadBytesRead <= PayloadSize);
 
-				if(SceneState->PayloadBytesRead == PayloadSize)
+				if(SceneState->PayloadBytesRead >= PayloadSize)
 				{
-					// NOTE: finished reading header
+					// NOTE: finished reading payload
 					break;
 				}
 				else
@@ -1855,7 +1857,7 @@ void UpdateAndRenderCardGame(
 				}
 			}
 
-			if(SceneState->PayloadBytesRead == PayloadSize)
+			if(SceneState->PayloadBytesRead >= PayloadSize)
 			{
 				void* Payload = SceneState->PacketPayload;
 				switch(Header->Type)
@@ -2076,7 +2078,7 @@ void UpdateAndRenderCardGame(
 			}
 			else
 			{
-				// NOTE: could not finish payload, break
+				// NOTE: could not finish reading payload, break
 				break;
 			}
 		}

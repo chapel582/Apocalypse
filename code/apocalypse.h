@@ -72,6 +72,9 @@ struct game_state
 	void* SceneArgs;
 
 	bool OverlayDebugInfo;
+
+	uint64_t ExpectedNetworkLatency; // NOTE: in frames 
+	bool CanSendPackets;
 };
 
 #define APOCALYPSE_H

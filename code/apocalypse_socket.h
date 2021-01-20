@@ -12,6 +12,8 @@
 typedef enum
 {
 	Packet_NotSet,
+	Packet_LatencyCheck,
+	Packet_LatencyCheckRsp,
 	Packet_Ready,
 	Packet_SwitchLeader,
 	Packet_StateUpdate,
@@ -200,12 +202,8 @@ struct socket_send_data_args
 	uint32_t BufferSize;
 	uint32_t DataSize;
 };
-void SocketSendDataJob(void* Data);
-void SocketSendData(
-	game_state* GameState,
-	platform_socket* Socket,
-	packet_header* Header,
-	memory_arena* Arena
+void ThrottledSocketSendData(
+	game_state* GameState, platform_socket* Socket, packet_header* Header
 );
 
 #define APOCALYPSE_SOCKET_H

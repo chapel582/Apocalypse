@@ -242,6 +242,11 @@ void GameUpdateAndRender(
 		ResetMemArena(&GameState->SceneArgsArena);	
 	}
 
+	GameState->ExpectedNetworkLatency = 60; // TODO: remove me!
+	GameState->CanSendPackets = (
+		(GameState->FrameCount % GameState->ExpectedNetworkLatency) == 0
+	);
+
 	switch(GameState->Scene)
 	{
 		case(SceneType_CardGame):

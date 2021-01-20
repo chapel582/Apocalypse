@@ -258,9 +258,7 @@ void SafeRemoveCardCommon(
 		remove_card_payload* Payload = &Packet->Payload;
 		Payload->CardId = Card->CardId;
 
-		SocketSendData(
-			GameState, &SceneState->ConnectSocket, Header, FrameArena
-		);
+		SocketSendData(GameState, &SceneState->ConnectSocket, Header);
 	}
 }
 
@@ -1114,8 +1112,8 @@ void StartCardGame(
 		InitPacketHeader(GameState, Header, Packet_RandSeed);
 		RandSeedPacket->Payload.Seed = Seed;
 
-		SocketSendData(
-			GameState, &SceneState->ConnectSocket, Header, FrameArena
+		ThrottledSocketSendData(
+			GameState, &SceneState->ConnectSocket, Header
 		);
 	}
 
@@ -1767,7 +1765,7 @@ void UpdateAndRenderCardGame(
 		)
 		{
 			card* Card = SceneState->Cards + CardIndex;
-			Card->ConsecutiveMissedPackets++;
+			Card->MissedFrames++;
 		}
 
 		// TODO: handle packets coming in pieces
@@ -1953,7 +1951,7 @@ void UpdateAndRenderCardGame(
 								CardOwner
 							);
 						}
-						CardToChange->ConsecutiveMissedPackets = 0;
+						CardToChange->MissedFrames = 0;
 
 						if(
 							CardToChange->LastFrame >= Header->FrameId && 
@@ -2090,7 +2088,13 @@ void UpdateAndRenderCardGame(
 		)
 		{
 			card* Card = SceneState->Cards + CardIndex;
-			if(Card->Active && Card->ConsecutiveMissedPackets > 5)
+			if(
+				Card->Active &&
+				(
+					Card->MissedFrames > 
+					(2 * GameState->ExpectedNetworkLatency)
+				)
+			)
 			{
 				SafeRemoveCard(GameState, SceneState, Card);
 			}
@@ -2561,8 +2565,8 @@ void UpdateAndRenderCardGame(
 				SceneState->PlayerLife[Player_Two]
 			);
 
-			SocketSendData(
-				GameState, &SceneState->ConnectSocket, Header, FrameArena
+			ThrottledSocketSendData(
+				GameState, &SceneState->ConnectSocket, Header
 			);
 
 			for(uint32_t Owner = Player_One; Owner < Player_Count; Owner++)
@@ -2595,11 +2599,10 @@ void UpdateAndRenderCardGame(
 					Deck->InDeck,
 					sizeof(uint32_t) * Deck->InDeckCount
 				);
-				SocketSendData(
+				ThrottledSocketSendData(
 					GameState,
 					&SceneState->ConnectSocket,
-					&DeckUpdatePacket->Header,
-					FrameArena
+					&DeckUpdatePacket->Header
 				);
 			}
 		}
@@ -2658,8 +2661,8 @@ void UpdateAndRenderCardGame(
 			Payload->TableauTags = Card->TableauTags;
 			Payload->StackTags = Card->StackTags;
 
-			SocketSendData(
-				GameState, &SceneState->ConnectSocket, Header, FrameArena
+			ThrottledSocketSendData(
+				GameState, &SceneState->ConnectSocket, Header
 			);
 		}
 
@@ -2680,7 +2683,7 @@ void UpdateAndRenderCardGame(
 			InitPacketHeader(GameState, Header, Packet_SwitchLeader);
 
 			SocketSendData(
-				GameState, &SceneState->ConnectSocket, Header, FrameArena
+				GameState, &SceneState->ConnectSocket, Header
 			);
 			SceneState->IsLeader = false;
 		}

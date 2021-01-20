@@ -64,7 +64,7 @@ struct card
 	bool HoveredOver;
 	
 	// NOTE: number of frames that leader hasn't updated this card
-	uint8_t ConsecutiveMissedPackets; 
+	uint8_t MissedFrames; 
 	player_id Owner;
 	int32_t TapsAvailable;
 	int32_t TimesTapped;

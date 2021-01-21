@@ -111,7 +111,6 @@ struct card_game_event_header
 	uint32_t DataSize;
 };
 
-struct packet_header;
 struct card_game_state
 {
 	ui_context UiContext;
@@ -155,14 +154,84 @@ struct card_game_state
 	bool NetworkGame;
 	platform_socket ListenSocket;
 	platform_socket ConnectSocket;
-	packet_header* PacketHeader;
-	uint32_t HeaderBytesRead;
-	void* PacketPayload;
-	uint32_t PayloadBytesRead;
+	packet_reader_data PacketReader;
 
 	// NOTE: last frame received from master
 	uint64_t LastFrame;
 };
+
+#pragma pack(push, 1)
+struct switch_leader_packet
+{
+	packet_header Header;
+};
+
+struct card_update_payload
+{
+	uint32_t CardId;
+	uint32_t DefId;
+	player_id Owner;
+	card_set_type SetType;
+	player_resources PlayDelta[Player_Count];
+	player_resources TapDelta[Player_Count];
+	
+	player_resources TurnStartPlayDelta[Player_Count];
+	player_resources TurnStartTapDelta[Player_Count];
+
+	float TimeLeft;
+	int32_t TapsAvailable;
+	int32_t TimesTapped;
+	int16_t Attack;
+	int16_t TurnStartAttack;
+	int16_t Health;
+	int16_t TurnStartHealth;
+	tableau_effect_tags TableauTags;
+	stack_effect_tags StackTags;
+};
+struct card_update_packet
+{
+	packet_header Header;
+	card_update_payload Payload;
+};
+
+struct remove_card_payload
+{
+	uint32_t CardId;
+};
+struct remove_card_packet
+{
+	packet_header Header;
+	remove_card_payload Payload;
+};
+
+struct state_update_payload
+{
+	player_id CurrentTurn;
+	float TurnTimer;
+	float NextTurnTimer;
+	player_id StackTurn;
+	bool StackBuilding;
+	player_resources PlayerResources[Player_Count];
+	float PlayerLife[Player_Count];
+};
+struct state_update_packet
+{
+	packet_header Header;
+	state_update_payload Payload;
+};
+
+struct deck_update_payload
+{
+	player_id Owner;
+	uint32_t InDeckCount;
+	uint32_t Offset;
+};
+struct deck_update_packet
+{
+	packet_header Header;
+	deck_update_payload Payload;
+};
+#pragma pack(pop)
 
 struct start_card_game_args
 {

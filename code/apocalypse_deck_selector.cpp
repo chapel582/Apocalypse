@@ -247,6 +247,8 @@ void StartDeckSelector(
 	SceneState->ListenSocket = ListenSocket;
 	SceneState->ConnectSocket = ConnectSocket;
 	SceneState->WaitingForOpponent = false;
+	SceneState->PacketReader = {};
+	SceneState->PacketReader.NetworkArena = &GameState->NetworkArena; 
 }
 
 void UpdateAndRenderDeckSelector(
@@ -551,57 +553,36 @@ void UpdateAndRenderDeckSelector(
 
 	if(SceneState->NetworkGame && SceneState->WaitingForOpponent)
 	{
-		packet_header* HeaderReceived = PushStruct(
-			&GameState->FrameArena, packet_header
-		);
 		uint32_t BytesRead = 0;
-		do
+		while(true)
 		{
-			platform_read_socket_result ReadResult = PlatformSocketRead(
-				&SceneState->ConnectSocket,
-				HeaderReceived,
-				sizeof(packet_header),
-				&BytesRead
+			bool ReadDone = ReadPacket(
+				&SceneState->ConnectSocket, &SceneState->PacketReader
 			);
-			if(
-				ReadResult == PlatformReadSocketResult_Success &&
-				BytesRead == sizeof(packet_header)
-			)
-			{
-				uint32_t DataRemaining = (
-					HeaderReceived->DataSize - sizeof(packet_header)
-				);
-				void* Payload = NULL;
-				if(DataRemaining > 0)
-				{
-					Payload = PushSize(FrameArena, DataRemaining);
-					platform_read_socket_result SocketReadResult = (
-						PlatformSocketRead(
-							&SceneState->ConnectSocket,
-							Payload,
-							DataRemaining,
-							&BytesRead
-						)
-					);
-				}
 
-				if(HeaderReceived->Type == Packet_DeckData)
+			if(ReadDone)
+			{
+				packet_header* Header = SceneState->PacketReader.Header;
+				void* Payload = SceneState->PacketReader.Payload;
+				if(Header->Type == Packet_DeckData)
 				{
 					deck_data_payload* DeckDataPayload = (
 						(deck_data_payload*) Payload
 					);
 					SceneState->P2Deck = DeckDataPayload->Deck;
 				}
-				else if(HeaderReceived->Type == Packet_Ready)
+				else if(Header->Type == Packet_Ready)
 				{
 					DeckSelectorPrepNextScene(GameState, SceneState, true);
 				}
+
+				ReadPacketEnd(&SceneState->PacketReader);
 			}
 			else
 			{
 				break;
 			}
-		} while(BytesRead > 0);
+		}
 	}
 	else
 	{

@@ -55,7 +55,20 @@ struct deck_selector_state
 	bool NetworkGame;
 	platform_socket ListenSocket;
 	platform_socket ConnectSocket;
+	packet_reader_data PacketReader;
 };
+
+#pragma pack(push, 1)
+struct deck_data_payload
+{
+	loaded_deck Deck;
+};
+struct deck_data_packet
+{
+	packet_header Header;
+	deck_data_payload Payload;
+};
+#pragma pack(pop)
 
 void StartDeckSelectorPrep(
 	game_state* GameState,

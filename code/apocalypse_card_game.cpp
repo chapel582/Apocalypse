@@ -8,6 +8,7 @@
 #include "apocalypse_card_definitions.h"
 #include "apocalypse_info_card.h"
 #include "apocalypse_alert.h"
+#include "apocalypse_init_packet_header.h"
 
 #define RESOURCE_TEXT_HEIGHT 15.0f
 #define RESOURCE_LEFT_PADDING 100.0f
@@ -1191,6 +1192,8 @@ void StartCardGame(
 		PlayerLifeRectDim
 	);
 
+	SceneState->PacketReader = {};
+	SceneState->PacketReader.NetworkArena = &GameState->NetworkArena;
 	// TODO: remove me!
 	// PlaySound(
 	// 	&GameState->PlayingSoundList,
@@ -1741,7 +1744,6 @@ void UpdateAndRenderCardGame(
 {
 	ui_context* UiContext = &SceneState->UiContext;
 	memory_arena* FrameArena = &GameState->FrameArena;
-	memory_arena* NetworkArena = &GameState->NetworkArena;
 	assets* Assets = &GameState->Assets;
 
 	SceneState->ScreenDimInWorld = TransformVectorToBasis(
@@ -1772,92 +1774,14 @@ void UpdateAndRenderCardGame(
 		uint32_t BytesRead = 0;
 		while(true)
 		{
-			if(SceneState->PacketHeader == NULL)
-			{
-				// NOTE: need to read a packet
-				SceneState->PacketHeader = PushStruct(
-					NetworkArena, packet_header
-				);
-				SceneState->HeaderBytesRead = 0;
-				SceneState->PayloadBytesRead = 0;
-			}
-			while(SceneState->HeaderBytesRead < sizeof(packet_header))
-			{
-				// TODO: error handling
-				PlatformSocketRead(
-					&SceneState->ConnectSocket,
-					((uint8_t*) SceneState->PacketHeader) + SceneState->HeaderBytesRead,
-					sizeof(packet_header) - SceneState->HeaderBytesRead,
-					&BytesRead
-				);
-				SceneState->HeaderBytesRead += BytesRead;
-				ASSERT(SceneState->HeaderBytesRead <= sizeof(packet_header));
+			bool ReadDone = ReadPacket(
+				&SceneState->ConnectSocket, &SceneState->PacketReader
+			);
 
-				if(SceneState->HeaderBytesRead == sizeof(packet_header))
-				{
-					// NOTE: finished reading header
-					break;
-				}
-				else
-				{
-					if(BytesRead == 0)
-					{
-						break;
-					}
-				}
-			}
-			packet_header* Header = SceneState->PacketHeader;
-			
-			uint32_t PayloadSize = 0;
-			if(
-				Header == NULL ||
-				SceneState->HeaderBytesRead < sizeof(packet_header)
-			)
+			if(ReadDone)
 			{
-				// NOTE: could not read header, break
-				break;
-			}
-			else if(SceneState->PacketPayload == NULL)
-			{
-				// NOTE: need to read a new payload
-				PayloadSize = Header->DataSize - sizeof(packet_header);
-				SceneState->PacketPayload = PushSize(
-					NetworkArena, Header->DataSize - sizeof(packet_header)
-				);
-			}
-			while(SceneState->PayloadBytesRead < PayloadSize)
-			{
-				platform_read_socket_result SocketReadResult = PlatformSocketRead(
-					&SceneState->ConnectSocket,
-					(
-						((uint8_t*) SceneState->PacketPayload) +
-						SceneState->PayloadBytesRead
-					),
-					PayloadSize - SceneState->PayloadBytesRead,
-					&BytesRead
-				);
-				SceneState->PayloadBytesRead += BytesRead;
-				ASSERT(SceneState->PayloadBytesRead <= PayloadSize);
-
-				if(SceneState->PayloadBytesRead >= PayloadSize)
-				{
-					// NOTE: finished reading payload
-					break;
-				}
-				else
-				{
-					if(BytesRead == 0)
-					{
-						// NOTE: read no bytes, and we're not finished. 
-						// CONT: time to give up
-						break;
-					}
-				}
-			}
-
-			if(SceneState->PayloadBytesRead >= PayloadSize)
-			{
-				void* Payload = SceneState->PacketPayload;
+				packet_header* Header = SceneState->PacketReader.Header;
+				void* Payload = SceneState->PacketReader.Payload;
 				switch(Header->Type)
 				{
 					case(Packet_SwitchLeader):
@@ -2069,10 +1993,7 @@ void UpdateAndRenderCardGame(
 						ASSERT(false);
 					}
 				}
-
-				ResetMemArena(NetworkArena);
-				SceneState->PacketHeader = NULL;
-				SceneState->PacketPayload = NULL;
+				ReadPacketEnd(&SceneState->PacketReader);
 			}
 			else
 			{

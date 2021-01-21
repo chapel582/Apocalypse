@@ -17,19 +17,7 @@ void SocketSendData(
 {
 	// NOTE: this function assumes that the whole packet begins at the header in
 	// CONT: memory and is contiguous
-	// socket_send_data_args* SendStatePacketArgs = PushStruct(
-	// 	Arena, socket_send_data_args
-	// );
-	// SendStatePacketArgs->Socket = Socket;
-	// SendStatePacketArgs->Buffer = Header;
-	// SendStatePacketArgs->BufferSize = Header->DataSize;
-	// SendStatePacketArgs->DataSize = Header->DataSize;
-	// PlatformAddJob(
-	// 	GameState->JobQueue,
-	// 	SocketSendDataJob,
-	// 	SendStatePacketArgs,
-	// 	JobPriority_SendPacket
-	// );
+	ASSERT(Header->Type != Packet_NotSet);
 	PlatformSocketSend(Socket, Header, Header->DataSize);
 }
 
@@ -39,19 +27,7 @@ void ThrottledSocketSendData(
 {
 	// NOTE: this function assumes that the whole packet begins at the header in
 	// CONT: memory and is contiguous
-	// socket_send_data_args* SendStatePacketArgs = PushStruct(
-	// 	Arena, socket_send_data_args
-	// );
-	// SendStatePacketArgs->Socket = Socket;
-	// SendStatePacketArgs->Buffer = Header;
-	// SendStatePacketArgs->BufferSize = Header->DataSize;
-	// SendStatePacketArgs->DataSize = Header->DataSize;
-	// PlatformAddJob(
-	// 	GameState->JobQueue,
-	// 	SocketSendDataJob,
-	// 	SendStatePacketArgs,
-	// 	JobPriority_SendPacket
-	// );
+	ASSERT(Header->Type != Packet_NotSet);
 	if(GameState->CanSendPackets)
 	{
 		PlatformSocketSend(Socket, Header, Header->DataSize);

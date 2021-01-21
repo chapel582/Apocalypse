@@ -1767,10 +1767,11 @@ void UpdateAndRenderCardGame(
 		)
 		{
 			card* Card = SceneState->Cards + CardIndex;
-			Card->MissedFrames++;
+			Card->Updated = false;
 		}
 
 		// TODO: handle packets coming in pieces
+		bool StateUpdated = false;
 		uint32_t BytesRead = 0;
 		while(true)
 		{
@@ -1793,6 +1794,7 @@ void UpdateAndRenderCardGame(
 					{
 						if(Header->FrameId > SceneState->LastFrame)
 						{
+							StateUpdated = true;
 							state_update_payload* LeaderState = (
 								(state_update_payload*) Payload
 							);
@@ -1875,7 +1877,7 @@ void UpdateAndRenderCardGame(
 								CardOwner
 							);
 						}
-						CardToChange->MissedFrames = 0;
+						CardToChange->Updated = true;
 
 						if(
 							CardToChange->LastFrame >= Header->FrameId && 
@@ -2009,13 +2011,7 @@ void UpdateAndRenderCardGame(
 		)
 		{
 			card* Card = SceneState->Cards + CardIndex;
-			if(
-				Card->Active &&
-				(
-					Card->MissedFrames > 
-					(2 * GameState->ExpectedNetworkLatency)
-				)
-			)
+			if(Card->Active && StateUpdated && !Card->Updated)
 			{
 				SafeRemoveCard(GameState, SceneState, Card);
 			}

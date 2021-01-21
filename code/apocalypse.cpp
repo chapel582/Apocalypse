@@ -180,6 +180,8 @@ void GameInitMemory(
 
 		PlatformMakeDirectory(DECKS_PATH);
 		PlatformMakeDirectory(LOGS_PATH);
+
+		GameState->UpdateDelay = 60;
 	}
 }
 
@@ -242,9 +244,8 @@ void GameUpdateAndRender(
 		ResetMemArena(&GameState->SceneArgsArena);	
 	}
 
-	GameState->ExpectedNetworkLatency = 60; // TODO: remove me!
 	GameState->CanSendPackets = (
-		(GameState->FrameCount % GameState->ExpectedNetworkLatency) == 0
+		(GameState->FrameCount % GameState->UpdateDelay) == 0
 	);
 
 	switch(GameState->Scene)

@@ -73,7 +73,7 @@ struct game_state
 
 	bool OverlayDebugInfo;
 
-	uint64_t ExpectedNetworkLatency; // NOTE: in frames 
+	uint64_t UpdateDelay; // NOTE: in frames 
 	bool CanSendPackets;
 };
 

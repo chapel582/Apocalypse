@@ -62,8 +62,9 @@ struct card
 	bool Active;
 	bool Visible;
 	bool HoveredOver;
-	bool Updated;
 	
+	uint8_t MissedUpdates;
+
 	player_id Owner;
 	int32_t TapsAvailable;
 	int32_t TimesTapped;

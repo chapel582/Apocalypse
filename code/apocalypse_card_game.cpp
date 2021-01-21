@@ -1767,7 +1767,7 @@ void UpdateAndRenderCardGame(
 		)
 		{
 			card* Card = SceneState->Cards + CardIndex;
-			Card->Updated = false;
+			Card->MissedUpdates++;
 		}
 
 		// TODO: handle packets coming in pieces
@@ -1877,7 +1877,7 @@ void UpdateAndRenderCardGame(
 								CardOwner
 							);
 						}
-						CardToChange->Updated = true;
+						CardToChange->MissedUpdates = 0;
 
 						if(
 							CardToChange->LastFrame >= Header->FrameId && 
@@ -2011,7 +2011,7 @@ void UpdateAndRenderCardGame(
 		)
 		{
 			card* Card = SceneState->Cards + CardIndex;
-			if(Card->Active && StateUpdated && !Card->Updated)
+			if(Card->Active && StateUpdated && (Card->MissedUpdates > 5))
 			{
 				SafeRemoveCard(GameState, SceneState, Card);
 			}

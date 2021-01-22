@@ -1992,7 +1992,18 @@ void UpdateAndRenderCardGame(
 					default:
 					{
 						// TODO: logging
-						ASSERT(false);
+						// NOTE: clear socket
+						uint8_t Bytes[256];
+						do
+						{
+							PlatformSocketRead(
+								ConnectSocket,
+								Bytes,
+								sizeof(Bytes),
+								&BytesRead
+							);
+						} while(BytesRead > 0);
+						break;
 					}
 				}
 				ReadPacketEnd(&SceneState->PacketReader);

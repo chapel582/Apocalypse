@@ -2022,7 +2022,7 @@ void UpdateAndRenderCardGame(
 		)
 		{
 			card* Card = SceneState->Cards + CardIndex;
-			if(Card->Active && StateUpdated && (Card->MissedUpdates > 5))
+			if(Card->Active && StateUpdated && (Card->MissedUpdates > MISSED_UPDATES_BEFORE_DESTRUCTION))
 			{
 				SafeRemoveCard(GameState, SceneState, Card);
 			}

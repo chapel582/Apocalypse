@@ -181,7 +181,7 @@ void GameInitMemory(
 		PlatformMakeDirectory(DECKS_PATH);
 		PlatformMakeDirectory(LOGS_PATH);
 
-		GameState->UpdateDelay = 30;
+		GameState->UpdateDelay = 15;
 	}
 }
 

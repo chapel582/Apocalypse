@@ -1758,18 +1758,6 @@ void UpdateAndRenderCardGame(
 	// TODO: refactor and reuse in other scenes that require packet reading?
 	if(SceneState->NetworkGame && !SceneState->IsLeader)
 	{
-		// NOTE: this only exists so we can remove cards that aren't touched by
-		// CONT: the leader
-		for(
-			uint32_t CardIndex = 0;
-			CardIndex < SceneState->MaxCards;
-			CardIndex++
-		)
-		{
-			card* Card = SceneState->Cards + CardIndex;
-			Card->MissedUpdates++;
-		}
-
 		// TODO: handle packets coming in pieces
 		bool StateUpdated = false;
 		uint32_t BytesRead = 0;
@@ -2022,9 +2010,16 @@ void UpdateAndRenderCardGame(
 		)
 		{
 			card* Card = SceneState->Cards + CardIndex;
-			if(Card->Active && StateUpdated && (Card->MissedUpdates > MISSED_UPDATES_BEFORE_DESTRUCTION))
+			if(Card->Active && StateUpdated)
 			{
-				SafeRemoveCard(GameState, SceneState, Card);
+				if(Card->MissedUpdates > MISSED_UPDATES_BEFORE_DESTRUCTION)
+				{
+					SafeRemoveCard(GameState, SceneState, Card);
+				}
+				else
+				{
+					Card->MissedUpdates++;
+				}
 			}
 		}
 

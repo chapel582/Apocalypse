@@ -1997,7 +1997,7 @@ void UpdateAndRenderCardGame(
 						do
 						{
 							PlatformSocketRead(
-								ConnectSocket,
+								&SceneState->ConnectSocket,
 								Bytes,
 								sizeof(Bytes),
 								&BytesRead

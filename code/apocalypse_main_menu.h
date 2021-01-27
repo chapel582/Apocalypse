@@ -10,6 +10,7 @@ struct main_menu_state
 	ui_button DeckEditorButton;
 	ui_button HostGameButton;
 	ui_button JoinGameButton;
+	ui_button OptionsButton;
 };
 
 void StartMainMenu(

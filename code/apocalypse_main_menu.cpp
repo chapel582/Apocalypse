@@ -42,6 +42,11 @@ void StartMainMenu(
 	InitButton(
 		UiContext, &SceneState->DeckEditorButton, MakeRectangle(ButtonMin, Dim)
 	);
+
+	ButtonMin.Y -= 1.5f * Dim.Y;
+	InitButton(
+		UiContext, &SceneState->OptionsButton, MakeRectangle(ButtonMin, Dim)
+	);
 }
 
 void UpdateAndRenderMainMenu(
@@ -135,6 +140,17 @@ void UpdateAndRenderMainMenu(
 					NULL
 				);
 			}
+			Result = ButtonHandleEvent(
+				&SceneState->UiContext,
+				&SceneState->OptionsButton,
+				MouseEvent,
+				MouseEventWorldPos
+			);
+			if(Result == ButtonHandleEvent_TakeAction)
+			{
+				// TODO: something meaningful
+				SetWindowSize(GameState, 1440, 900);
+			}
 			
 			UserEventIndex++;
 		}
@@ -196,6 +212,17 @@ void UpdateAndRenderMainMenu(
 		&GameState->Assets, 
 		"Deck Editor",
 		sizeof("Deck Editor"),
+		FontHandle_TestFont,
+		Black,
+		&GameState->FrameArena
+	);
+	PushButtonToRenderGroup(
+		SceneState->OptionsButton.Rectangle,
+		BitmapHandle_TestCard2,
+		&GameState->RenderGroup,
+		&GameState->Assets, 
+		"Options",
+		sizeof("Options"),
 		FontHandle_TestFont,
 		Black,
 		&GameState->FrameArena

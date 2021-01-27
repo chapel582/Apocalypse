@@ -51,6 +51,41 @@ loaded_bitmap MakeEmptyBitmap(
 	return MakeEmptyBitmap(Memory, Width, Height);
 }
 
+void UpdateCameras(
+	game_state* GameState, uint32_t WindowWidth, uint32_t WindowHeight
+)
+{
+	GameState->WorldToCamera = MakeBasis(
+		Vector2(WindowWidth / 2.0f, WindowHeight / 2.0f),
+		Vector2(1.0f, 0.0f),
+		Vector2(0.0f, 1.0f)
+	);
+	GameState->CameraToScreen = MakeBasis(
+		Vector2(
+			-1.0f * WindowWidth / 2.0f, -1.0f * WindowHeight / 2.0f
+		),
+		Vector2(1, 0),
+		Vector2(0, 1)
+	);
+
+	render_group* RenderGroup = &GameState->RenderGroup;
+	AddClipRect(
+		RenderGroup,
+		MakeRectangle(
+			Vector2(0, 0),
+			Vector2(WindowWidth, WindowHeight)
+		)
+	);
+}
+
+void SetWindowSize(
+	game_state* GameState, uint32_t WindowWidth, uint32_t WindowHeight
+)
+{
+	UpdateCameras(GameState, WindowWidth, WindowHeight);
+	PlatformSetWindowSize(WindowWidth, WindowHeight);
+}
+
 void GameInitMemory(
 	game_memory* Memory,
 	platform_job_queue* JobQueue,
@@ -127,32 +162,13 @@ void GameInitMemory(
 			GetEndOfArena(&AssetArena)
 		);
 
-		GameState->WorldToCamera = MakeBasis(
-			Vector2(WindowWidth / 2.0f, WindowHeight / 2.0f),
-			Vector2(1.0f, 0.0f),
-			Vector2(0.0f, 1.0f)
-		);
-		GameState->CameraToScreen = MakeBasis(
-			Vector2(
-				-1.0f * WindowWidth / 2.0f, -1.0f * WindowHeight / 2.0f
-			),
-			Vector2(1, 0),
-			Vector2(0, 1)
-		);
-
 		render_group* RenderGroup = &GameState->RenderGroup;
 		*RenderGroup = {};
 		RenderGroup->Arena = &GameState->RenderArena;
-
 		RenderGroup->WorldToCamera = &GameState->WorldToCamera;
 		RenderGroup->CameraToScreen = &GameState->CameraToScreen;
-		AddClipRect(
-			RenderGroup,
-			MakeRectangle(
-				Vector2(0, 0),
-				Vector2(WindowWidth, WindowHeight)
-			)
-		);
+		UpdateCameras(GameState, WindowWidth, WindowHeight);
+
 		GameState->Time = 0;
 		GameState->JobQueue = JobQueue;
 

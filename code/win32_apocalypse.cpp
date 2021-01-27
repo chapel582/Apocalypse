@@ -25,8 +25,9 @@ TODO: This is not a final platform layer
 
 // TODO: this is a global for now
 bool GlobalRunning = false;
-uint32_t GlobalWindowWidth;
-uint32_t GlobalWindowHeight;
+HWND GlobalWindowHandle = 0;
+uint32_t GlobalWindowWidth = 0;
+uint32_t GlobalWindowHeight = 0;
 LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer = NULL;
 GLuint GlobalBlitTextureHandle;
 
@@ -727,6 +728,7 @@ soundend:
 
 void Win32InitOpenGl(HWND Window)
 {
+	// TODO: review this code and make sure it doesn't leak memory
 	HDC WindowDc = GetDC(Window);
 
 	PIXELFORMATDESCRIPTOR DesiredPixelFormat = {};
@@ -791,6 +793,26 @@ win32_window_dimension Win32CalculateWindowDimensions(
 	Result.Width = ClientRect.right - ClientRect.left;
 	Result.Height = ClientRect.bottom - ClientRect.top;
 	return Result;
+}
+
+void PlatformSetWindowSize(uint32_t WindowWidth, uint32_t WindowHeight)
+{
+	GlobalWindowWidth = WindowWidth;
+	GlobalWindowHeight = WindowHeight;
+	win32_window_dimension Dim = Win32CalculateWindowDimensions(
+		GlobalWindowWidth, GlobalWindowHeight
+	);
+	SetWindowPos(
+		GlobalWindowHandle,
+		HWND_TOP,
+		0,
+		0,
+		Dim.Width,
+		Dim.Height,
+		SWP_NOMOVE
+	);
+
+	Win32InitOpenGl(GlobalWindowHandle);
 }
 
 void Win32WriteMouseEvent(
@@ -1101,9 +1123,9 @@ int CALLBACK WinMain(
 		timeBeginPeriod(DesiredSchedulerMS) == TIMERR_NOERROR
 	);
 
-	// TODO: make this changeable by the game layer
-	GlobalWindowWidth = 1440;
-	GlobalWindowHeight = 910;
+	// TODO: full screen by default
+	GlobalWindowWidth = 800;
+	GlobalWindowHeight = 600;
 
 	WNDCLASS WindowClass = {};
 	WindowClass.lpfnWndProc = MainWindowCallback;
@@ -1122,7 +1144,7 @@ int CALLBACK WinMain(
 		win32_window_dimension WindowDim = Win32CalculateWindowDimensions(
 			GlobalWindowWidth, GlobalWindowHeight
 		);
-		HWND WindowHandle = CreateWindowExA(
+		GlobalWindowHandle = CreateWindowExA(
 			0,
 			WindowClass.lpszClassName,
 			"Apocalypse",
@@ -1137,16 +1159,16 @@ int CALLBACK WinMain(
 			0
 		);
 
-		if(WindowHandle)
+		if(GlobalWindowHandle)
 		{
-			Win32InitOpenGl(WindowHandle);
+			Win32InitOpenGl(GlobalWindowHandle);
 
 			// TODO: query this on Windows
 			int MonitorRefreshHz = 60;
 			{
-				HDC RefreshDC = GetDC(WindowHandle);
+				HDC RefreshDC = GetDC(GlobalWindowHandle);
 				int Win32RefreshRate = GetDeviceCaps(RefreshDC, VREFRESH);
-				ReleaseDC(WindowHandle, RefreshDC);
+				ReleaseDC(GlobalWindowHandle, RefreshDC);
 				if(Win32RefreshRate > 1)
 				{
 					MonitorRefreshHz = Win32RefreshRate;
@@ -1196,9 +1218,9 @@ int CALLBACK WinMain(
 
 			// NOTE: Since we specified CS_OWNDC, we can just grab this 
 			// CONT: once and use it forever. No sharing
-			HDC DeviceContext = GetDC(WindowHandle);
+			HDC DeviceContext = GetDC(GlobalWindowHandle);
 			windows_result_code result = Win32InitDSound(
-				WindowHandle,
+				GlobalWindowHandle,
 				48000,
 				48000 * sizeof(int16_t) * 2
 			);

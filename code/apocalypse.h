@@ -77,5 +77,8 @@ struct game_state
 	bool CanSendPackets;
 };
 
+void SetWindowSize(
+	game_state* GameState, uint32_t WindowWidth, uint32_t WindowHeight
+);
 #define APOCALYPSE_H
 #endif

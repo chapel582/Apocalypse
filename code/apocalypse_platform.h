@@ -107,6 +107,7 @@ void PlatformFindAllFiles(
 // TODO: error handling
 void PlatformDeleteFile(char* FileName);
 
+// SECTION START: Socket code
 typedef enum
 {
 	PlatformSocketResult_Success,
@@ -160,6 +161,7 @@ platform_read_socket_result PlatformSocketRead(
 	uint32_t BufferSize,
 	uint32_t* TotalBytesRead
 );
+// SECTION STOP: socket code
 
 #if APOCALYPSE_INTERNAL
 
@@ -264,10 +266,7 @@ void PlatformCompleteAllJobsAtPriority(
 	platform_job_queue* JobQueue, uint32_t Priority
 );
 // SECTION STOP: Threading Code
-
-// SECTION START: Network code
-
-// SECTION STOP: Network code
+void PlatformSetWindowSize(uint32_t WindowWidth, uint32_t WindowHeight);
 
 struct game_memory
 {

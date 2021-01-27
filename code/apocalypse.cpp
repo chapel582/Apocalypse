@@ -88,11 +88,14 @@ void SetWindowSize(
 {
 	UpdateCameras(GameState, NewWindowWidth, NewWindowHeight);
 	PlatformSetWindowSize(NewWindowWidth, NewWindowHeight);
-	vector2 NewWorldDim = Vector2(NewWindowWidth, NewWindowHeight);
+	vector2 NewWindowDim = Vector2(NewWindowWidth, NewWindowHeight);
 	vector2 OldWindowDim = Vector2(OldWindowWidth, OldWindowHeight);
 	vector2 OneOverOldWindowDim = Vector2(
 		1.0f / OldWindowWidth, 1.0f / OldWindowHeight
 	);
+	float DimScalar = (float) sqrt(
+		(NewWindowDim.X * NewWindowDim.Y) / (OldWindowDim.X * OldWindowDim.Y)
+	); // NOTE: Dimension scalar is approximately sqrt of the ratios of the areas
 	for(
 		uint32_t RectangleIndex = 0;
 		RectangleIndex < GameState->TrackedRectanglesCount;
@@ -102,10 +105,11 @@ void SetWindowSize(
 		rectangle* Rectangle = GameState->TrackedRectangles + RectangleIndex;
 		vector2 OldCenter = GetCenter(*Rectangle);
 		vector2 OldDim = Rectangle->Dim;
-		vector2 NewCenterProportions = Hadamard(
+		vector2 PropotionalPosition = Hadamard(
 			OldWindowDim - OldCenter, OneOverOldWindowDim
 		);
-		SetCenter(Rectangle, Hadamard(NewCenterProportions, NewWorldDim));
+		SetCenter(Rectangle, Hadamard(PropotionalPosition, NewWindowDim));
+		Rectangle->Dim *= DimScalar;
 	}
 }
 

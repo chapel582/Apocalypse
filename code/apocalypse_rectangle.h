@@ -91,6 +91,12 @@ inline void SetTopLeft(rectangle* Rectangle, vector2 TopLeft)
 	SetTop(Rectangle, TopLeft.Y);
 }
 
+inline void SetCenter(rectangle* Rectangle, vector2 Center)
+{
+	SetLeft(Rectangle, Center.X - (0.5f * Rectangle->Dim.X));
+	SetTop(Rectangle, Center.Y - (0.5f * Rectangle->Dim.Y));
+}
+
 bool PointInRectangle(vector2 Point, rectangle Rectangle)
 {
 	vector2 Max = Rectangle.Min + Rectangle.Dim; 

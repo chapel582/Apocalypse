@@ -25,27 +25,37 @@ void StartMainMenu(
 	vector2 Dim = Vector2(WindowWidth / 5.5f, WindowHeight / 20.0f); 
 	vector2 ButtonMin = Center - 0.5f * Dim;
 	InitButton(
-		UiContext, &SceneState->CardGameButton, MakeRectangle(ButtonMin, Dim)
+		UiContext,
+		&SceneState->CardGameButton,
+		MakeTrackedRectangle(GameState, ButtonMin, Dim)
 	);
 
 	ButtonMin.Y -= 1.5f * Dim.Y;
 	InitButton(
-		UiContext, &SceneState->HostGameButton, MakeRectangle(ButtonMin, Dim)
+		UiContext,
+		&SceneState->HostGameButton,
+		MakeTrackedRectangle(GameState, ButtonMin, Dim)
 	);
 	
 	ButtonMin.Y -= 1.5f * Dim.Y;
 	InitButton(
-		UiContext, &SceneState->JoinGameButton, MakeRectangle(ButtonMin, Dim)
+		UiContext,
+		&SceneState->JoinGameButton,
+		MakeTrackedRectangle(GameState, ButtonMin, Dim)
 	);
 	
 	ButtonMin.Y -= 1.5f * Dim.Y;
 	InitButton(
-		UiContext, &SceneState->DeckEditorButton, MakeRectangle(ButtonMin, Dim)
+		UiContext,
+		&SceneState->DeckEditorButton,
+		MakeTrackedRectangle(GameState, ButtonMin, Dim)
 	);
 
 	ButtonMin.Y -= 1.5f * Dim.Y;
 	InitButton(
-		UiContext, &SceneState->OptionsButton, MakeRectangle(ButtonMin, Dim)
+		UiContext,
+		&SceneState->OptionsButton,
+		MakeTrackedRectangle(GameState, ButtonMin, Dim)
 	);
 }
 
@@ -149,7 +159,7 @@ void UpdateAndRenderMainMenu(
 			if(Result == ButtonHandleEvent_TakeAction)
 			{
 				// TODO: something meaningful
-				SetWindowSize(GameState, 1440, 900);
+				SetWindowSize(GameState, WindowWidth, WindowHeight, 1440, 900);
 			}
 			
 			UserEventIndex++;
@@ -173,7 +183,7 @@ void UpdateAndRenderMainMenu(
 
 	vector4 Black = Vector4(0.0f, 0.0f, 0.0f, 1.0f);
 	PushButtonToRenderGroup(
-		SceneState->CardGameButton.Rectangle,
+		*SceneState->CardGameButton.Rectangle,
 		BitmapHandle_TestCard2,
 		&GameState->RenderGroup,
 		&GameState->Assets, 
@@ -184,7 +194,7 @@ void UpdateAndRenderMainMenu(
 		&GameState->FrameArena
 	);
 	PushButtonToRenderGroup(
-		SceneState->HostGameButton.Rectangle,
+		*SceneState->HostGameButton.Rectangle,
 		BitmapHandle_TestCard2,
 		&GameState->RenderGroup,
 		&GameState->Assets, 
@@ -195,7 +205,7 @@ void UpdateAndRenderMainMenu(
 		&GameState->FrameArena
 	);
 	PushButtonToRenderGroup(
-		SceneState->JoinGameButton.Rectangle,
+		*SceneState->JoinGameButton.Rectangle,
 		BitmapHandle_TestCard2,
 		&GameState->RenderGroup,
 		&GameState->Assets, 
@@ -206,7 +216,7 @@ void UpdateAndRenderMainMenu(
 		&GameState->FrameArena
 	);
 	PushButtonToRenderGroup(
-		SceneState->DeckEditorButton.Rectangle,
+		*SceneState->DeckEditorButton.Rectangle,
 		BitmapHandle_TestCard2,
 		&GameState->RenderGroup,
 		&GameState->Assets, 
@@ -217,7 +227,7 @@ void UpdateAndRenderMainMenu(
 		&GameState->FrameArena
 	);
 	PushButtonToRenderGroup(
-		SceneState->OptionsButton.Rectangle,
+		*SceneState->OptionsButton.Rectangle,
 		BitmapHandle_TestCard2,
 		&GameState->RenderGroup,
 		&GameState->Assets, 

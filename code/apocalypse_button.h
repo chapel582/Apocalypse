@@ -9,11 +9,11 @@
 struct ui_button
 {
 	ui_id Id;
-	rectangle Rectangle;
+	rectangle* Rectangle;
 };
 
 inline void InitButton(
-	ui_context* Context, ui_button* Button, rectangle Rectangle
+	ui_context* Context, ui_button* Button, rectangle* Rectangle
 )
 {
 	Button->Id = GetId(Context);

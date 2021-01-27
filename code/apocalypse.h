@@ -46,6 +46,8 @@ struct game_state
 	memory_arena RenderArena;
 	// NOTE: an arena for scene args
 	memory_arena SceneArgsArena;
+	// NOTE: an arena for tracked rectangles. cleared with new context
+	memory_arena TrackedRectanglesArena;
 
 	// NOTE: number of frames that have passed in this scene
 	uint64_t FrameCount;
@@ -75,10 +77,29 @@ struct game_state
 
 	uint64_t UpdateDelay; // NOTE: in frames 
 	bool CanSendPackets;
+
+	// NOTE: tracked rectangles are rectangles that can be used to easily update
+	// CONT: their positions after a change in window size
+	rectangle* TrackedRectangles;
+	uint32_t TrackedRectanglesCount;
 };
 
+rectangle* MakeTrackedRectangle(game_state* GameState, vector2 Min, vector2 Dim)
+{
+	rectangle* Result = PushStruct(
+		&GameState->TrackedRectanglesArena, rectangle
+	);
+	GameState->TrackedRectanglesCount++;
+	*Result = MakeRectangle(Min, Dim);
+	return Result;
+}
+
 void SetWindowSize(
-	game_state* GameState, uint32_t WindowWidth, uint32_t WindowHeight
+	game_state* GameState,
+	uint32_t OldWindowWidth,
+	uint32_t OldWindowHeight,
+	uint32_t NewWindowWidth,
+	uint32_t NewWindowHeight
 );
 #define APOCALYPSE_H
 #endif

@@ -496,7 +496,8 @@ void StartDeckEditor(
 			);
 			if(Index < Definitions->NumCards)
 			{
-				rectangle Rectangle = MakeRectangle(
+				rectangle* Rectangle = MakeTrackedRectangle(
+					GameState,
 					Vector2(
 						(Dim.X + XMargin) * Col + XOffset,
 						(Dim.Y + YMargin) * (NumRows - Row - 1) + YOffset
@@ -541,24 +542,24 @@ void StartDeckEditor(
 	vector2 BrowseCollectionButtonDim = Vector2(
 		XOffset - 2 * XMargin, NumRows * (YMargin + Dim.Y)
 	);
-	rectangle ScrollButtonRectangle = MakeRectangle(
-		Vector2(XMargin, YOffset),
-		BrowseCollectionButtonDim
-	);
 	InitButton(
 		UiContext,
 		&SceneState->CollectionPrev,
-		ScrollButtonRectangle
+		MakeTrackedRectangle(
+			GameState,
+			Vector2(XMargin, YOffset),
+			BrowseCollectionButtonDim
+		)
 	);
 
-	ScrollButtonRectangle = MakeRectangle(
-		Vector2(NumCols * (Dim.X + XMargin) + XOffset, YOffset),
-		BrowseCollectionButtonDim
-	);
 	InitButton(
 		UiContext,
 		&SceneState->CollectionNext,
-		ScrollButtonRectangle
+		MakeTrackedRectangle(
+			GameState,
+			Vector2(NumCols * (Dim.X + XMargin) + XOffset, YOffset),
+			BrowseCollectionButtonDim
+		)
 	);
 
 	SceneState->DeckNameBufferSize = PLATFORM_MAX_PATH;
@@ -582,20 +583,24 @@ void StartDeckEditor(
 	vector2 SaveButtonPos = Vector2(
 		SceneState->DeckCards.XPos - SaveButtonDim.X, 0.0f
 	);
-	rectangle SaveButtonRect = MakeRectangle(SaveButtonPos, SaveButtonDim);
+	rectangle* SaveButtonRect = MakeTrackedRectangle(
+		GameState, SaveButtonPos, SaveButtonDim
+	);
 	InitButton(UiContext, &SceneState->SaveButton, SaveButtonRect);
 
 	vector2 DeleteButtonPos = SaveButtonPos;
 	DeleteButtonPos.X -= SaveButtonDim.X + 5.0f; 
-	rectangle DeleteButtonRect = MakeRectangle(DeleteButtonPos, SaveButtonDim);
+	rectangle* DeleteButtonRect = MakeTrackedRectangle(
+		GameState, DeleteButtonPos, SaveButtonDim
+	);
 	InitButton(UiContext, &SceneState->DeleteButton, DeleteButtonRect);
 
 	SceneState->CardCountPos = Vector2(
-		GetCenter(SaveButtonRect).X, (float) WindowHeight - 30.0f
+		GetCenter(*SaveButtonRect).X, (float) WindowHeight - 30.0f
 	);
 
 	SceneState->DeckNamePos = (
-		GetTopLeft(SaveButtonRect) + Vector2(0.0f, 3.0f)
+		GetTopLeft(*SaveButtonRect) + Vector2(0.0f, 3.0f)
 	); 
 
 	SceneState->InfoCardCenter = Vector2(
@@ -922,7 +927,7 @@ void UpdateAndRenderDeckEditor(
 					Definitions->Array + CollectionIndex
 				);
 				PushButtonToRenderGroup(
-					CollectionCard->Button.Rectangle,
+					*CollectionCard->Button.Rectangle,
 					BitmapHandle_TestCard2,
 					DefaultRenderGroup,
 					Assets, 
@@ -972,7 +977,7 @@ void UpdateAndRenderDeckEditor(
 				);
 
 				PushButtonToRenderGroup(
-					CollectionCard->Button.Rectangle,
+					*CollectionCard->Button.Rectangle,
 					BitmapHandle_TestCard2,
 					DefaultRenderGroup,
 					Assets, 
@@ -1071,7 +1076,7 @@ void UpdateAndRenderDeckEditor(
 
 	// NOTE: Push save button
 	PushButtonToRenderGroup(
-		SceneState->SaveButton.Rectangle,
+		*SceneState->SaveButton.Rectangle,
 		BitmapHandle_TestCard2,
 		DefaultRenderGroup,
 		Assets, 
@@ -1084,7 +1089,7 @@ void UpdateAndRenderDeckEditor(
 
 	// NOTE: push delete button
 	PushButtonToRenderGroup(
-		SceneState->DeleteButton.Rectangle,
+		*SceneState->DeleteButton.Rectangle,
 		BitmapHandle_TestCard2,
 		DefaultRenderGroup,
 		Assets, 
@@ -1097,7 +1102,7 @@ void UpdateAndRenderDeckEditor(
 
 	// NOTE: Push collection prev
 	PushButtonToRenderGroup(
-		SceneState->CollectionPrev.Rectangle,
+		*SceneState->CollectionPrev.Rectangle,
 		BitmapHandle_TestCard2,
 		DefaultRenderGroup,
 		Assets, 
@@ -1109,7 +1114,7 @@ void UpdateAndRenderDeckEditor(
 	);
 	// NOTE: Push collection next
 	PushButtonToRenderGroup(
-		SceneState->CollectionNext.Rectangle,
+		*SceneState->CollectionNext.Rectangle,
 		BitmapHandle_TestCard2,
 		DefaultRenderGroup,
 		Assets, 

@@ -63,7 +63,7 @@ inline button_handle_event_result ButtonHandleEvent(
 	return ButtonHandleEvent(
 		UiContext,
 		Button->Id,
-		Button->Rectangle,
+		*Button->Rectangle,
 		MouseEvent,
 		MouseEventWorldPos
 	);

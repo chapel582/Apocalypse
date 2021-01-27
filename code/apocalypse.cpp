@@ -79,11 +79,34 @@ void UpdateCameras(
 }
 
 void SetWindowSize(
-	game_state* GameState, uint32_t WindowWidth, uint32_t WindowHeight
+	game_state* GameState,
+	uint32_t OldWindowWidth,
+	uint32_t OldWindowHeight,
+	uint32_t NewWindowWidth,
+	uint32_t NewWindowHeight
 )
 {
-	UpdateCameras(GameState, WindowWidth, WindowHeight);
-	PlatformSetWindowSize(WindowWidth, WindowHeight);
+	UpdateCameras(GameState, NewWindowWidth, NewWindowHeight);
+	PlatformSetWindowSize(NewWindowWidth, NewWindowHeight);
+	vector2 NewWorldDim = Vector2(NewWindowWidth, NewWindowHeight);
+	vector2 OldWindowDim = Vector2(OldWindowWidth, OldWindowHeight);
+	vector2 OneOverOldWindowDim = Vector2(
+		1.0f / OldWindowWidth, 1.0f / OldWindowHeight
+	);
+	for(
+		uint32_t RectangleIndex = 0;
+		RectangleIndex < GameState->TrackedRectanglesCount;
+		RectangleIndex++
+	)
+	{
+		rectangle* Rectangle = GameState->TrackedRectangles + RectangleIndex;
+		vector2 OldCenter = GetCenter(*Rectangle);
+		vector2 OldDim = Rectangle->Dim;
+		vector2 NewCenterProportions = Hadamard(
+			OldWindowDim - OldCenter, OneOverOldWindowDim
+		);
+		SetCenter(Rectangle, Hadamard(NewCenterProportions, NewWorldDim));
+	}
 }
 
 void GameInitMemory(
@@ -122,7 +145,7 @@ void GameInitMemory(
 		);
 
 		// TODO: do we want to be extra and make sure we pick up that last byte?
-		size_t TransientStorageDivision = Memory->TransientStorageSize / 7;
+		size_t TransientStorageDivision = Memory->TransientStorageSize / 8;
 		InitMemArena(
 			&GameState->TransientArena,
 			TransientStorageDivision,
@@ -145,6 +168,11 @@ void GameInitMemory(
 		);
 		InitMemArena(
 			&GameState->SceneArgsArena,
+			TransientStorageDivision,
+			GetEndOfArena(&GameState->NetworkArena)
+		);
+		InitMemArena(
+			&GameState->TrackedRectanglesArena,
 			TransientStorageDivision,
 			GetEndOfArena(&GameState->NetworkArena)
 		);
@@ -198,6 +226,10 @@ void GameInitMemory(
 		PlatformMakeDirectory(LOGS_PATH);
 
 		GameState->UpdateDelay = 15;
+
+		GameState->TrackedRectangles = (rectangle*)(
+			GameState->TrackedRectanglesArena.Base
+		);
 	}
 }
 
@@ -220,6 +252,9 @@ void GameUpdateAndRender(
 	if(GameState->LastFrameScene != GameState->Scene)
 	{
 		GameState->FrameCount = 0;
+		ResetMemArena(&GameState->TrackedRectanglesArena);
+		GameState->TrackedRectanglesCount = 0;
+
 		switch(GameState->Scene)
 		{
 			case(SceneType_CardGame):
@@ -257,7 +292,7 @@ void GameUpdateAndRender(
 				ASSERT(false);
 			}
 		}
-		ResetMemArena(&GameState->SceneArgsArena);	
+		ResetMemArena(&GameState->SceneArgsArena);
 	}
 
 	GameState->CanSendPackets = (

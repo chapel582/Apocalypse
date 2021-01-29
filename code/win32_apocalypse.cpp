@@ -28,6 +28,7 @@ bool GlobalRunning = false;
 HWND GlobalWindowHandle = 0;
 uint32_t GlobalWindowWidth = 0;
 uint32_t GlobalWindowHeight = 0;
+HGLRC GlobalOpenGlrc;
 LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer = NULL;
 GLuint GlobalBlitTextureHandle;
 
@@ -754,8 +755,8 @@ void Win32InitOpenGl(HWND Window)
 	);
 	SetPixelFormat(WindowDc, SuggestedPixelFormatIndex, &SuggestedPixelFormat);
 
-	HGLRC OpenGlrc = wglCreateContext(WindowDc);
-	if(wglMakeCurrent(WindowDc, OpenGlrc))
+	GlobalOpenGlrc = wglCreateContext(WindowDc);
+	if(wglMakeCurrent(WindowDc, GlobalOpenGlrc))
 	{
 	}
 	else
@@ -809,10 +810,29 @@ void PlatformSetWindowSize(uint32_t WindowWidth, uint32_t WindowHeight)
 		0,
 		Dim.Width,
 		Dim.Height,
-		SWP_NOMOVE
+		SWP_NOMOVE | SWP_NOOWNERZORDER | SWP_FRAMECHANGED
 	);
 
-	Win32InitOpenGl(GlobalWindowHandle);
+	// wglMakeCurrent(NULL, NULL);
+	// wglDeleteContext(GlobalOpenGlrc);
+	// HDC WindowDc = GetDC(GlobalWindowHandle);
+	// GlobalOpenGlrc = wglCreateContext(WindowDc);
+	// if(wglMakeCurrent(WindowDc, GlobalOpenGlrc))
+	// {
+	// }
+	// else
+	// {
+	// 	ASSERT(false);
+	// 	// TODO: Diagnostic
+	// }
+	// ReleaseDC(GlobalWindowHandle, WindowDc);
+
+	// Win32InitOpenGl(GlobalWindowHandle);
+	// ReshapeScene(
+	// 	Dim.Width,
+	// 	Dim.Height,
+	// 	((float) Dim.Width) / Dim.Height
+	// );
 }
 
 void Win32WriteMouseEvent(

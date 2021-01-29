@@ -126,6 +126,7 @@ void RenderGroupToOutput(
 	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
 	glViewport(0, 0, WindowWidth, WindowHeight);
+	glScissor(0, 0, WindowWidth, WindowHeight);
 
 	glMatrixMode(GL_TEXTURE);
 	glLoadIdentity();

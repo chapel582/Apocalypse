@@ -67,6 +67,10 @@ void UpdateCameras(
 		Vector2(1, 0),
 		Vector2(0, 1)
 	);
+
+	// NOTE: when updating the cameras, you probably have to update the clip
+	// CONT: rect (used for scissor). However, it is not included in this 
+	// CONT: function 
 }
 
 void SetWindowSize(
@@ -85,7 +89,7 @@ void SetWindowSize(
 	float DimScalar = (float) sqrt(
 		(NewWindowDim.X * NewWindowDim.Y) / (OldWindowDim.X * OldWindowDim.Y)
 	); // NOTE: Dimension scalar is approximately sqrt of the ratios of the areas
-	
+
 	UpdateCameras(GameState, NewWindowWidth, NewWindowHeight);
 	render_group* RenderGroup = &GameState->RenderGroup;
 	ReplaceClipRect(
@@ -105,13 +109,15 @@ void SetWindowSize(
 	)
 	{
 		rectangle* Rectangle = GameState->TrackedRectangles + RectangleIndex;
+
 		vector2 OldCenter = GetCenter(*Rectangle);
 		vector2 OldDim = Rectangle->Dim;
 		vector2 PropotionalPosition = Hadamard(
-			OldWindowDim - OldCenter, OneOverOldWindowDim
+			OldCenter, OneOverOldWindowDim
 		);
+
+		Rectangle->Dim *= DimScalar; // NOTE: this should be done before set center
 		SetCenter(Rectangle, Hadamard(PropotionalPosition, NewWindowDim));
-		Rectangle->Dim *= DimScalar;
 	}
 }
 

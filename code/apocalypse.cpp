@@ -67,15 +67,6 @@ void UpdateCameras(
 		Vector2(1, 0),
 		Vector2(0, 1)
 	);
-
-	render_group* RenderGroup = &GameState->RenderGroup;
-	AddClipRect(
-		RenderGroup,
-		MakeRectangle(
-			Vector2(0, 0),
-			Vector2(WindowWidth, WindowHeight)
-		)
-	);
 }
 
 void SetWindowSize(
@@ -86,8 +77,6 @@ void SetWindowSize(
 	uint32_t NewWindowHeight
 )
 {
-	UpdateCameras(GameState, NewWindowWidth, NewWindowHeight);
-	PlatformSetWindowSize(NewWindowWidth, NewWindowHeight);
 	vector2 NewWindowDim = Vector2(NewWindowWidth, NewWindowHeight);
 	vector2 OldWindowDim = Vector2(OldWindowWidth, OldWindowHeight);
 	vector2 OneOverOldWindowDim = Vector2(
@@ -96,6 +85,19 @@ void SetWindowSize(
 	float DimScalar = (float) sqrt(
 		(NewWindowDim.X * NewWindowDim.Y) / (OldWindowDim.X * OldWindowDim.Y)
 	); // NOTE: Dimension scalar is approximately sqrt of the ratios of the areas
+	
+	UpdateCameras(GameState, NewWindowWidth, NewWindowHeight);
+	render_group* RenderGroup = &GameState->RenderGroup;
+	ReplaceClipRect(
+		RenderGroup,
+		MakeRectangle(
+			Vector2(0, 0),
+			NewWindowDim
+		),
+		0
+	);
+
+	PlatformSetWindowSize(NewWindowWidth, NewWindowHeight);
 	for(
 		uint32_t RectangleIndex = 0;
 		RectangleIndex < GameState->TrackedRectanglesCount;
@@ -200,6 +202,13 @@ void GameInitMemory(
 		RenderGroup->WorldToCamera = &GameState->WorldToCamera;
 		RenderGroup->CameraToScreen = &GameState->CameraToScreen;
 		UpdateCameras(GameState, WindowWidth, WindowHeight);
+		AddClipRect(
+			RenderGroup,
+			MakeRectangle(
+				Vector2(0, 0),
+				Vector2(WindowWidth, WindowHeight)
+			)
+		);
 
 		GameState->Time = 0;
 		GameState->JobQueue = JobQueue;

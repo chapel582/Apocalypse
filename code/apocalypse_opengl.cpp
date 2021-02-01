@@ -41,6 +41,18 @@ inline void OpenGlRectangle(vector2 MinP, vector2 MaxP, vector4 Color)
 	glEnd();
 }
 
+void ScissorWithIndex(render_group* RenderGroup, uint32_t ClipRectIndex)
+{
+	ASSERT(ClipRectIndex < RenderGroup->NumClipRects);
+	rectangle ClipRect = RenderGroup->ClipRects[ClipRectIndex];
+	glScissor(
+		(int) ClipRect.Min.X,
+		(int) ClipRect.Min.Y,
+		(int) ClipRect.Dim.X,
+		(int) ClipRect.Dim.Y
+	);
+}
+
 // TODO: get rid of this
 uint32_t GlobalTextureBindCount = 0;
 
@@ -126,7 +138,6 @@ void RenderGroupToOutput(
 	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
 	glViewport(0, 0, WindowWidth, WindowHeight);
-	glScissor(0, 0, WindowWidth, WindowHeight);
 
 	glMatrixMode(GL_TEXTURE);
 	glLoadIdentity();
@@ -151,21 +162,15 @@ void RenderGroupToOutput(
 	glLoadMatrixf(Proj);
 
 	uint32_t ClipRectIndex = 0;
+	ScissorWithIndex(RenderGroup, ClipRectIndex);
 	for(uint32_t Index = 0; Index < RenderGroup->NumEntries; Index++)
 	{
 		render_entry_handle* EntryHandle = EntryHandles + Index;
 		render_entry_header* Header = EntryHandle->Header;
 		if(Header->ClipRectIndex != ClipRectIndex)
 		{
-			ASSERT(ClipRectIndex < RenderGroup->NumClipRects);
 			ClipRectIndex = Header->ClipRectIndex;
-			rectangle ClipRect = RenderGroup->ClipRects[ClipRectIndex];
-			glScissor(
-				(int) ClipRect.Min.X,
-				(int) ClipRect.Min.Y,
-				(int) ClipRect.Dim.X,
-				(int) ClipRect.Dim.Y
-			);
+			ScissorWithIndex(RenderGroup, ClipRectIndex);
 		}
 
 		switch(Header->Type)

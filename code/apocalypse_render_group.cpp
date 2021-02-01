@@ -1420,4 +1420,17 @@ uint32_t AddClipRect(render_group* RenderGroup, rectangle ToAdd)
 	return Index;
 }
 
+uint32_t ReplaceClipRect(
+	render_group* RenderGroup, rectangle ReplaceWith, uint32_t Index
+)
+{
+	// TODO: error handling for run-time failures
+	ASSERT(Index < ARRAY_COUNT(RenderGroup->ClipRects));
+	ASSERT(Index < RenderGroup->NumClipRects);
+
+	RenderGroup->ClipRects[Index] = ReplaceWith;
+
+	return Index;
+}
+
 // TODO: have an option for resetting clip rect count

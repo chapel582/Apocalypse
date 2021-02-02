@@ -7,6 +7,7 @@
 #include "apocalypse_deck_selector.h"
 #include "apocalypse_host_game.h"
 #include "apocalypse_join_game.h"
+#include "apocalypse_options_menu.h"
 
 void StartMainMenu(
 	game_state* GameState, uint32_t WindowWidth, uint32_t WindowHeight
@@ -158,8 +159,7 @@ void UpdateAndRenderMainMenu(
 			);
 			if(Result == ButtonHandleEvent_TakeAction)
 			{
-				// TODO: something meaningful
-				SetWindowSize(GameState, WindowWidth, WindowHeight, 1440, 900);
+				StartOptionsMenuPrep(GameState);	
 			}
 			
 			UserEventIndex++;

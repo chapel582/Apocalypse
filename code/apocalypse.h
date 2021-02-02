@@ -26,7 +26,8 @@ typedef enum
 	SceneType_DeckEditor,
 	SceneType_DeckSelector,
 	SceneType_HostGame,
-	SceneType_JoinGame
+	SceneType_JoinGame,
+	SceneType_OptionsMenu
 } scene_type;
 
 struct game_state

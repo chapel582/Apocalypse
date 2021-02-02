@@ -12,6 +12,7 @@
 #include "apocalypse_opengl.h"
 
 // TODO: move the source includes above the headers
+#include "apocalypse_options_menu.cpp"
 #include "apocalypse_socket.cpp"
 #include "apocalypse_binary_heap.cpp"
 #include "apocalypse_host_game.cpp"
@@ -306,6 +307,11 @@ void GameUpdateAndRender(
 				StartJoinGame(GameState, WindowWidth, WindowHeight);
 				break;
 			}
+			case(SceneType_OptionsMenu):
+			{
+				StartOptionsMenu(GameState, WindowWidth, WindowHeight);
+				break;
+			}
 			default:
 			{
 				ASSERT(false);
@@ -402,6 +408,20 @@ void GameUpdateAndRender(
 				DtForFrame
 			);
 			GameState->LastFrameScene = SceneType_JoinGame;
+			break;
+		}
+		case(SceneType_OptionsMenu):
+		{
+			UpdateAndRenderOptionsMenu(
+				GameState,
+				(options_menu_state*) GameState->SceneState,
+				WindowWidth,
+				WindowHeight,
+				MouseEvents,
+				KeyboardEvents,
+				DtForFrame
+			);
+			GameState->LastFrameScene = SceneType_OptionsMenu;
 			break;
 		}
 		default:

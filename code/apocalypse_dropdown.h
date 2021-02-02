@@ -40,15 +40,14 @@ void AddDropdownEntry(
 	ui_context* Context,
 	ui_dropdown* Dropdown
 )
-{
-	Dropdown->DropdownButtonsLen++;
-	ASSERT(Dropdown->DropdownButtonsLen <= Dropdown->ButtonsMaxLen);
+{	
 	rectangle* DropButtonRect = Dropdown->DropButton.Rectangle;
 	float YMin = (
-		Dropdown->DropdownButtonsLen * DropButtonRect->Dim.Y +
-		DropButtonRect->Min.Y
+		DropButtonRect->Min.Y -
+		(Dropdown->DropdownButtonsLen + 1) * DropButtonRect->Dim.Y
 	);
 	float XMin = DropButtonRect->Min.X;
+	
 	rectangle* NextRectangle = MakeTrackedRectangle(
 		GameState, Vector2(XMin, YMin), DropButtonRect->Dim
 	);
@@ -56,6 +55,9 @@ void AddDropdownEntry(
 		&Dropdown->DropdownButtons[Dropdown->DropdownButtonsLen]
 	);
 	InitButton(Context, Button, NextRectangle);
+
+	Dropdown->DropdownButtonsLen++;
+	ASSERT(Dropdown->DropdownButtonsLen <= Dropdown->ButtonsMaxLen);
 }
 
 void PushDropdownToRenderGroup(

@@ -175,7 +175,7 @@ void UpdateAndRenderOptionsMenu(
 		uint32_t CharBufferSize = sizeof(CharBuffer);
 		for(
 			uint32_t ButtonIndex = 0;
-			ButtonIndex < Dropdown->ButtonsMaxLen;
+			ButtonIndex < Dropdown->DropdownButtonsLen;
 			ButtonIndex++
 		)
 		{

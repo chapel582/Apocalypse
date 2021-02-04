@@ -21,7 +21,7 @@ void StartOptionsMenu(
 		GameState->SceneState
 	);
 
-	uint32_t ResolutionOptionCount = 2;
+	uint32_t ResolutionOptionCount = 3;
 	SceneState->ResolutionPairs = PushArray(
 		&GameState->TransientArena, 2 * ResolutionOptionCount, uint32_t
 	);
@@ -29,6 +29,8 @@ void StartOptionsMenu(
 	SceneState->ResolutionPairs[1] = 600;
 	SceneState->ResolutionPairs[2] = 1440;
 	SceneState->ResolutionPairs[3] = 900;
+	SceneState->ResolutionPairs[4] = 1920;
+	SceneState->ResolutionPairs[5] = 1080;
 
 	ui_context* UiContext = &SceneState->UiContext;
 	InitUiContext(UiContext);
@@ -196,8 +198,8 @@ void UpdateAndRenderOptionsMenu(
 				CharBuffer,
 				CharBufferSize,
 				"%d x %d",
-				ResolutionPairs[ButtonIndex],
-				ResolutionPairs[ButtonIndex + 1]
+				ResolutionPairs[2 * ButtonIndex],
+				ResolutionPairs[2 * ButtonIndex + 1]
 			);
 			PushButtonToRenderGroup(
 				*DropdownButton->Rectangle,

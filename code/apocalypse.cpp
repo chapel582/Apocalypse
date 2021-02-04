@@ -187,14 +187,14 @@ void GameInitMemory(
 		InitMemArena(
 			&GameState->TrackedRectanglesArena,
 			TransientStorageDivision,
-			GetEndOfArena(&GameState->NetworkArena)
+			GetEndOfArena(&GameState->SceneArgsArena)
 		);
 		// TODO: Asset arena probably needs to be bigger than most arenas
 		memory_arena AssetArena = {};
 		InitMemArena(
 			&AssetArena,
 			TransientStorageDivision,
-			GetEndOfArena(&GameState->SceneArgsArena)
+			GetEndOfArena(&GameState->TrackedRectanglesArena)
 		);
 		memory_arena JobArena = {};
 		InitMemArena(

@@ -148,6 +148,18 @@ void UpdateAndRenderOptionsMenu(
 				break;
 			}
 
+			if(KeyboardEvent->IsDown != KeyboardEvent->WasDown)
+			{
+				switch(KeyboardEvent->Code)
+				{
+					case(0x1B): // NOTE: Escape V-code
+					{
+						GameState->Scene = SceneType_MainMenu; 
+						break;
+					}
+				}
+			}
+
 			UserEventIndex++;
 		}
 	}

@@ -85,17 +85,23 @@ void StartWaiting(
 			&GameState->FrameArena, deck_data_packet
 		);
 		*Packet = {};
-		Packet->Header.Type = Packet_DeckData;
-		Packet->Header.DataSize = sizeof(deck_data_packet);
+		
+		packet_header* Header = &Packet->Header;
 		deck_data_payload* Payload = &Packet->Payload;
+
 		loaded_deck* Deck = &Payload->Deck;
 		char Buffer[PLATFORM_MAX_PATH];
 		FormatDeckPath(Buffer, sizeof(Buffer), SceneState->DeckName);
 		*Deck = LoadDeck(Buffer);
 		
 		SceneState->P1Deck = *Deck;
+
+		Header->DataSize = sizeof(deck_data_packet);
+		InitPacketHeader(
+			GameState, Header, Packet_DeckData, (uint8_t*) Payload
+		);
 		platform_send_socket_result SendResult = PlatformSocketSend(
-			&SceneState->ConnectSocket, Packet, Packet->Header.DataSize
+			&SceneState->ConnectSocket, Packet, Header->DataSize
 		);
 		ASSERT(
 			SendResult == PlatformSendSocketResult_Success
@@ -108,8 +114,8 @@ void StartWaiting(
 			&GameState->FrameArena, packet_header
 		);
 		*Packet = {};
-		Packet->Type = Packet_Ready;
 		Packet->DataSize = sizeof(packet_header);
+		InitPacketHeader(GameState, Packet, Packet_Ready, NULL);
 		platform_send_socket_result SendResult = PlatformSocketSend(
 			&SceneState->ConnectSocket, Packet, Packet->DataSize
 		);
@@ -554,13 +560,14 @@ void UpdateAndRenderDeckSelector(
 	if(SceneState->NetworkGame && SceneState->WaitingForOpponent)
 	{
 		uint32_t BytesRead = 0;
+		packet_reader_data* PacketReader = &SceneState->PacketReader;
 		while(true)
 		{
-			bool ReadDone = ReadPacket(
-				&SceneState->ConnectSocket, &SceneState->PacketReader
+			read_packet_result ReadResult = ReadPacket(
+				&SceneState->ConnectSocket, PacketReader
 			);
 
-			if(ReadDone)
+			if(ReadResult == ReadPacketResult_Complete)
 			{
 				packet_header* Header = SceneState->PacketReader.Header;
 				void* Payload = SceneState->PacketReader.Payload;
@@ -576,11 +583,19 @@ void UpdateAndRenderDeckSelector(
 					DeckSelectorPrepNextScene(GameState, SceneState, true);
 				}
 
-				ReadPacketEnd(&SceneState->PacketReader);
+				ReadPacketEnd(PacketReader);
+			}
+			else if(ReadResult == ReadPacketResult_Incomplete)
+			{
+				break;
+			}
+			else if(ReadResult == ReadPacketResult_Error)
+			{
+				ReadPacketEnd(PacketReader);
 			}
 			else
 			{
-				break;
+				ASSERT(false);
 			}
 		}
 	}

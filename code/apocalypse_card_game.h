@@ -4,6 +4,7 @@
 #define RESOURCE_TO_TIME 5.0f
 #define TURN_TIMER_INCREASE 10.0f
 #define MISSED_UPDATES_BEFORE_DESTRUCTION 5 // NOTE: measured in frames
+#include "apocalypse_socket.h"
 #include "apocalypse_platform.h"
 #include "apocalypse_vector.h"
 #include "apocalypse_rectangle.h"

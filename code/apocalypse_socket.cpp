@@ -34,7 +34,17 @@ void ThrottledSocketSendData(
 	}
 }
 
-bool ReadPacket(
+void ClearSocket(platform_socket* ConnectSocket)
+{
+	uint32_t BytesRead = 0;
+	uint8_t Bytes[256];
+	do
+	{
+		PlatformSocketRead(ConnectSocket, Bytes, sizeof(Bytes), &BytesRead);
+	} while(BytesRead > 0);
+}
+
+read_packet_result ReadPacket(
 	platform_socket* ConnectSocket, packet_reader_data* PacketReader
 )
 {
@@ -46,8 +56,11 @@ bool ReadPacket(
 	ConnectSocket is the socket used for reading.
 	HeaderBytesRead is the number of bytes read from the header.
 	PayloadBytesRead is the number of bytes read from the payload.
-	NetworkArena is the arena used for . It is the caller's responsibility to 
-	reset this arena
+	NetworkArena is the arena used for making new headers and payloads. 
+	It is the caller's responsibility to call ReadPacketEnd 
+	once it has processed the packet. 
+	It should process the packet after receiving a ReadPacketResult_Complete or
+	a ReadPacketResult_Error
 	*/ 
 	memory_arena* NetworkArena = PacketReader->NetworkArena;
 	uint32_t BytesRead = 0;
@@ -92,10 +105,17 @@ bool ReadPacket(
 	)
 	{
 		// NOTE: could not read header, end
-		return false;
+		return ReadPacketResult_Incomplete;
 	}
 	else if(PacketReader->Payload == NULL)
 	{
+		uint64_t HeaderChecksum = GetHeaderChecksum(Header);
+		if(HeaderChecksum != Header->HeaderChecksum)
+		{
+			// TODO: logging
+			ClearSocket(ConnectSocket);
+			return ReadPacketResult_Error;
+		}
 		// NOTE: need to read a new payload
 		PayloadSize = Header->DataSize - sizeof(packet_header);
 		PacketReader->Payload = PushSize(
@@ -106,7 +126,7 @@ bool ReadPacket(
 	if(PayloadSize == 0)
 	{
 		// NOTE: no payload to read. done
-		return true;
+		return ReadPacketResult_Complete;
 	}
 
 	while(PacketReader->PayloadBytesRead < PayloadSize)
@@ -139,7 +159,27 @@ bool ReadPacket(
 		}
 	}
 
-	return PacketReader->PayloadBytesRead >= PayloadSize;
+	if(PacketReader->PayloadBytesRead >= PayloadSize)
+	{
+		if(
+			GetPayloadChecksum(
+				(uint8_t*) PacketReader->Payload, PayloadSize
+			) == 
+			Header->PayloadChecksum
+		)
+		{
+			return ReadPacketResult_Complete;
+		}
+		else
+		{
+			ClearSocket(ConnectSocket);
+			return ReadPacketResult_Error;	
+		}
+	}
+	else
+	{
+		return ReadPacketResult_Incomplete;
+	}
 }
 
 void ReadPacketEnd(packet_reader_data* PacketReader)

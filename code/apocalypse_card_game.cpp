@@ -8,7 +8,7 @@
 #include "apocalypse_card_definitions.h"
 #include "apocalypse_info_card.h"
 #include "apocalypse_alert.h"
-#include "apocalypse_init_packet_header.h"
+#include "apocalypse_packet_header.h"
 
 #define RESOURCE_TEXT_HEIGHT 15.0f
 #define RESOURCE_LEFT_PADDING 100.0f
@@ -252,12 +252,15 @@ void SafeRemoveCardCommon(
 		memory_arena* FrameArena = &GameState->FrameArena;
 		remove_card_packet* Packet = PushStruct(
 			FrameArena, remove_card_packet
-		);
-		packet_header* Header = &Packet->Header;
-		InitPacketHeader(GameState, Header, Packet_RemoveCard);
-
+		);		
 		remove_card_payload* Payload = &Packet->Payload;
 		Payload->CardId = Card->CardId;
+
+		packet_header* Header = &Packet->Header;
+		Header->DataSize = sizeof(remove_card_packet);
+		InitPacketHeader(
+			GameState, Header, Packet_RemoveCard, (uint8_t*) Payload
+		);
 
 		SocketSendData(GameState, &SceneState->ConnectSocket, Header);
 	}
@@ -1109,10 +1112,14 @@ void StartCardGame(
 		rand_seed_packet* RandSeedPacket = PushStruct(
 			FrameArena, rand_seed_packet
 		);
-		packet_header* Header = &RandSeedPacket->Header; 
-		InitPacketHeader(GameState, Header, Packet_RandSeed);
-		RandSeedPacket->Payload.Seed = Seed;
+		rand_seed_payload* Payload = &RandSeedPacket->Payload;
+		Payload->Seed = Seed;
 
+		packet_header* Header = &RandSeedPacket->Header; 
+		Header->DataSize = sizeof(rand_seed_packet);
+		InitPacketHeader(
+			GameState, Header, Packet_RandSeed, (uint8_t*) Payload
+		);
 		SocketSendData(
 			GameState, &SceneState->ConnectSocket, Header
 		);
@@ -1761,13 +1768,14 @@ void UpdateAndRenderCardGame(
 		// TODO: handle packets coming in pieces
 		bool StateUpdated = false;
 		uint32_t BytesRead = 0;
+		packet_reader_data* PacketReader = &SceneState->PacketReader;
 		while(true)
 		{
-			bool ReadDone = ReadPacket(
-				&SceneState->ConnectSocket, &SceneState->PacketReader
+			read_packet_result ReadResult = ReadPacket(
+				&SceneState->ConnectSocket, PacketReader
 			);
 
-			if(ReadDone)
+			if(ReadResult == ReadPacketResult_Complete)
 			{
 				packet_header* Header = SceneState->PacketReader.Header;
 				void* Payload = SceneState->PacketReader.Payload;
@@ -1980,26 +1988,23 @@ void UpdateAndRenderCardGame(
 					default:
 					{
 						// TODO: logging
-						// NOTE: clear socket
-						uint8_t Bytes[256];
-						do
-						{
-							PlatformSocketRead(
-								&SceneState->ConnectSocket,
-								Bytes,
-								sizeof(Bytes),
-								&BytesRead
-							);
-						} while(BytesRead > 0);
+						ClearSocket(&SceneState->ConnectSocket);
 						break;
 					}
 				}
-				ReadPacketEnd(&SceneState->PacketReader);
+				ReadPacketEnd(PacketReader);
+			}
+			else if(ReadResult == ReadPacketResult_Incomplete)
+			{
+				break;
+			}
+			else if(ReadResult == ReadPacketResult_Error)
+			{
+				ReadPacketEnd(PacketReader);
 			}
 			else
 			{
-				// NOTE: could not finish reading payload, break
-				break;
+				ASSERT(false);
 			}
 		}
 
@@ -2471,8 +2476,8 @@ void UpdateAndRenderCardGame(
 				FrameArena, state_update_packet
 			);
 			packet_header* Header = &StatePacket->Header;
-			InitPacketHeader(GameState, Header, Packet_StateUpdate);
 			state_update_payload* Payload = &StatePacket->Payload;
+			
 			Payload->CurrentTurn = SceneState->CurrentTurn;
 			Payload->TurnTimer = SceneState->TurnTimer;
 			Payload->NextTurnTimer = SceneState->NextTurnTimer;
@@ -2491,6 +2496,10 @@ void UpdateAndRenderCardGame(
 				SceneState->PlayerLife[Player_Two]
 			);
 
+			Header->DataSize = sizeof(state_update_packet);
+			InitPacketHeader(
+				GameState, Header, Packet_StateUpdate, (uint8_t*) Payload
+			);
 			if(SwitchingLeader)
 			{
 				SocketSendData(
@@ -2512,17 +2521,10 @@ void UpdateAndRenderCardGame(
 				);
 				
 				packet_header* DeckUpdateHeader = &DeckUpdatePacket->Header;
-				InitPacketHeader(
-					GameState, DeckUpdateHeader, Packet_DeckUpdate
-				);
-				DeckUpdateHeader->DataSize = (
-					sizeof(deck_update_packet) +
-					Deck->InDeckCount * sizeof(uint32_t)
-				);
-
 				deck_update_payload* DeckUpdatePayload = (
 					&DeckUpdatePacket->Payload
 				);
+
 				uint32_t* InDeckHandles = PushArray(
 					FrameArena, Deck->InDeckCount, uint32_t
 				);
@@ -2534,6 +2536,18 @@ void UpdateAndRenderCardGame(
 					Deck->InDeck,
 					sizeof(uint32_t) * Deck->InDeckCount
 				);
+
+				DeckUpdateHeader->DataSize = (
+					sizeof(deck_update_packet) +
+					Deck->InDeckCount * sizeof(uint32_t)
+				);
+				InitPacketHeader(
+					GameState,
+					DeckUpdateHeader,
+					Packet_DeckUpdate,
+					(uint8_t*) DeckUpdatePayload
+				);
+
 				if(SwitchingLeader)
 				{
 					SocketSendData(
@@ -2568,10 +2582,8 @@ void UpdateAndRenderCardGame(
 			card_update_packet* CardPacket = PushStruct(
 				FrameArena, card_update_packet
 			);
-			packet_header* Header = &CardPacket->Header;
-			InitPacketHeader(GameState, Header, Packet_CardUpdate);
-
 			card_update_payload* Payload = &CardPacket->Payload;
+			
 			Payload->CardId = Card->CardId;
 			Payload->DefId = Card->Definition->Id;
 			Payload->Owner = Card->Owner;
@@ -2607,6 +2619,11 @@ void UpdateAndRenderCardGame(
 			Payload->TableauTags = Card->TableauTags;
 			Payload->StackTags = Card->StackTags;
 
+			packet_header* Header = &CardPacket->Header;
+			Header->DataSize = sizeof(card_update_packet);
+			InitPacketHeader(
+				GameState, Header, Packet_CardUpdate, (uint8_t*) Payload
+			);
 			if(SwitchingLeader)
 			{
 				SocketSendData(
@@ -2635,7 +2652,8 @@ void UpdateAndRenderCardGame(
 				FrameArena, switch_leader_packet
 			);
 			packet_header* Header = &SwitchLeaderPacket->Header;
-			InitPacketHeader(GameState, Header, Packet_SwitchLeader);
+			Header->DataSize = sizeof(switch_leader_packet);
+			InitPacketHeader(GameState, Header, Packet_SwitchLeader, NULL);
 
 			SocketSendData(
 				GameState, &SceneState->ConnectSocket, Header

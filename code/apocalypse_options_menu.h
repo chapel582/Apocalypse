@@ -4,6 +4,7 @@
 #include "apocalypse_ui.h"
 #include "apocalypse_dropdown.h"
 
+#define RESOLUTION_CONFIG_PATH "./config/resolution.data"
 struct options_menu_state
 {
 	ui_context UiContext;

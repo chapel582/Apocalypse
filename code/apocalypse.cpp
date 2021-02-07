@@ -125,8 +125,8 @@ void SetWindowSize(
 void GameInitMemory(
 	game_memory* Memory,
 	platform_job_queue* JobQueue,
-	uint32_t WindowWidth,
-	uint32_t WindowHeight
+	uint32_t DefaultWindowWidth,
+	uint32_t DefaultWindowHeight
 )
 {
 	ASSERT(sizeof(game_state) <= Memory->PermanentStorageSize);
@@ -208,6 +208,29 @@ void GameInitMemory(
 		RenderGroup->Arena = &GameState->RenderArena;
 		RenderGroup->WorldToCamera = &GameState->WorldToCamera;
 		RenderGroup->CameraToScreen = &GameState->CameraToScreen;
+		
+		uint32_t WindowWidth = 0;
+		uint32_t WindowHeight = 0;
+
+		uint32_t ResolutionConfig[2];
+		platform_read_file_result ReadResult = PlatformReadFile(
+			RESOLUTION_CONFIG_PATH,
+			ResolutionConfig,
+			sizeof(ResolutionConfig)
+		);
+		// TODO: handle File DNE differently than file not formatted correctly
+		// TODO: verify that the resolutions are in a valid set of resolutions 
+		if(ReadResult == PlatformReadFileResult_Success)
+		{
+			WindowWidth = ResolutionConfig[0];
+			WindowHeight = ResolutionConfig[1];
+		}
+		else
+		{
+			WindowWidth = DefaultWindowWidth;
+			WindowHeight = DefaultWindowHeight;
+		}
+		PlatformSetWindowSize(WindowWidth, WindowHeight);
 		UpdateCameras(GameState, WindowWidth, WindowHeight);
 		AddClipRect(
 			RenderGroup,

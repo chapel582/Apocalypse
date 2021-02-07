@@ -9,7 +9,7 @@
 	things up
 */
 
-#define DECKS_PATH "../decks/"
+#define DECKS_PATH "./decks/"
 
 loaded_deck LoadDeck(char* PathToDeck)
 {

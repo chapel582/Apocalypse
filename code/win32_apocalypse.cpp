@@ -812,27 +812,6 @@ void PlatformSetWindowSize(uint32_t WindowWidth, uint32_t WindowHeight)
 		Dim.Height,
 		SWP_NOMOVE | SWP_NOOWNERZORDER | SWP_FRAMECHANGED
 	);
-
-	// wglMakeCurrent(NULL, NULL);
-	// wglDeleteContext(GlobalOpenGlrc);
-	// HDC WindowDc = GetDC(GlobalWindowHandle);
-	// GlobalOpenGlrc = wglCreateContext(WindowDc);
-	// if(wglMakeCurrent(WindowDc, GlobalOpenGlrc))
-	// {
-	// }
-	// else
-	// {
-	// 	ASSERT(false);
-	// 	// TODO: Diagnostic
-	// }
-	// ReleaseDC(GlobalWindowHandle, WindowDc);
-
-	// Win32InitOpenGl(GlobalWindowHandle);
-	// ReshapeScene(
-	// 	Dim.Width,
-	// 	Dim.Height,
-	// 	((float) Dim.Width) / Dim.Height
-	// );
 }
 
 void Win32WriteMouseEvent(

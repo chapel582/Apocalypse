@@ -351,8 +351,8 @@ struct keyboard_state
 void GameInitMemory(
 	game_memory* Memory,
 	platform_job_queue* JobQueue,
-	uint32_t WindowWidth,
-	uint32_t WindowHeight
+	uint32_t DefaultWindowWidth,
+	uint32_t DefaultWindowHeight
 );
 void GameUpdateAndRender(
 	game_memory* Memory,

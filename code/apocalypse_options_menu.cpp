@@ -124,12 +124,16 @@ void UpdateAndRenderOptionsMenu(
 					);
 					if(ButtonResult == ButtonHandleEvent_TakeAction)
 					{
+						uint32_t* Pair = &ResolutionPairs[2 * ButtonIndex];
 						SetWindowSize(
 							GameState,
 							WindowWidth,
 							WindowHeight,
-							ResolutionPairs[2 * ButtonIndex],
-							ResolutionPairs[2 * ButtonIndex + 1]
+							*Pair,
+							*(Pair + 1)
+						);
+						PlatformWriteEntireFile(
+							RESOLUTION_CONFIG_PATH, Pair, 2 * sizeof(uint32_t)
 						);
 						Dropdown->DropdownVisible = false;
 						break;

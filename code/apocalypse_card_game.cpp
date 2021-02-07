@@ -665,7 +665,7 @@ void SwitchTurns(game_state* GameState, card_game_state* SceneState)
 {
 	SceneState->CurrentTurn = GetOpponent(SceneState->CurrentTurn);
 	char Buffer[64];
-	if(SceneState->StackTurn == Player_One)
+	if(SceneState->CurrentTurn == Player_One)
 	{
 		snprintf(Buffer, sizeof(Buffer), "P1's turn");
 	}

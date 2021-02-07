@@ -207,7 +207,7 @@ struct remove_card_packet
 
 struct state_update_payload
 {
-	player_id CurrentTurn;
+	player_id CurrentTurn; // NOTE: current turn is relative to leader
 	float TurnTimer;
 	float NextTurnTimer;
 	player_id StackTurn;

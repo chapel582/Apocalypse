@@ -31,8 +31,21 @@ struct socket_send_data_args
 	uint32_t BufferSize;
 	uint32_t DataSize;
 };
-void ThrottledSocketSendData(
+platform_socket_send_result SocketSendData(
 	game_state* GameState, platform_socket* Socket, packet_header* Header
+);
+void SocketSendErrorCheck(
+	game_state* GameState,
+	platform_socket* ConnectSocket,
+	packet_header* Header
+);
+platform_socket_send_result ThrottledSocketSendData(
+	game_state* GameState, platform_socket* Socket, packet_header* Header
+);
+void ThrottledSocketSendErrorCheck(
+	game_state* GameState,
+	platform_socket* ConnectSocket,
+	packet_header* Header
 );
 read_packet_result ReadPacket(
 	platform_socket* ConnectSocket, packet_reader_data* PacketReader

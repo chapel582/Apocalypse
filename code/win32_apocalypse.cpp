@@ -546,17 +546,25 @@ void PlatformClientDisconnect(platform_socket* ConnectSocket)
 	WSACleanup();
 }
 
-platform_send_socket_result PlatformSocketSend(
+platform_socket_send_result PlatformSocketSend(
 	platform_socket* Socket, void* Buffer, uint32_t DataSize
 )
 {
-	platform_send_socket_result Result = PlatformSendSocketResult_Success;
+	platform_socket_send_result Result = PlatformSocketSendResult_Success;
 	int SendResult = send(
 		Socket->Socket, (const char*) Buffer, DataSize, 0
 	);
 	if(SendResult == SOCKET_ERROR)
 	{
-		Result = PlatformSendSocketResult_Error;
+		int SpecificError = WSAGetLastError();
+		if(SpecificError == WSAECONNRESET)
+		{
+			Result = PlatformSocketSendResult_PeerReset;
+		}
+		else
+		{
+			Result = PlatformSocketSendResult_Error;
+		}
 	}
 
 	return Result;

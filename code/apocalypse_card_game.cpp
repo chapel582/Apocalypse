@@ -262,7 +262,7 @@ void SafeRemoveCardCommon(
 			GameState, Header, Packet_RemoveCard, (uint8_t*) Payload
 		);
 
-		SocketSendData(GameState, &SceneState->ConnectSocket, Header);
+		SocketSendErrorCheck(GameState, &SceneState->ConnectSocket, Header);
 	}
 }
 
@@ -1120,7 +1120,7 @@ void StartCardGame(
 		InitPacketHeader(
 			GameState, Header, Packet_RandSeed, (uint8_t*) Payload
 		);
-		SocketSendData(
+		SocketSendErrorCheck(
 			GameState, &SceneState->ConnectSocket, Header
 		);
 	}
@@ -2502,13 +2502,13 @@ void UpdateAndRenderCardGame(
 			);
 			if(SwitchingLeader)
 			{
-				SocketSendData(
+				SocketSendErrorCheck(
 					GameState, &SceneState->ConnectSocket, Header
 				);
 			}
 			else
 			{
-				ThrottledSocketSendData(
+				ThrottledSocketSendErrorCheck(
 					GameState, &SceneState->ConnectSocket, Header
 				);
 			}
@@ -2550,7 +2550,7 @@ void UpdateAndRenderCardGame(
 
 				if(SwitchingLeader)
 				{
-					SocketSendData(
+					SocketSendErrorCheck(
 						GameState,
 						&SceneState->ConnectSocket,
 						&DeckUpdatePacket->Header
@@ -2558,7 +2558,7 @@ void UpdateAndRenderCardGame(
 				}
 				else
 				{
-					ThrottledSocketSendData(
+					ThrottledSocketSendErrorCheck(
 						GameState,
 						&SceneState->ConnectSocket,
 						&DeckUpdatePacket->Header
@@ -2626,13 +2626,13 @@ void UpdateAndRenderCardGame(
 			);
 			if(SwitchingLeader)
 			{
-				SocketSendData(
+				SocketSendErrorCheck(
 					GameState, &SceneState->ConnectSocket, Header
 				);
 			}
 			else
 			{
-				ThrottledSocketSendData(
+				ThrottledSocketSendErrorCheck(
 					GameState, &SceneState->ConnectSocket, Header
 				);
 			}
@@ -2655,7 +2655,7 @@ void UpdateAndRenderCardGame(
 			Header->DataSize = sizeof(switch_leader_packet);
 			InitPacketHeader(GameState, Header, Packet_SwitchLeader, NULL);
 
-			SocketSendData(
+			SocketSendErrorCheck(
 				GameState, &SceneState->ConnectSocket, Header
 			);
 			SceneState->IsLeader = false;

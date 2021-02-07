@@ -100,11 +100,8 @@ void StartWaiting(
 		InitPacketHeader(
 			GameState, Header, Packet_DeckData, (uint8_t*) Payload
 		);
-		platform_send_socket_result SendResult = PlatformSocketSend(
-			&SceneState->ConnectSocket, Packet, Header->DataSize
-		);
-		ASSERT(
-			SendResult == PlatformSendSocketResult_Success
+		SocketSendErrorCheck(
+			GameState, &SceneState->ConnectSocket, Header
 		);
 	}
 
@@ -116,12 +113,8 @@ void StartWaiting(
 		*Packet = {};
 		Packet->DataSize = sizeof(packet_header);
 		InitPacketHeader(GameState, Packet, Packet_Ready, NULL);
-		platform_send_socket_result SendResult = PlatformSocketSend(
-			&SceneState->ConnectSocket, Packet, Packet->DataSize
-		);
-		// TODO: error handling
-		ASSERT(
-			SendResult == PlatformSendSocketResult_Success
+		SocketSendErrorCheck(
+			GameState, &SceneState->ConnectSocket, Packet
 		);
 	}
 }

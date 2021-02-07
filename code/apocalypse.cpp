@@ -12,6 +12,7 @@
 #include "apocalypse_opengl.h"
 
 // TODO: move the source includes above the headers
+#include "apocalypse_lost_connection.cpp"
 #include "apocalypse_options_menu.cpp"
 #include "apocalypse_socket.cpp"
 #include "apocalypse_binary_heap.cpp"
@@ -335,6 +336,11 @@ void GameUpdateAndRender(
 				StartOptionsMenu(GameState, WindowWidth, WindowHeight);
 				break;
 			}
+			case(SceneType_LostConnection):
+			{
+				StartLostConnection(GameState, WindowWidth, WindowHeight);
+				break;
+			}
 			default:
 			{
 				ASSERT(false);
@@ -445,6 +451,20 @@ void GameUpdateAndRender(
 				DtForFrame
 			);
 			GameState->LastFrameScene = SceneType_OptionsMenu;
+			break;
+		}
+		case(SceneType_LostConnection):
+		{
+			UpdateAndRenderLostConnection(
+				GameState,
+				(lost_connection_state*) GameState->SceneState,
+				WindowWidth,
+				WindowHeight,
+				MouseEvents,
+				KeyboardEvents,
+				DtForFrame
+			);
+			GameState->LastFrameScene = SceneType_LostConnection;
 			break;
 		}
 		default:

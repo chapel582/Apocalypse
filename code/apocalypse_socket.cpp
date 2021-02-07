@@ -11,17 +11,38 @@ void SocketSendDataJob(void* Data)
 	PlatformSocketSend(Socket, Buffer, DataSize);
 }
 
-void SocketSendData(
+platform_socket_send_result SocketSendData(
 	game_state* GameState, platform_socket* Socket, packet_header* Header
 )
 {
 	// NOTE: this function assumes that the whole packet begins at the header in
 	// CONT: memory and is contiguous
 	ASSERT(Header->Type != Packet_NotSet);
-	PlatformSocketSend(Socket, Header, Header->DataSize);
+	return PlatformSocketSend(Socket, Header, Header->DataSize);
 }
 
-void ThrottledSocketSendData(
+void SocketSendErrorCheck(
+	game_state* GameState,
+	platform_socket* ConnectSocket,
+	packet_header* Header
+)
+{
+	platform_socket_send_result SendResult = SocketSendData(
+		GameState, ConnectSocket, Header
+	);
+	if(SendResult == PlatformSocketSendResult_PeerReset)
+	{
+		StartLostConnectionPrep(GameState);
+		// TODO: socket cleanup here?
+	}
+	else if(SendResult == PlatformSocketSendResult_Error)
+	{
+		// TODO: logging
+		ASSERT(false);
+	}
+}
+
+platform_socket_send_result ThrottledSocketSendData(
 	game_state* GameState, platform_socket* Socket, packet_header* Header
 )
 {
@@ -30,7 +51,32 @@ void ThrottledSocketSendData(
 	ASSERT(Header->Type != Packet_NotSet);
 	if(GameState->CanSendPackets)
 	{
-		PlatformSocketSend(Socket, Header, Header->DataSize);
+		return PlatformSocketSend(Socket, Header, Header->DataSize);
+	}
+	else
+	{
+		return PlatformSocketSendResult_Success;
+	}
+}
+
+void ThrottledSocketSendErrorCheck(
+	game_state* GameState,
+	platform_socket* ConnectSocket,
+	packet_header* Header
+)
+{
+	platform_socket_send_result SendResult = ThrottledSocketSendData(
+		GameState, ConnectSocket, Header
+	);
+	if(SendResult == PlatformSocketSendResult_PeerReset)
+	{
+		GameState->Scene = SceneType_LostConnection;
+		// TODO: socket cleanup here?
+	}
+	else if(SendResult == PlatformSocketSendResult_Error)
+	{
+		// TODO: logging
+		ASSERT(false);
 	}
 }
 

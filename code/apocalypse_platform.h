@@ -124,9 +124,10 @@ typedef enum
 
 typedef enum
 {
-	PlatformSendSocketResult_Success,
-	PlatformSendSocketResult_Error
-} platform_send_socket_result;
+	PlatformSocketSendResult_Success,
+	PlatformSocketSendResult_Error,
+	PlatformSocketSendResult_PeerReset
+} platform_socket_send_result;
 
 typedef enum
 {
@@ -152,7 +153,7 @@ platform_socket_result PlatformCreateClient(
 	char* ServerIp, platform_socket* ConnectSocket
 );
 void PlatformClientDisconnect(platform_socket* ConnectSocket);
-platform_send_socket_result PlatformSocketSend(
+platform_socket_send_result PlatformSocketSend(
 	platform_socket* Socket, void* Buffer, uint32_t DataSize
 );
 platform_read_socket_result PlatformSocketRead(

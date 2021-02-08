@@ -175,7 +175,10 @@ text_input_kb_result TextInputHandleKeyboard(
 		case(0x0D):
 		{
 			// NOTE: Return
-			Result = TextInputKbResult_Submit;
+			if(KeyboardEvent->IsDown)
+			{
+				Result = TextInputKbResult_Submit;
+			}
 			break;
 		}
 		case(0x20):

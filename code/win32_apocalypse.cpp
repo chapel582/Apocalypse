@@ -1400,6 +1400,8 @@ int CALLBACK WinMain(
 					&KeyboardEvents,
 					TargetSecondsPerFrame
 				);
+				// TODO: i think it makes more sense for the reset to occur
+				// CONT: at the game layer
 				Win32ResetUserEvents(
 					&UserEventIndex, &MouseEvents, &KeyboardEvents
 				);

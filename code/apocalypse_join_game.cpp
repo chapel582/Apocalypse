@@ -163,7 +163,8 @@ void UpdateAndRenderJoinGame(
 						}
 					}
 
-					text_input_kb_result KeyboardResult = (TextInputHandleKeyboard(
+					text_input_kb_result KeyboardResult = (
+						TextInputHandleKeyboard(
 							UiContext,
 							&SceneState->IpInput,
 							KeyboardEvent

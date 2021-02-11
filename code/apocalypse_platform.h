@@ -131,9 +131,10 @@ typedef enum
 
 typedef enum
 {
-	PlatformReadSocketResult_Success,
-	PlatformReadSocketResult_Error
-} platform_read_socket_result;
+	PlatformSocketReadResult_Success,
+	PlatformSocketReadResult_Error,
+	PlatformSocketReadResult_PeerReset
+} platform_socket_read_result;
 
 #if COMPILER_MSVC
 struct platform_socket
@@ -156,7 +157,7 @@ void PlatformClientDisconnect(platform_socket* ConnectSocket);
 platform_socket_send_result PlatformSocketSend(
 	platform_socket* Socket, void* Buffer, uint32_t DataSize
 );
-platform_read_socket_result PlatformSocketRead(
+platform_socket_read_result PlatformSocketRead(
 	platform_socket* Socket,
 	void* Buffer,
 	uint32_t BufferSize,

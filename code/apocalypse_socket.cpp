@@ -33,7 +33,6 @@ void SocketSendErrorCheck(
 	if(SendResult == PlatformSocketSendResult_PeerReset)
 	{
 		StartLostConnectionPrep(GameState);
-		// TODO: socket cleanup here?
 	}
 	else if(SendResult == PlatformSocketSendResult_Error)
 	{
@@ -91,7 +90,9 @@ void ClearSocket(platform_socket* ConnectSocket)
 }
 
 read_packet_result ReadPacket(
-	platform_socket* ConnectSocket, packet_reader_data* PacketReader
+	game_state* GameState,
+	platform_socket* ConnectSocket,
+	packet_reader_data* PacketReader
 )
 {
 	/*
@@ -108,6 +109,9 @@ read_packet_result ReadPacket(
 	It should process the packet after receiving a ReadPacketResult_Complete or
 	a ReadPacketResult_Error
 	*/ 
+	platform_socket_read_result SocketReadResult = (
+		PlatformSocketReadResult_Success
+	);
 	memory_arena* NetworkArena = PacketReader->NetworkArena;
 	uint32_t BytesRead = 0;
 	if(PacketReader->Header == NULL)
@@ -120,12 +124,16 @@ read_packet_result ReadPacket(
 	while(PacketReader->HeaderBytesRead < sizeof(packet_header))
 	{
 		// TODO: error handling
-		PlatformSocketRead(
+		SocketReadResult = PlatformSocketRead(
 			ConnectSocket,
 			((uint8_t*) PacketReader->Header) + PacketReader->HeaderBytesRead,
 			sizeof(packet_header) - PacketReader->HeaderBytesRead,
 			&BytesRead
 		);
+		if(SocketReadResult == PlatformSocketReadResult_PeerReset)
+		{
+			StartLostConnectionPrep(GameState);
+		}
 		PacketReader->HeaderBytesRead += BytesRead;
 		ASSERT(PacketReader->HeaderBytesRead <= sizeof(packet_header));
 
@@ -177,7 +185,7 @@ read_packet_result ReadPacket(
 
 	while(PacketReader->PayloadBytesRead < PayloadSize)
 	{
-		platform_read_socket_result SocketReadResult = PlatformSocketRead(
+		SocketReadResult = PlatformSocketRead(
 			ConnectSocket,
 			(
 				((uint8_t*) PacketReader->Payload) +
@@ -186,6 +194,10 @@ read_packet_result ReadPacket(
 			PayloadSize - PacketReader->PayloadBytesRead,
 			&BytesRead
 		);
+		if(SocketReadResult == PlatformSocketReadResult_PeerReset)
+		{
+			StartLostConnectionPrep(GameState);
+		}
 		PacketReader->PayloadBytesRead += BytesRead;
 		ASSERT(PacketReader->PayloadBytesRead <= PayloadSize);
 

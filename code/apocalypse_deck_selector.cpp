@@ -557,7 +557,7 @@ void UpdateAndRenderDeckSelector(
 		while(true)
 		{
 			read_packet_result ReadResult = ReadPacket(
-				&SceneState->ConnectSocket, PacketReader
+				GameState, &SceneState->ConnectSocket, PacketReader
 			);
 
 			if(ReadResult == ReadPacketResult_Complete)

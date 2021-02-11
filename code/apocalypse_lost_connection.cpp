@@ -5,7 +5,8 @@
 
 void StartLostConnectionPrep(game_state* GameState)
 {
-	GameState->Scene = SceneType_LostConnection; 
+	GameState->Scene = SceneType_LostConnection;
+	// TODO: socket cleanup here
 }
 
 void StartLostConnection(

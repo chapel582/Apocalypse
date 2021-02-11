@@ -48,7 +48,9 @@ void ThrottledSocketSendErrorCheck(
 	packet_header* Header
 );
 read_packet_result ReadPacket(
-	platform_socket* ConnectSocket, packet_reader_data* PacketReader
+	game_state* GameState,
+	platform_socket* ConnectSocket,
+	packet_reader_data* PacketReader
 );
 void ReadPacketEnd(packet_reader_data* PacketReader);
 

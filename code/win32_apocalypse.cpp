@@ -557,7 +557,7 @@ platform_socket_send_result PlatformSocketSend(
 	if(SendResult == SOCKET_ERROR)
 	{
 		int SpecificError = WSAGetLastError();
-		if(SpecificError == WSAECONNRESET)
+		if(SpecificError == WSAECONNRESET) // TODO: might need to check for WSAENETRESET as well 
 		{
 			Result = PlatformSocketSendResult_PeerReset;
 		}
@@ -570,14 +570,14 @@ platform_socket_send_result PlatformSocketSend(
 	return Result;
 }
 
-platform_read_socket_result PlatformSocketRead(
+platform_socket_read_result PlatformSocketRead(
 	platform_socket* Socket,
 	void* Buffer,
 	uint32_t BufferSize,
 	uint32_t* TotalBytesRead
 )
 {
-	platform_read_socket_result ReadResult = PlatformReadSocketResult_Success;
+	platform_socket_read_result ReadResult = PlatformSocketReadResult_Success;
 	int RemainingLength = BufferSize;
 	int RecvResult = 0;
 	int BytesRead = 0;
@@ -594,11 +594,22 @@ platform_read_socket_result PlatformSocketRead(
 		}
 		if(BytesAvailable == 0)
 		{
+			int SendResult = send(
+				Socket->Socket, NULL, 0, 0
+			);
+			if(SendResult == SOCKET_ERROR)
+			{
+				int SpecificError = WSAGetLastError();
+				if(SpecificError == WSAECONNRESET) // TODO: might need to check for WSAENETRESET as well 
+				{
+					ReadResult = PlatformSocketReadResult_PeerReset;
+				}
+			}
 			break;
 		}
 
 		RecvResult = recv(Socket->Socket, (char*) WriteTo, RemainingLength, 0);
-		if(RecvResult >= 0)
+		if(RecvResult != SOCKET_ERROR)
 		{
 			BytesRead = RecvResult;
 			WriteTo += BytesRead;
@@ -607,7 +618,7 @@ platform_read_socket_result PlatformSocketRead(
 		else
 		{
 			// TODO: logging
-			ReadResult = PlatformReadSocketResult_Error;
+			ReadResult = PlatformSocketReadResult_Error;
 			break;
 		}
 	} while(BytesRead > 0);

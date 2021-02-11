@@ -140,6 +140,7 @@ typedef enum
 struct platform_socket
 {
 	SOCKET Socket;
+	bool IsValid;
 };
 #endif
 

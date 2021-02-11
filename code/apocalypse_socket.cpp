@@ -24,6 +24,7 @@ platform_socket_send_result SocketSendData(
 void SocketSendErrorCheck(
 	game_state* GameState,
 	platform_socket* ConnectSocket,
+	platform_socket* ListenSocket,
 	packet_header* Header
 )
 {
@@ -32,7 +33,7 @@ void SocketSendErrorCheck(
 	);
 	if(SendResult == PlatformSocketSendResult_PeerReset)
 	{
-		StartLostConnectionPrep(GameState);
+		StartLostConnectionPrep(GameState, ConnectSocket, ListenSocket);
 	}
 	else if(SendResult == PlatformSocketSendResult_Error)
 	{
@@ -92,6 +93,7 @@ void ClearSocket(platform_socket* ConnectSocket)
 read_packet_result ReadPacket(
 	game_state* GameState,
 	platform_socket* ConnectSocket,
+	platform_socket* ListenSocket,
 	packet_reader_data* PacketReader
 )
 {
@@ -132,7 +134,8 @@ read_packet_result ReadPacket(
 		);
 		if(SocketReadResult == PlatformSocketReadResult_PeerReset)
 		{
-			StartLostConnectionPrep(GameState);
+			StartLostConnectionPrep(GameState, ConnectSocket, ListenSocket);
+			return ReadPacketResult_PeerReset;
 		}
 		PacketReader->HeaderBytesRead += BytesRead;
 		ASSERT(PacketReader->HeaderBytesRead <= sizeof(packet_header));
@@ -196,7 +199,8 @@ read_packet_result ReadPacket(
 		);
 		if(SocketReadResult == PlatformSocketReadResult_PeerReset)
 		{
-			StartLostConnectionPrep(GameState);
+			StartLostConnectionPrep(GameState, ConnectSocket, ListenSocket);
+			return ReadPacketResult_PeerReset;
 		}
 		PacketReader->PayloadBytesRead += BytesRead;
 		ASSERT(PacketReader->PayloadBytesRead <= PayloadSize);

@@ -262,7 +262,12 @@ void SafeRemoveCardCommon(
 			GameState, Header, Packet_RemoveCard, (uint8_t*) Payload
 		);
 
-		SocketSendErrorCheck(GameState, &SceneState->ConnectSocket, Header);
+		SocketSendErrorCheck(
+			GameState,
+			&SceneState->ConnectSocket,
+			&SceneState->ListenSocket,
+			Header
+		);
 	}
 }
 
@@ -853,13 +858,26 @@ start_card_game_args* StartCardGamePrepCommon(
 	if(NetworkGame)
 	{
 		SceneArgs->IsLeader = IsLeader;
+	
+		SceneArgs->ListenSocket = {};
+		SceneArgs->ConnectSocket = {};
 		if(ListenSocket)
 		{
 			SceneArgs->ListenSocket = *ListenSocket;
+			SceneArgs->ListenSocket.IsValid = true;
+		}
+		else
+		{
+			SceneArgs->ListenSocket.IsValid = false; 
 		}
 		if(ConnectSocket)
 		{
 			SceneArgs->ConnectSocket = *ConnectSocket;
+			SceneArgs->ConnectSocket.IsValid = true;
+		}
+		else
+		{
+			SceneArgs->ConnectSocket.IsValid = false;
 		}
 		SceneArgs->NetworkGame = true;
 	}
@@ -1121,7 +1139,10 @@ void StartCardGame(
 			GameState, Header, Packet_RandSeed, (uint8_t*) Payload
 		);
 		SocketSendErrorCheck(
-			GameState, &SceneState->ConnectSocket, Header
+			GameState,
+			&SceneState->ConnectSocket,
+			&SceneState->ListenSocket,
+			Header
 		);
 	}
 
@@ -1772,7 +1793,10 @@ void UpdateAndRenderCardGame(
 		while(true)
 		{
 			read_packet_result ReadResult = ReadPacket(
-				GameState, &SceneState->ConnectSocket, PacketReader
+				GameState,
+				&SceneState->ConnectSocket,
+				&SceneState->ListenSocket,
+				PacketReader
 			);
 
 			if(ReadResult == ReadPacketResult_Complete)
@@ -1994,7 +2018,10 @@ void UpdateAndRenderCardGame(
 				}
 				ReadPacketEnd(PacketReader);
 			}
-			else if(ReadResult == ReadPacketResult_Incomplete)
+			else if(
+				ReadResult == ReadPacketResult_Incomplete ||
+				ReadResult == ReadPacketResult_PeerReset
+			)
 			{
 				break;
 			}
@@ -2503,7 +2530,10 @@ void UpdateAndRenderCardGame(
 			if(SwitchingLeader)
 			{
 				SocketSendErrorCheck(
-					GameState, &SceneState->ConnectSocket, Header
+					GameState,
+					&SceneState->ConnectSocket,
+					&SceneState->ListenSocket,
+					Header
 				);
 			}
 			else
@@ -2553,6 +2583,7 @@ void UpdateAndRenderCardGame(
 					SocketSendErrorCheck(
 						GameState,
 						&SceneState->ConnectSocket,
+						&SceneState->ListenSocket,
 						&DeckUpdatePacket->Header
 					);
 				}
@@ -2627,7 +2658,10 @@ void UpdateAndRenderCardGame(
 			if(SwitchingLeader)
 			{
 				SocketSendErrorCheck(
-					GameState, &SceneState->ConnectSocket, Header
+					GameState,
+					&SceneState->ConnectSocket,
+					&SceneState->ListenSocket,
+					Header
 				);
 			}
 			else
@@ -2656,7 +2690,10 @@ void UpdateAndRenderCardGame(
 			InitPacketHeader(GameState, Header, Packet_SwitchLeader, NULL);
 
 			SocketSendErrorCheck(
-				GameState, &SceneState->ConnectSocket, Header
+				GameState,
+				&SceneState->ConnectSocket,
+				&SceneState->ListenSocket,
+				Header
 			);
 			SceneState->IsLeader = false;
 		}

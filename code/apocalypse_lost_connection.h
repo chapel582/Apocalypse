@@ -10,6 +10,11 @@ struct lost_connection_state
 	ui_context UiContext;
 };
 
+void StartLostConnectionPrep(
+	game_state* GameState,
+	platform_socket* ConnectSocket,
+	platform_socket* ListenSocket
+);
 void StartLostConnection(
 	game_state* GameState, uint32_t WindowWidth, uint32_t WindowHeight
 );

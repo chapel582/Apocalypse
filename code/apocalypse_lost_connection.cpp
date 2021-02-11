@@ -3,10 +3,25 @@
 #include "apocalypse_render_group.h"
 #include "apocalypse_lost_connection.h"
 
-void StartLostConnectionPrep(game_state* GameState)
+void StartLostConnectionPrep(
+	game_state* GameState,
+	platform_socket* ConnectSocket,
+	platform_socket* ListenSocket
+)
 {
 	GameState->Scene = SceneType_LostConnection;
-	// TODO: socket cleanup here
+	if(ListenSocket->IsValid && ConnectSocket->IsValid)
+	{
+		PlatformServerDisconnect(ListenSocket, ConnectSocket);
+	}
+	else if(ConnectSocket->IsValid)
+	{
+		PlatformClientDisconnect(ConnectSocket);
+	}
+	else
+	{
+		ASSERT(false);
+	}
 }
 
 void StartLostConnection(

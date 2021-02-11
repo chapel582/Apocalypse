@@ -101,7 +101,10 @@ void StartWaiting(
 			GameState, Header, Packet_DeckData, (uint8_t*) Payload
 		);
 		SocketSendErrorCheck(
-			GameState, &SceneState->ConnectSocket, Header
+			GameState,
+			&SceneState->ConnectSocket,
+			&SceneState->ListenSocket,
+			Header
 		);
 	}
 
@@ -114,7 +117,10 @@ void StartWaiting(
 		Packet->DataSize = sizeof(packet_header);
 		InitPacketHeader(GameState, Packet, Packet_Ready, NULL);
 		SocketSendErrorCheck(
-			GameState, &SceneState->ConnectSocket, Packet
+			GameState,
+			&SceneState->ConnectSocket,
+			&SceneState->ListenSocket,
+			Packet
 		);
 	}
 }
@@ -136,13 +142,26 @@ void StartDeckSelectorPrep(
 
 	SceneArgs->NetworkGame = NetworkGame;
 	SceneArgs->IsLeader = IsLeader;
+
+	SceneArgs->ListenSocket = {};
+	SceneArgs->ConnectSocket = {};
 	if(ListenSocket)
 	{
 		SceneArgs->ListenSocket = *ListenSocket;
+		SceneArgs->ListenSocket.IsValid = true;
+	}
+	else
+	{
+		SceneArgs->ListenSocket.IsValid = false; 
 	}
 	if(ConnectSocket)
 	{
 		SceneArgs->ConnectSocket = *ConnectSocket;
+		SceneArgs->ConnectSocket.IsValid = true;
+	}
+	else
+	{
+		SceneArgs->ConnectSocket.IsValid = false;
 	}
 
 	GameState->SceneArgs = SceneArgs;
@@ -557,7 +576,10 @@ void UpdateAndRenderDeckSelector(
 		while(true)
 		{
 			read_packet_result ReadResult = ReadPacket(
-				GameState, &SceneState->ConnectSocket, PacketReader
+				GameState,
+				&SceneState->ConnectSocket,
+				&SceneState->ListenSocket,
+				PacketReader
 			);
 
 			if(ReadResult == ReadPacketResult_Complete)
@@ -578,7 +600,10 @@ void UpdateAndRenderDeckSelector(
 
 				ReadPacketEnd(PacketReader);
 			}
-			else if(ReadResult == ReadPacketResult_Incomplete)
+			else if(
+				ReadResult == ReadPacketResult_Incomplete ||
+				ReadResult == ReadPacketResult_PeerReset
+			)
 			{
 				break;
 			}

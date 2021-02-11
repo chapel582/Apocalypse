@@ -12,6 +12,7 @@ typedef enum
 	ReadPacketResult_Unknown,
 	ReadPacketResult_Complete,
 	ReadPacketResult_Incomplete,
+	ReadPacketResult_PeerReset,
 	ReadPacketResult_Error
 } read_packet_result;
 
@@ -37,6 +38,7 @@ platform_socket_send_result SocketSendData(
 void SocketSendErrorCheck(
 	game_state* GameState,
 	platform_socket* ConnectSocket,
+	platform_socket* ListenSocket,
 	packet_header* Header
 );
 platform_socket_send_result ThrottledSocketSendData(
@@ -50,6 +52,7 @@ void ThrottledSocketSendErrorCheck(
 read_packet_result ReadPacket(
 	game_state* GameState,
 	platform_socket* ConnectSocket,
+	platform_socket* ListenSocket,
 	packet_reader_data* PacketReader
 );
 void ReadPacketEnd(packet_reader_data* PacketReader);

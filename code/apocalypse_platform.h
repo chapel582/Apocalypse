@@ -45,6 +45,8 @@
 #define LOGS_PATH "./logs"
 #define ASSERT_LOG_PATH (LOGS_PATH "/assert.log")
 
+// NOTE: grabbed this stringize stuff from here:
+// CONT: https://stackoverflow.com/questions/2670816/how-can-i-use-the-compile-time-constant-line-in-a-string
 #define STRINGIZE(x) STRINGIZE2(x)
 #define STRINGIZE2(x) #x
 #define LINE_STRING STRINGIZE(__LINE__)

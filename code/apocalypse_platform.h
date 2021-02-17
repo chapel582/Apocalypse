@@ -42,9 +42,18 @@
 #include <ws2tcpip.h>
 #endif
 
+#define LOGS_PATH "./logs"
+#define ASSERT_LOG_PATH (LOGS_PATH "/assert.log")
+
+#define STRINGIZE(x) STRINGIZE2(x)
+#define STRINGIZE2(x) #x
+#define LINE_STRING STRINGIZE(__LINE__)
+
 #if APOCALYPSE_SLOW
 // TODO: Complete assertion macro
 #define ASSERT(Expression) if(!(Expression)) {*(int*) 0 = 0;}
+#elif APOCALYPSE_INTERNAL
+#define ASSERT(Expression) if(!(Expression)) {PlatformAppendToFile(ASSERT_LOG_PATH, "At " __FILE__ ": " __FUNCTION__ ": " LINE_STRING, sizeof("At " __FILE__ ": " __FUNCTION__ ": " LINE_STRING) - 1); *(int*) 0 = 0;}
 #else
 #define ASSERT(Expression)
 #endif
@@ -60,12 +69,6 @@
 
 #define BYTES_PER_PIXEL 4 
 #define PI32 3.14159265359f // TODO: find a better place for this?
-
-inline uint32_t SafeTruncateUInt64(uint64_t Value)
-{
-	ASSERT(Value <= UINT32_MAX);
-	return (uint32_t) Value;
-}
 
 // NOTE: These are blocking calls that don't protect against lost data
 // CONT: they are intended for debug purposes only
@@ -370,6 +373,12 @@ void GameFillSound(game_memory* Memory, game_sound_output_buffer* SoundBuffer);
 void HandleGameDebug(
 	game_memory* Memory, uint32_t WindowWidth, uint32_t WindowHeight
 );
+
+inline uint32_t SafeTruncateUInt64(uint64_t Value)
+{
+	ASSERT(Value <= UINT32_MAX);
+	return (uint32_t) Value;
+}
 
 #define APOCALYPSE_PLATFORM_H
 #endif

@@ -130,6 +130,10 @@ void GameInitMemory(
 	uint32_t DefaultWindowHeight
 )
 {
+	// TODO: should these be in the release?
+	PlatformMakeDirectory(LOGS_PATH);
+	PlatformDeleteFile(ASSERT_LOG_PATH);
+
 	ASSERT(sizeof(game_state) <= Memory->PermanentStorageSize);
 	if(!Memory->IsInitialized)
 	{

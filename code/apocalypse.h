@@ -10,8 +10,6 @@
 #include "apocalypse_audio.h"
 #include "apocalypse_particles.h"
 
-#define LOGS_PATH "../logs"
-
 typedef enum
 {
 	JobPriority_SendPacket,

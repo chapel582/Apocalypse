@@ -842,45 +842,12 @@ void SetTurnTimer(card_game_state* SceneState, float Value)
 	SceneState->LastWholeSecond = IntTurnTimer;
 }
 
-start_card_game_args* StartCardGamePrepCommon(
-	game_state* GameState,
-	bool NetworkGame,
-	bool IsLeader,
-	platform_socket* ListenSocket,
-	platform_socket* ConnectSocket
-)
+start_card_game_args* StartCardGamePrepCommon(game_state* GameState)
 {
 	start_card_game_args* SceneArgs = PushStruct(
 		&GameState->SceneArgsArena, start_card_game_args
 	);
 	*SceneArgs = {};
-
-	if(NetworkGame)
-	{
-		SceneArgs->IsLeader = IsLeader;
-	
-		SceneArgs->ListenSocket = {};
-		SceneArgs->ConnectSocket = {};
-		if(ListenSocket)
-		{
-			SceneArgs->ListenSocket = *ListenSocket;
-			SceneArgs->ListenSocket.IsValid = true;
-		}
-		else
-		{
-			SceneArgs->ListenSocket.IsValid = false; 
-		}
-		if(ConnectSocket)
-		{
-			SceneArgs->ConnectSocket = *ConnectSocket;
-			SceneArgs->ConnectSocket.IsValid = true;
-		}
-		else
-		{
-			SceneArgs->ConnectSocket.IsValid = false;
-		}
-		SceneArgs->NetworkGame = true;
-	}
 
 	GameState->SceneArgs = SceneArgs;
 	GameState->Scene = SceneType_CardGame; 
@@ -889,20 +856,11 @@ start_card_game_args* StartCardGamePrepCommon(
 }
 
 void StartCardGamePrep(
-	game_state* GameState,
-	char* P1DeckName,
-	char* P2DeckName,
-	bool NetworkGame,
-	bool IsLeader
+	game_state* GameState, char* P1DeckName, char* P2DeckName
 )
 {
-	start_card_game_args* SceneArgs = StartCardGamePrepCommon(
-		GameState,
-		NetworkGame,
-		IsLeader,
-		NULL,
-		NULL
-	);
+	// NOTE: for use in setting up a local game
+	start_card_game_args* SceneArgs = StartCardGamePrepCommon(GameState);
 
 	char Buffer[PLATFORM_MAX_PATH];
 	FormatDeckPath(Buffer, sizeof(Buffer), P1DeckName);
@@ -915,19 +873,37 @@ void StartCardGamePrep(
 	game_state* GameState,
 	loaded_deck P1Deck,
 	loaded_deck P2Deck,
-	bool NetworkGame,
 	bool IsLeader,
 	platform_socket* ListenSocket,
 	platform_socket* ConnectSocket
 )
 {
-	start_card_game_args* SceneArgs = StartCardGamePrepCommon(
-		GameState,
-		NetworkGame,
-		IsLeader,
-		ListenSocket,
-		ConnectSocket
-	);
+	// NOTE: for use in setting up a network game
+	start_card_game_args* SceneArgs = StartCardGamePrepCommon(GameState);
+
+	SceneArgs->IsLeader = IsLeader;
+
+	SceneArgs->ListenSocket = {};
+	SceneArgs->ConnectSocket = {};
+	if(ListenSocket)
+	{
+		SceneArgs->ListenSocket = *ListenSocket;
+		SceneArgs->ListenSocket.IsValid = true;
+	}
+	else
+	{
+		SceneArgs->ListenSocket.IsValid = false; 
+	}
+	if(ConnectSocket)
+	{
+		SceneArgs->ConnectSocket = *ConnectSocket;
+		SceneArgs->ConnectSocket.IsValid = true;
+	}
+	else
+	{
+		SceneArgs->ConnectSocket.IsValid = false;
+	}
+	SceneArgs->NetworkGame = true;
 
 	SceneArgs->P1Deck = P1Deck;
 	SceneArgs->P2Deck = P2Deck;

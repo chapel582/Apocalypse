@@ -24,7 +24,6 @@ void DeckSelectorPrepNextScene(
 						GameState,
 						SceneState->P1Deck,
 						SceneState->P2Deck,
-						SceneState->NetworkGame,
 						SceneState->IsLeader,
 						&SceneState->ListenSocket,
 						&SceneState->ConnectSocket
@@ -33,13 +32,7 @@ void DeckSelectorPrepNextScene(
 				else
 				{
 					char* P2Deck = "P2Deck";
-					StartCardGamePrep(
-						GameState,
-						SceneState->DeckName,
-						P2Deck,
-						SceneState->NetworkGame,
-						SceneState->IsLeader
-					);
+					StartCardGamePrep(GameState, SceneState->DeckName, P2Deck);
 				}
 			}
 			else

@@ -244,17 +244,12 @@ struct start_card_game_args
 	bool NetworkGame;
 };
 void StartCardGamePrep(
-	game_state* GameState,
-	char* P1DeckName,
-	char* P2DeckName,
-	bool NetworkGame,
-	bool IsLeader
+	game_state* GameState, char* P1DeckName, char* P2DeckName
 );
 void StartCardGamePrep(
 	game_state* GameState,
 	loaded_deck P1Deck,
 	loaded_deck P2Deck,
-	bool NetworkGame,
 	bool IsLeader,
 	platform_socket* ListenSocket,
 	platform_socket* ConnectSocket

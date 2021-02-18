@@ -893,17 +893,15 @@ void StartCardGamePrep(
 	char* P1DeckName,
 	char* P2DeckName,
 	bool NetworkGame,
-	bool IsLeader,
-	platform_socket* ListenSocket,
-	platform_socket* ConnectSocket
+	bool IsLeader
 )
 {
 	start_card_game_args* SceneArgs = StartCardGamePrepCommon(
 		GameState,
 		NetworkGame,
 		IsLeader,
-		ListenSocket,
-		ConnectSocket
+		NULL,
+		NULL
 	);
 
 	char Buffer[PLATFORM_MAX_PATH];

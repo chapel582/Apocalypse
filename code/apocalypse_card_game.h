@@ -248,9 +248,7 @@ void StartCardGamePrep(
 	char* P1DeckName,
 	char* P2DeckName,
 	bool NetworkGame,
-	bool IsLeader,
-	platform_socket* ListenSocket,
-	platform_socket* ConnectSocket
+	bool IsLeader
 );
 void StartCardGamePrep(
 	game_state* GameState,

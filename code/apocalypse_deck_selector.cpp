@@ -38,9 +38,7 @@ void DeckSelectorPrepNextScene(
 						SceneState->DeckName,
 						P2Deck,
 						SceneState->NetworkGame,
-						SceneState->IsLeader,
-						&SceneState->ListenSocket,
-						&SceneState->ConnectSocket
+						SceneState->IsLeader
 					);
 				}
 			}

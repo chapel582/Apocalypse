@@ -1,4 +1,4 @@
-#ifndef INIT_PACKET_HEADER
+#ifndef APOCALYPSE_PACKET_HEADER_H
 
 #include "apocalypse_memory_arena.h"
 
@@ -14,7 +14,8 @@ typedef enum
 	Packet_RemoveCard,
 	Packet_DeckData,
 	Packet_DeckUpdate,
-	Packet_RandSeed
+	Packet_RandSeed,
+	Packet_JoinGameType
 } packet_type;
 
 /* TODO: make sure we handle all the following endianness cases
@@ -98,5 +99,5 @@ void InitPacketHeader(
 	}
 }
 
-#define INIT_PACKET_HEADER
+#define APOCALYPSE_PACKET_HEADER_H
 #endif

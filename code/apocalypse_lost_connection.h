@@ -16,6 +16,8 @@ struct lost_connection_args
 struct lost_connection_state
 {
 	ui_context UiContext;
+	bool IsServer;
+	bool Listening;
 	platform_socket ListenSocket;
 	platform_socket ConnectSocket;
 };

@@ -73,6 +73,24 @@ void UpdateAndRenderHostGame(
 		if(SocketResult == PlatformSocketResult_Success)
 		{
 			SceneState->Listening = false;
+
+			join_game_type_packet* Packet = PushStruct(
+				FrameArena, join_game_type_packet
+			);
+			join_game_type_payload* Payload = &Packet->Payload;
+			Payload->Type = JoinGameType_NewGame;
+
+			packet_header* Header = &Packet->Header; 
+			Header->DataSize = sizeof(join_game_type_packet);
+			InitPacketHeader(
+				GameState, Header, Packet_JoinGameType, (uint8_t*) Payload
+			);
+			SocketSendErrorCheck(
+				GameState,
+				SceneState->ClientSocket,
+				SceneState->ListenSocket,
+				Header
+			);
 		}
 	}
 	else

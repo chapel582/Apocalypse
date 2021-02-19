@@ -29,7 +29,7 @@ void ConnectJob(void* Data)
 void StartJoinGamePrep(game_state* GameState)
 {
 	GameState->SceneArgs = NULL;
-	GameState->Scene = SceneType_JoinGame; 
+	GameState->Scene = SceneType_JoinGame;
 }
 
 void StartJoinGame(
@@ -42,6 +42,8 @@ void StartJoinGame(
 
 	join_game_state* SceneState = (join_game_state*) GameState->SceneState;
 	*SceneState = {};
+
+	SceneState->JoinGameType = JoinGameType_Unknown;
 
 	SceneState->ScreenDimInWorld = TransformVectorToBasis(
 		&GameState->WorldToCamera,
@@ -74,6 +76,9 @@ void StartJoinGame(
 		Vector2(2.0f * WindowWidth / 5.0f, SceneState->IpInput.FontHeight)
 	);
 	SetActive(UiContext, SceneState->IpInput.UiId);
+
+	SceneState->PacketReader = {};
+	SceneState->PacketReader.NetworkArena = &GameState->NetworkArena;
 }
 
 void UpdateAndRenderJoinGame(
@@ -91,7 +96,6 @@ void UpdateAndRenderJoinGame(
 	assets* Assets = &GameState->Assets;
 	ui_context* UiContext = &SceneState->UiContext;
 
-	uint32_t BytesRead = 0;
 	if(
 		SceneState->ConnectionArgs.ConnectionState == ConnectionState_IpEntry
 	)
@@ -193,14 +197,77 @@ void UpdateAndRenderJoinGame(
 		// TODO: probably want to just join a thread/check for a particular job
 		// CONT: finishing, instead of all jobs
 		PlatformCompleteAllJobs(GameState->JobQueue);
-		StartDeckSelectorPrep(
-			GameState,
-			SceneType_CardGame,
-			true,
-			false,
-			NULL,
-			SceneState->ConnectSocket
-		);
+
+		if(SceneState->JoinGameType == JoinGameType_Unknown)
+		{
+			uint32_t BytesRead = 0;
+			packet_reader_data* PacketReader = &SceneState->PacketReader;
+			while(true)
+			{
+				read_packet_result ReadResult = ReadPacket(
+					GameState,
+					SceneState->ConnectSocket,
+					NULL,
+					PacketReader
+				);
+
+				if(ReadResult == ReadPacketResult_Complete)
+				{
+					packet_header* Header = SceneState->PacketReader.Header;
+					void* Payload = SceneState->PacketReader.Payload;
+					switch(Header->Type)
+					{
+						case(Packet_JoinGameType):
+						{
+							join_game_type_payload* JgtPayload = (
+								(join_game_type_payload*) Payload
+							);
+							SceneState->JoinGameType = JgtPayload->Type;
+							break;
+						}
+						default:
+						{
+							ASSERT(false);
+							break;
+						}
+					}
+					ReadPacketEnd(PacketReader);
+				}
+				else if(
+					ReadResult == ReadPacketResult_Incomplete ||
+					ReadResult == ReadPacketResult_PeerReset
+				)
+				{
+					break;
+				}
+				else if(ReadResult == ReadPacketResult_Error)
+				{
+					ReadPacketEnd(PacketReader);
+				}
+				else
+				{
+					ASSERT(false);
+				}
+			}
+		}
+
+		if(SceneState->JoinGameType == JoinGameType_NewGame)
+		{
+			StartDeckSelectorPrep(
+				GameState,
+				SceneType_CardGame,
+				true,
+				false,
+				NULL,
+				SceneState->ConnectSocket
+			);
+		}
+		else if(SceneState->JoinGameType == JoinGameType_ResumeGame)
+		{
+			ResumeCardGamePrep(
+				GameState, false, NULL, SceneState->ConnectSocket
+			);
+		}
 	}
 
 	PushClear(RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));

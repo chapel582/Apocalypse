@@ -120,5 +120,7 @@ void SetWindowSize(
 );
 
 void AddSceneStackEntry(game_state* GameState);
+scene_stack_entry* PeekSceneStack(game_state* GameState);
+
 #define APOCALYPSE_H
 #endif

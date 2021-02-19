@@ -234,7 +234,7 @@ struct deck_update_packet
 };
 #pragma pack(pop)
 
-struct start_card_game_args
+struct card_game_args
 {
 	loaded_deck P1Deck;
 	loaded_deck P2Deck;
@@ -242,6 +242,7 @@ struct start_card_game_args
 	platform_socket ConnectSocket;
 	bool IsLeader;
 	bool NetworkGame;
+	bool NewCardGame;
 };
 void StartCardGamePrep(
 	game_state* GameState, char* P1DeckName, char* P2DeckName
@@ -250,6 +251,12 @@ void StartCardGamePrep(
 	game_state* GameState,
 	loaded_deck P1Deck,
 	loaded_deck P2Deck,
+	bool IsLeader,
+	platform_socket* ListenSocket,
+	platform_socket* ConnectSocket
+);
+void ResumeCardGamePrep(
+	game_state* GameState,
 	bool IsLeader,
 	platform_socket* ListenSocket,
 	platform_socket* ConnectSocket

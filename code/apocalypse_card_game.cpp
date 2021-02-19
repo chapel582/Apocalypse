@@ -842,10 +842,10 @@ void SetTurnTimer(card_game_state* SceneState, float Value)
 	SceneState->LastWholeSecond = IntTurnTimer;
 }
 
-start_card_game_args* StartCardGamePrepCommon(game_state* GameState)
+card_game_args* StartCardGamePrepCommon(game_state* GameState)
 {
-	start_card_game_args* SceneArgs = PushStruct(
-		&GameState->SceneArgsArena, start_card_game_args
+	card_game_args* SceneArgs = PushStruct(
+		&GameState->SceneArgsArena, card_game_args
 	);
 	*SceneArgs = {};
 
@@ -860,13 +860,14 @@ void StartCardGamePrep(
 )
 {
 	// NOTE: for use in setting up a local game
-	start_card_game_args* SceneArgs = StartCardGamePrepCommon(GameState);
+	card_game_args* SceneArgs = StartCardGamePrepCommon(GameState);
 
 	char Buffer[PLATFORM_MAX_PATH];
 	FormatDeckPath(Buffer, sizeof(Buffer), P1DeckName);
 	SceneArgs->P1Deck = LoadDeck(Buffer);
 	FormatDeckPath(Buffer, sizeof(Buffer), P2DeckName);
 	SceneArgs->P2Deck = LoadDeck(Buffer);
+	SceneArgs->NewCardGame = true;
 }
 
 void StartCardGamePrep(
@@ -879,7 +880,7 @@ void StartCardGamePrep(
 )
 {
 	// NOTE: for use in setting up a network game
-	start_card_game_args* SceneArgs = StartCardGamePrepCommon(GameState);
+	card_game_args* SceneArgs = StartCardGamePrepCommon(GameState);
 
 	SceneArgs->IsLeader = IsLeader;
 
@@ -907,23 +908,58 @@ void StartCardGamePrep(
 
 	SceneArgs->P1Deck = P1Deck;
 	SceneArgs->P2Deck = P2Deck;
+	SceneArgs->NewCardGame = true;
 }
 
-void StartCardGame(
-	game_state* GameState, uint32_t WindowWidth, uint32_t WindowHeight
+void ResumeCardGamePrep(
+	game_state* GameState,
+	bool IsLeader,
+	platform_socket* ListenSocket,
+	platform_socket* ConnectSocket
 )
 {
-	start_card_game_args* SceneArgs = (start_card_game_args*) (
-		GameState->SceneArgs
-	);
-	loaded_deck P1Deck = SceneArgs->P1Deck;
-	loaded_deck P2Deck = SceneArgs->P2Deck;
+	// NOTE: for use in setting up a network game
+	card_game_args* SceneArgs = StartCardGamePrepCommon(GameState);
 
-	GameState->SceneState = PushStruct(
-		&GameState->TransientArena, card_game_state
-	);
+	SceneArgs->IsLeader = IsLeader;
 
-	card_game_state* SceneState = (card_game_state*) GameState->SceneState;
+	SceneArgs->ListenSocket = {};
+	SceneArgs->ConnectSocket = {};
+	if(ListenSocket)
+	{
+		SceneArgs->ListenSocket = *ListenSocket;
+		SceneArgs->ListenSocket.IsValid = true;
+	}
+	else
+	{
+		SceneArgs->ListenSocket.IsValid = false; 
+	}
+	if(ConnectSocket)
+	{
+		SceneArgs->ConnectSocket = *ConnectSocket;
+		SceneArgs->ConnectSocket.IsValid = true;
+	}
+	else
+	{
+		SceneArgs->ConnectSocket.IsValid = false;
+	}
+	SceneArgs->NetworkGame = true;
+	SceneArgs->NewCardGame = false;
+}
+
+void StartCardGameDataSetup(
+	game_state* GameState,
+	card_game_state* SceneState,
+	card_game_args* SceneArgs,
+	uint32_t WindowWidth,
+	uint32_t WindowHeight
+)
+{
+	/* NOTE:
+	for setting up card_game_state data (anything not related to 
+	actual game state. ignores stuff like setting life, resources, drawing 
+	cards)
+	*/
 	*SceneState = {};
 
 	SceneState->MaxCards = Player_Count * CardSet_Count * MAX_CARDS_PER_SET;
@@ -939,17 +975,147 @@ void StartCardGame(
 	SceneState->ConnectSocket = SceneArgs->ConnectSocket;
 	SceneState->LastFrame = 0;
 
-	SceneState->NextCardId = 0;
-	if(SceneState->NetworkGame && !SceneState->IsLeader)
-	{
-		SceneState->NextCardId = 1 << 16;
-	}
+	SceneState->Definitions = DefineCards(&GameState->TransientArena);
+	SceneState->Decks = PushArray(
+		&GameState->TransientArena, Player_Count, deck
+	);
 
+	SceneState->PlayerResources = PushArray(
+		&GameState->TransientArena, Player_Count, player_resources
+	);
+	SceneState->Hands = PushArray(
+		&GameState->TransientArena, Player_Count, card_set
+	);
+	memset(SceneState->Hands, 0, Player_Count * sizeof(card_set));
+	SceneState->Tableaus = PushArray(
+		&GameState->TransientArena, Player_Count, card_set
+	);
+
+	float CardWidth = 60.0f;
+	float CardHeight = 90.0f;
+	SceneState->CardWidth = CardWidth;
+	SceneState->CardHeight = CardHeight;
+
+	float HandTableauMargin = 5.0f;
+	// NOTE: transform assumes screen and camera are 1:1
+	SceneState->ScreenDimInWorld = TransformVectorToBasis(
+		&GameState->WorldToCamera,
+		Vector2(WindowWidth, WindowHeight)
+	);
+	vector2 ScreenDimInWorld = SceneState->ScreenDimInWorld;
+	float ScreenWidthInWorld = ScreenDimInWorld.X;
+	
+	card_set* CardSet = &SceneState->Hands[Player_One];
+	CardSet->Type = CardSet_Hand;
+	CardSet->CardCount = 0;
+	CardSet->ScreenWidth = ScreenWidthInWorld;
+	CardSet->YPos = 0.0f;
+	CardSet->CardWidth = CardWidth;
+
+	CardSet = &SceneState->Hands[Player_Two];
+	CardSet->Type = CardSet_Hand;
+	CardSet->CardCount = 0;
+	CardSet->ScreenWidth = ScreenWidthInWorld;
+	CardSet->YPos = ScreenDimInWorld.Y - CardHeight;
+	CardSet->CardWidth = CardWidth;
+
+	CardSet = &SceneState->Tableaus[Player_One];
+	CardSet->Type = CardSet_Tableau;
+	CardSet->CardCount = 0;
+	CardSet->ScreenWidth = ScreenWidthInWorld;
+	CardSet->YPos = CardHeight + HandTableauMargin;
+	CardSet->CardWidth = CardWidth;
+
+	CardSet = &SceneState->Tableaus[Player_Two];
+	CardSet->Type = CardSet_Tableau;
+	CardSet->CardCount = 0;
+	CardSet->ScreenWidth = ScreenWidthInWorld;
+	CardSet->YPos = (
+		ScreenDimInWorld.Y - (2 * CardHeight) - HandTableauMargin 
+	);
+	CardSet->CardWidth = CardWidth;
+	
+	SceneState->InfoCardCenter = ScreenDimInWorld / 2.0f;
+
+	vector2 ScaledInfoCardDim = 0.33f * Vector2(600.0f, 900.0f);
+	SceneState->InfoCardXBound = Vector2(ScaledInfoCardDim.X, 0.0f);
+	SceneState->InfoCardYBound = Vector2(0.0f, ScaledInfoCardDim.Y);
+
+	SceneState->Alert = MakeAlert();
+
+	InitUiContext(&SceneState->UiContext);
+	ui_context* UiContext = &SceneState->UiContext;
+
+	SceneState->StackEntryInfoDim = Vector2(90.0f, 30.0f);
+	vector2 StackEntryInfoDim = SceneState->StackEntryInfoDim;
+	scroll_bar* StackScrollBar = &SceneState->StackScrollBar;
+
+	rectangle StackScrollBox = MakeRectangle(
+		Vector2(0.0f, ScreenDimInWorld.Y / 3.0f),
+		Vector2(StackEntryInfoDim.X, ScreenDimInWorld.Y / 3.0f)
+	);
+	uint32_t ScrollBoxClipIndex = AddClipRect(
+		&GameState->RenderGroup, StackScrollBox
+	);
+	InitScrollBar(
+		UiContext, StackScrollBar, 20.0f, StackScrollBox, ScrollBoxClipIndex
+	);
+	SceneState->StackYStart = GetTop(StackScrollBox);
+
+
+	// NOTE: the padding here is based on the height of the resource text info
+	// CONT: this is all kinda hard-coded until we have a good scheme for UI
+	// CONT: and also resolution scaling
+	float Padding = 95.0f;
+	vector2 PlayerLifeRectDim = Vector2(90.0f, 30.0f);
+	SceneState->PlayerLifeRects[Player_One] = MakeRectangle(
+		Vector2(
+			ScreenDimInWorld.X - RESOURCE_LEFT_PADDING,
+			(ScreenDimInWorld.Y / 2.0f) - Padding - 2.0f
+		),
+		PlayerLifeRectDim
+	);
+	SceneState->PlayerLifeRects[Player_Two] = MakeRectangle(
+		Vector2(
+			ScreenDimInWorld.X - RESOURCE_LEFT_PADDING,
+			(ScreenDimInWorld.Y / 2.0f) + Padding + RESOURCE_TEXT_HEIGHT + 2.0f
+		),
+		PlayerLifeRectDim
+	);
+
+	SceneState->PacketReader = {};
+	SceneState->PacketReader.NetworkArena = &GameState->NetworkArena;
+}
+
+void StartCardGame(
+	game_state* GameState, uint32_t WindowWidth, uint32_t WindowHeight
+)
+{
+	card_game_args* SceneArgs = (card_game_args*) (
+		GameState->SceneArgs
+	);
+
+	GameState->SceneState = PushStruct(
+		&GameState->TransientArena, card_game_state
+	);
+
+	card_game_state* SceneState = (card_game_state*) GameState->SceneState;
+
+	if(SceneArgs->NewCardGame)
 	{
-		SceneState->Definitions = DefineCards(&GameState->TransientArena);
-		SceneState->Decks = PushArray(
-			&GameState->TransientArena, Player_Count, deck
+		StartCardGameDataSetup(
+			GameState, SceneState, SceneArgs, WindowWidth, WindowHeight
 		);
+
+		loaded_deck P1Deck = SceneArgs->P1Deck;
+		loaded_deck P2Deck = SceneArgs->P2Deck;
+
+		SceneState->NextCardId = 0;
+		if(SceneState->NetworkGame && !SceneState->IsLeader)
+		{
+			SceneState->NextCardId = 1 << 16;
+		}
+
 		for(
 			int PlayerIndex = Player_One;
 			PlayerIndex < Player_Count;
@@ -1030,176 +1196,72 @@ void StartCardGame(
 			}
 		}
 		// SECTION STOP: Shuffle deck
+
+		// TODO: this may not be a great way to seed. might be exploitable?
+		uint32_t Seed = (uint32_t) time(NULL);
+		srand(Seed);
+		if(SceneState->NetworkGame && SceneState->IsLeader)
+		{
+			memory_arena* FrameArena = &GameState->FrameArena;
+			rand_seed_packet* RandSeedPacket = PushStruct(
+				FrameArena, rand_seed_packet
+			);
+			rand_seed_payload* Payload = &RandSeedPacket->Payload;
+			Payload->Seed = Seed;
+
+			packet_header* Header = &RandSeedPacket->Header; 
+			Header->DataSize = sizeof(rand_seed_packet);
+			InitPacketHeader(
+				GameState, Header, Packet_RandSeed, (uint8_t*) Payload
+			);
+			SocketSendErrorCheck(
+				GameState,
+				&SceneState->ConnectSocket,
+				&SceneState->ListenSocket,
+				Header
+			);
+		}
+
+		if(
+			!SceneState->NetworkGame || 
+			(SceneState->NetworkGame && SceneState->IsLeader)
+		)
+		{
+			DrawFullHand(SceneState, Player_One);
+			DrawFullHand(SceneState, Player_Two);
+		}
+
+		SetTurnTimer(SceneState, 20.0f);
+		SceneState->BaselineNextTurnTimer = (
+			SceneState->TurnTimer + TURN_TIMER_INCREASE
+		);
+		SceneState->ShouldUpdateBaseline = false;
+		SceneState->NextTurnTimer = SceneState->BaselineNextTurnTimer;
+
+		for(int PlayerIndex = 0; PlayerIndex < Player_Count; PlayerIndex++)
+		{
+			player_resources* PlayerResources = (
+				&SceneState->PlayerResources[PlayerIndex]
+			);
+			// TODO: initialize to 0?
+			SetResource(PlayerResources, PlayerResource_Red, rand() % 10 + 1);
+			SetResource(PlayerResources, PlayerResource_Green, rand() % 10 + 1);
+			SetResource(PlayerResources, PlayerResource_Blue, rand() % 10 + 1);
+			SetResource(PlayerResources, PlayerResource_White, rand() % 10 + 1);
+			SetResource(PlayerResources, PlayerResource_Black, rand() % 10 + 1);
+		}
+
+		SceneState->PlayerLife[Player_One] = 100.0f;
+		SceneState->PlayerLife[Player_Two] = 100.0f;
 	}
-
-	SceneState->PlayerResources = PushArray(
-		&GameState->TransientArena, Player_Count, player_resources
-	);
-	SceneState->Hands = PushArray(
-		&GameState->TransientArena, Player_Count, card_set
-	);
-	memset(SceneState->Hands, 0, Player_Count * sizeof(card_set));
-	SceneState->Tableaus = PushArray(
-		&GameState->TransientArena, Player_Count, card_set
-	);
-
-	float CardWidth = 60.0f;
-	float CardHeight = 90.0f;
-	SceneState->CardWidth = CardWidth;
-	SceneState->CardHeight = CardHeight;
-
-	float HandTableauMargin = 5.0f;
-	// NOTE: transform assumes screen and camera are 1:1
-	SceneState->ScreenDimInWorld = TransformVectorToBasis(
-		&GameState->WorldToCamera,
-		Vector2(WindowWidth, WindowHeight)
-	);
-	vector2 ScreenDimInWorld = SceneState->ScreenDimInWorld;
-	float ScreenWidthInWorld = ScreenDimInWorld.X;
-	
-	card_set* CardSet = &SceneState->Hands[Player_One];
-	CardSet->Type = CardSet_Hand;
-	CardSet->CardCount = 0;
-	CardSet->ScreenWidth = ScreenWidthInWorld;
-	CardSet->YPos = 0.0f;
-	CardSet->CardWidth = CardWidth;
-
-	CardSet = &SceneState->Hands[Player_Two];
-	CardSet->Type = CardSet_Hand;
-	CardSet->CardCount = 0;
-	CardSet->ScreenWidth = ScreenWidthInWorld;
-	CardSet->YPos = ScreenDimInWorld.Y - CardHeight;
-	CardSet->CardWidth = CardWidth;
-
-	CardSet = &SceneState->Tableaus[Player_One];
-	CardSet->Type = CardSet_Tableau;
-	CardSet->CardCount = 0;
-	CardSet->ScreenWidth = ScreenWidthInWorld;
-	CardSet->YPos = CardHeight + HandTableauMargin;
-	CardSet->CardWidth = CardWidth;
-
-	CardSet = &SceneState->Tableaus[Player_Two];
-	CardSet->Type = CardSet_Tableau;
-	CardSet->CardCount = 0;
-	CardSet->ScreenWidth = ScreenWidthInWorld;
-	CardSet->YPos = (
-		ScreenDimInWorld.Y - (2 * CardHeight) - HandTableauMargin 
-	);
-	CardSet->CardWidth = CardWidth;
-	
-	SceneState->InfoCardCenter = ScreenDimInWorld / 2.0f;
-
-	vector2 ScaledInfoCardDim = 0.33f * Vector2(600.0f, 900.0f);
-	SceneState->InfoCardXBound = Vector2(ScaledInfoCardDim.X, 0.0f);
-	SceneState->InfoCardYBound = Vector2(0.0f, ScaledInfoCardDim.Y);
-
-	// TODO: this may not be a great way to seed. might be exploitable?
-	uint32_t Seed = (uint32_t) time(NULL);
-	srand(Seed);
-	if(SceneState->NetworkGame && SceneState->IsLeader)
+	else
 	{
-		memory_arena* FrameArena = &GameState->FrameArena;
-		rand_seed_packet* RandSeedPacket = PushStruct(
-			FrameArena, rand_seed_packet
+		StartCardGameDataSetup(
+			GameState, SceneState, SceneArgs, WindowWidth, WindowHeight
 		);
-		rand_seed_payload* Payload = &RandSeedPacket->Payload;
-		Payload->Seed = Seed;
-
-		packet_header* Header = &RandSeedPacket->Header; 
-		Header->DataSize = sizeof(rand_seed_packet);
-		InitPacketHeader(
-			GameState, Header, Packet_RandSeed, (uint8_t*) Payload
-		);
-		SocketSendErrorCheck(
-			GameState,
-			&SceneState->ConnectSocket,
-			&SceneState->ListenSocket,
-			Header
-		);
+		// TODO: handle unique ids
+		// TODO: handle seeding
 	}
-
-	if(
-		!SceneState->NetworkGame || 
-		(SceneState->NetworkGame && SceneState->IsLeader)
-	)
-	{
-		DrawFullHand(SceneState, Player_One);
-		DrawFullHand(SceneState, Player_Two);
-	}
-
-	SetTurnTimer(SceneState, 20.0f);
-	SceneState->BaselineNextTurnTimer = (
-		SceneState->TurnTimer + TURN_TIMER_INCREASE
-	);
-	SceneState->ShouldUpdateBaseline = false;
-	SceneState->NextTurnTimer = SceneState->BaselineNextTurnTimer;
-
-	for(int PlayerIndex = 0; PlayerIndex < Player_Count; PlayerIndex++)
-	{
-		player_resources* PlayerResources = (
-			&SceneState->PlayerResources[PlayerIndex]
-		);
-		// TODO: initialize to 0?
-		SetResource(PlayerResources, PlayerResource_Red, rand() % 10 + 1);
-		SetResource(PlayerResources, PlayerResource_Green, rand() % 10 + 1);
-		SetResource(PlayerResources, PlayerResource_Blue, rand() % 10 + 1);
-		SetResource(PlayerResources, PlayerResource_White, rand() % 10 + 1);
-		SetResource(PlayerResources, PlayerResource_Black, rand() % 10 + 1);
-	}
-
-	SceneState->Alert = MakeAlert();
-
-	SceneState->PlayerLife[Player_One] = 100.0f;
-	SceneState->PlayerLife[Player_Two] = 100.0f;
-
-	InitUiContext(&SceneState->UiContext);
-	ui_context* UiContext = &SceneState->UiContext;
-
-	SceneState->StackEntryInfoDim = Vector2(90.0f, 30.0f);
-	vector2 StackEntryInfoDim = SceneState->StackEntryInfoDim;
-	scroll_bar* StackScrollBar = &SceneState->StackScrollBar;
-
-	rectangle StackScrollBox = MakeRectangle(
-		Vector2(0.0f, ScreenDimInWorld.Y / 3.0f),
-		Vector2(StackEntryInfoDim.X, ScreenDimInWorld.Y / 3.0f)
-	);
-	uint32_t ScrollBoxClipIndex = AddClipRect(
-		&GameState->RenderGroup, StackScrollBox
-	);
-	InitScrollBar(
-		UiContext, StackScrollBar, 20.0f, StackScrollBox, ScrollBoxClipIndex
-	);
-	SceneState->StackYStart = GetTop(StackScrollBox);
-
-
-	// NOTE: the padding here is based on the height of the resource text info
-	// CONT: this is all kinda hard-coded until we have a good scheme for UI
-	// CONT: and also resolution scaling
-	float Padding = 95.0f;
-	vector2 PlayerLifeRectDim = Vector2(90.0f, 30.0f);
-	SceneState->PlayerLifeRects[Player_One] = MakeRectangle(
-		Vector2(
-			ScreenDimInWorld.X - RESOURCE_LEFT_PADDING,
-			(ScreenDimInWorld.Y / 2.0f) - Padding - 2.0f
-		),
-		PlayerLifeRectDim
-	);
-	SceneState->PlayerLifeRects[Player_Two] = MakeRectangle(
-		Vector2(
-			ScreenDimInWorld.X - RESOURCE_LEFT_PADDING,
-			(ScreenDimInWorld.Y / 2.0f) + Padding + RESOURCE_TEXT_HEIGHT + 2.0f
-		),
-		PlayerLifeRectDim
-	);
-
-	SceneState->PacketReader = {};
-	SceneState->PacketReader.NetworkArena = &GameState->NetworkArena;
-	// TODO: remove me!
-	// PlaySound(
-	// 	&GameState->PlayingSoundList,
-	// 	WavHandle_TestMusic,
-	// 	&GameState->TransientArena
-	// );
 }
 
 void EndStackBuilding(card_game_state* SceneState)

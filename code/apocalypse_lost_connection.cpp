@@ -2,6 +2,8 @@
 #include "apocalypse_assets.h"
 #include "apocalypse_render_group.h"
 #include "apocalypse_lost_connection.h"
+#include "apocalypse_card_game.h"
+#include "apocalypse_join_game.h"
 
 void StartLostConnectionPrep(
 	game_state* GameState,
@@ -21,8 +23,17 @@ void StartLostConnectionPrep(
 	lost_connection_args* SceneArgs = PushStruct(
 		&GameState->SceneArgsArena, lost_connection_args
 	);
+	*SceneArgs = {};
+
 	SceneArgs->ConnectSocket = *ConnectSocket;
-	SceneArgs->ListenSocket = *ListenSocket;
+	if(ListenSocket)
+	{
+		SceneArgs->ListenSocket = *ListenSocket;
+	}
+	else
+	{
+		SceneArgs->ListenSocket = {};
+	}
 	GameState->SceneArgs = SceneArgs;
 }
 
@@ -42,6 +53,8 @@ void StartLostConnection(
 	);
 	SceneState->ListenSocket = SceneArgs->ListenSocket;
 	SceneState->ConnectSocket = SceneArgs->ConnectSocket;
+	SceneState->IsServer = SceneState->ListenSocket.IsValid;
+	PlatformCloseSocket(&SceneState->ConnectSocket);
 
 	ui_context* UiContext = &SceneState->UiContext;
 	InitUiContext(UiContext);
@@ -59,6 +72,57 @@ void UpdateAndRenderLostConnection(
 {
 
 	memory_arena* FrameArena = &GameState->FrameArena;
+
+	if(SceneState->IsServer)
+	{
+		platform_socket_result SocketResult = PlatformAcceptConnection(
+			&SceneState->ListenSocket, &SceneState->ConnectSocket
+		);
+		if(SocketResult == PlatformSocketResult_Success)
+		{
+			scene_stack_entry* StackEntry = PeekSceneStack(GameState);
+			switch(StackEntry->Scene)
+			{
+				case(SceneType_CardGame):
+				{
+					card_game_state* CardGameState = (card_game_state*)(
+						StackEntry->SceneState
+					);
+					CardGameState->ConnectSocket = SceneState->ConnectSocket;
+
+					join_game_type_packet* Packet = PushStruct(
+						FrameArena, join_game_type_packet
+					);
+					join_game_type_payload* Payload = &Packet->Payload;
+					Payload->Type = JoinGameType_ResumeGame;
+
+					packet_header* Header = &Packet->Header; 
+					Header->DataSize = sizeof(join_game_type_packet);
+					InitPacketHeader(
+						GameState, Header, Packet_JoinGameType, (uint8_t*) Payload
+					);
+					SocketSendErrorCheck(
+						GameState,
+						&SceneState->ConnectSocket,
+						&SceneState->ListenSocket,
+						Header
+					);
+					break;
+				}
+				default:
+				{
+					ASSERT(false);
+				}
+			}
+			GameState->PopScene = true;
+		}
+	}
+	else
+	{
+		// TODO:
+		// TODO: implementation error
+		ASSERT(false);
+	}
 	
 	user_event_index UserEventIndex = 0;
 	int MouseEventIndex = 0;
@@ -132,12 +196,6 @@ void UpdateAndRenderLostConnection(
 						{
 							ASSERT(false);
 						}
-						break;
-					}
-					case(0x20):
-					{
-						// TODO: remove this test code
-						GameState->PopScene = true;
 						break;
 					}
 				}

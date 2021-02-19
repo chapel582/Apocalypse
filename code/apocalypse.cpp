@@ -302,6 +302,15 @@ void AddSceneStackEntry(game_state* GameState)
 	GameState->SceneStackLen++;
 }
 
+scene_stack_entry* PeekSceneStack(game_state* GameState)
+{
+	// NOTE: peek at the top entry of the screen stack without popping it off
+	scene_stack_entry* StackEntry = (
+		GameState->SceneStack + (GameState->SceneStackLen - 1)
+	);
+	return StackEntry;
+}
+
 void GameUpdateAndRender(
 	game_memory* Memory,
 	uint32_t WindowWidth,

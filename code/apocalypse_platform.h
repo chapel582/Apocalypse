@@ -159,6 +159,7 @@ void PlatformServerDisconnect(
 platform_socket_result PlatformCreateClient(
 	char* ServerIp, platform_socket* ConnectSocket
 );
+void PlatformCloseSocket(platform_socket* Socket);
 void PlatformClientDisconnect(platform_socket* ConnectSocket);
 platform_socket_send_result PlatformSocketSend(
 	platform_socket* Socket, void* Buffer, uint32_t DataSize

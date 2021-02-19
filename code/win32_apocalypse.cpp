@@ -534,15 +534,20 @@ end:
 	return Result;
 }
 
-void PlatformClientDisconnect(platform_socket* ConnectSocket)
+void PlatformCloseSocket(platform_socket* Socket)
 {
-	int ShutdownResult = shutdown(ConnectSocket->Socket, SD_SEND);
+	int ShutdownResult = shutdown(Socket->Socket, SD_SEND);
 	if(ShutdownResult == SOCKET_ERROR)
 	{
 		// TODO: logging
 	}
 
-	closesocket(ConnectSocket->Socket);
+	closesocket(Socket->Socket);
+}
+
+void PlatformClientDisconnect(platform_socket* ConnectSocket)
+{
+	PlatformCloseSocket(ConnectSocket);
 	WSACleanup();
 }
 

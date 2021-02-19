@@ -436,11 +436,9 @@ void StartDeckEditor(
 	start_deck_editor_args* SceneArgs = (start_deck_editor_args*) (
 		GameState->SceneArgs
 	);
-	ResetMemArena(&GameState->TransientArena);
 	GameState->SceneState = PushStruct(
 		&GameState->TransientArena, deck_editor_state
 	);
-	ResetAssets(&GameState->Assets);
 	deck_editor_state* SceneState = (deck_editor_state*) GameState->SceneState;
 	InitUiContext(&SceneState->UiContext);
 	ui_context* UiContext = &SceneState->UiContext;

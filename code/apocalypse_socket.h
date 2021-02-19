@@ -47,6 +47,7 @@ platform_socket_send_result ThrottledSocketSendData(
 void ThrottledSocketSendErrorCheck(
 	game_state* GameState,
 	platform_socket* ConnectSocket,
+	platform_socket* ListenSocket,
 	packet_header* Header
 );
 read_packet_result ReadPacket(

@@ -62,6 +62,7 @@ platform_socket_send_result ThrottledSocketSendData(
 void ThrottledSocketSendErrorCheck(
 	game_state* GameState,
 	platform_socket* ConnectSocket,
+	platform_socket* ListenSocket,
 	packet_header* Header
 )
 {
@@ -70,12 +71,10 @@ void ThrottledSocketSendErrorCheck(
 	);
 	if(SendResult == PlatformSocketSendResult_PeerReset)
 	{
-		GameState->Scene = SceneType_LostConnection;
-		// TODO: socket cleanup here?
+		StartLostConnectionPrep(GameState, ConnectSocket, ListenSocket);
 	}
 	else if(SendResult == PlatformSocketSendResult_Error)
 	{
-		// TODO: logging
 		ASSERT(false);
 	}
 }

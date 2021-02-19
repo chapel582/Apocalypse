@@ -919,11 +919,9 @@ void StartCardGame(
 	loaded_deck P1Deck = SceneArgs->P1Deck;
 	loaded_deck P2Deck = SceneArgs->P2Deck;
 
-	ResetMemArena(&GameState->TransientArena);
 	GameState->SceneState = PushStruct(
 		&GameState->TransientArena, card_game_state
 	);
-	ResetAssets(&GameState->Assets);
 
 	card_game_state* SceneState = (card_game_state*) GameState->SceneState;
 	*SceneState = {};
@@ -2513,7 +2511,10 @@ void UpdateAndRenderCardGame(
 			else
 			{
 				ThrottledSocketSendErrorCheck(
-					GameState, &SceneState->ConnectSocket, Header
+					GameState,
+					&SceneState->ConnectSocket,
+					&SceneState->ListenSocket,
+					Header
 				);
 			}
 
@@ -2566,6 +2567,7 @@ void UpdateAndRenderCardGame(
 					ThrottledSocketSendErrorCheck(
 						GameState,
 						&SceneState->ConnectSocket,
+						&SceneState->ListenSocket,
 						&DeckUpdatePacket->Header
 					);
 				}
@@ -2641,7 +2643,10 @@ void UpdateAndRenderCardGame(
 			else
 			{
 				ThrottledSocketSendErrorCheck(
-					GameState, &SceneState->ConnectSocket, Header
+					GameState,
+					&SceneState->ConnectSocket,
+					&SceneState->ListenSocket,
+					Header
 				);
 			}
 		}

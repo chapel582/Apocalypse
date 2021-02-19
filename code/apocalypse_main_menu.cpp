@@ -13,11 +13,9 @@ void StartMainMenu(
 	game_state* GameState, uint32_t WindowWidth, uint32_t WindowHeight
 )
 {
-	ResetMemArena(&GameState->TransientArena);
 	GameState->SceneState = PushStruct(
 		&GameState->TransientArena, main_menu_state
 	);
-	ResetAssets(&GameState->Assets);
 	main_menu_state* SceneState = (main_menu_state*) GameState->SceneState;
 	
 	ui_context* UiContext = &SceneState->UiContext;

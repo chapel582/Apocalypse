@@ -55,9 +55,9 @@ inline uint8_t* GetEndOfArena(memory_arena* Arena)
 	return Arena->Base + Arena->TotalSize;
 }
 
-inline void ResetMemArena(memory_arena* Arena)
+inline void ResetMemArena(memory_arena* Arena, size_t ResetTo = 0)
 {
-	Arena->Used = 0;
+	Arena->Used = ResetTo;
 }
 
 struct temp_memory

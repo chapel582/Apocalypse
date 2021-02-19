@@ -173,12 +173,9 @@ void StartDeckSelector(
 	platform_socket ListenSocket = Args->ListenSocket;
 	platform_socket ConnectSocket = Args->ConnectSocket;
 
-	ResetMemArena(&GameState->TransientArena);
-	
 	GameState->SceneState = PushStruct(
 		&GameState->TransientArena, deck_selector_state
 	);
-	ResetAssets(&GameState->Assets);
 	deck_selector_state* SceneState = (deck_selector_state*) (
 		GameState->SceneState
 	);

@@ -29,6 +29,13 @@ typedef enum
 	SceneType_LostConnection
 } scene_type;
 
+struct scene_stack_entry
+{
+	scene_type Scene;
+	size_t ResetTransientTo;
+	size_t ResetRectanglesTo;
+};
+
 struct game_state
 {
 	// NOTE: Arena is just for permanent things that can/should be determined
@@ -70,6 +77,13 @@ struct game_state
 
 	scene_type Scene;
 	scene_type LastFrameScene;
+	// TODO: consider whether there's a way for users to go arbitrarily deep on
+	// CONT: the stack, and how to handle that
+	scene_stack_entry SceneStack[10];
+	uint32_t SceneStackLen;
+	uint32_t SceneStackMaxLen;
+	bool EmptyStack; // NOTE: a command set by the previous frame's state
+	bool PopScene;
 	void* SceneState;
 	void* SceneArgs;
 
@@ -101,5 +115,7 @@ void SetWindowSize(
 	uint32_t NewWindowWidth,
 	uint32_t NewWindowHeight
 );
+
+void AddSceneStackEntry(game_state* GameState);
 #define APOCALYPSE_H
 #endif

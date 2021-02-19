@@ -9,33 +9,39 @@ void StartLostConnectionPrep(
 	platform_socket* ListenSocket
 )
 {
-	GameState->Scene = SceneType_LostConnection;
-	if(ListenSocket->IsValid && ConnectSocket->IsValid)
+	// NOTE: right now, this assumes you want this scene stacked atop the old 
+	// CONT: scene
+	// NOTE: lost connection scenes cannot be stacked atop themselves 
+	if(GameState->Scene != SceneType_LostConnection)
 	{
-		PlatformServerDisconnect(ListenSocket, ConnectSocket);
+		AddSceneStackEntry(GameState);
+		GameState->Scene = SceneType_LostConnection;
 	}
-	else if(ConnectSocket->IsValid)
-	{
-		PlatformClientDisconnect(ConnectSocket);
-	}
-	else
-	{
-		ASSERT(false);
-	}
+
+	lost_connection_args* SceneArgs = PushStruct(
+		&GameState->SceneArgsArena, lost_connection_args
+	);
+	SceneArgs->ConnectSocket = *ConnectSocket;
+	SceneArgs->ListenSocket = *ListenSocket;
+	GameState->SceneArgs = SceneArgs;
 }
 
 void StartLostConnection(
 	game_state* GameState, uint32_t WindowWidth, uint32_t WindowHeight
 )
 {
-	ResetMemArena(&GameState->TransientArena);
+	lost_connection_args* SceneArgs = (lost_connection_args*) (
+		GameState->SceneArgs
+	);
+
 	GameState->SceneState = PushStruct(
 		&GameState->TransientArena, lost_connection_state
 	);
-	ResetAssets(&GameState->Assets);
 	lost_connection_state* SceneState = (lost_connection_state*)(
 		GameState->SceneState
 	);
+	SceneState->ListenSocket = SceneArgs->ListenSocket;
+	SceneState->ConnectSocket = SceneArgs->ConnectSocket;
 
 	ui_context* UiContext = &SceneState->UiContext;
 	InitUiContext(UiContext);
@@ -101,6 +107,37 @@ void UpdateAndRenderLostConnection(
 					case(0x1B): // NOTE: Escape V-code
 					{
 						GameState->Scene = SceneType_MainMenu; 
+
+						// NOTE: clean up the sockets now that we're going back
+						// CONT: to main menu 
+						platform_socket* ListenSocket = (
+							&SceneState->ListenSocket
+						);
+						platform_socket* ConnectSocket = (
+							&SceneState->ConnectSocket
+						);
+						if(
+							ListenSocket->IsValid && ConnectSocket->IsValid
+						)
+						{
+							PlatformServerDisconnect(
+								ListenSocket, ConnectSocket
+							);
+						}
+						else if(ConnectSocket->IsValid)
+						{
+							PlatformClientDisconnect(ConnectSocket);
+						}
+						else
+						{
+							ASSERT(false);
+						}
+						break;
+					}
+					case(0x20):
+					{
+						// TODO: remove this test code
+						GameState->PopScene = true;
 						break;
 					}
 				}

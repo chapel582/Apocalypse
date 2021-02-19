@@ -36,11 +36,9 @@ void StartJoinGame(
 	game_state* GameState, uint32_t WindowWidth, uint32_t WindowHeight
 )
 {
-	ResetMemArena(&GameState->TransientArena);
 	GameState->SceneState = PushStruct(
 		&GameState->TransientArena, join_game_state
 	);
-	ResetAssets(&GameState->Assets);
 
 	join_game_state* SceneState = (join_game_state*) GameState->SceneState;
 	*SceneState = {};

@@ -18,11 +18,9 @@ void StartHostGame(
 	game_state* GameState, uint32_t WindowWidth, uint32_t WindowHeight
 )
 {
-	ResetMemArena(&GameState->TransientArena);
 	GameState->SceneState = PushStruct(
 		&GameState->TransientArena, host_game_state
 	);
-	ResetAssets(&GameState->Assets);
 
 	host_game_state* SceneState = (host_game_state*) GameState->SceneState;
 	*SceneState = {};

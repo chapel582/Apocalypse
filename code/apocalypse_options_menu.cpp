@@ -12,11 +12,9 @@ void StartOptionsMenu(
 	game_state* GameState, uint32_t WindowWidth, uint32_t WindowHeight
 )
 {
-	ResetMemArena(&GameState->TransientArena);
 	GameState->SceneState = PushStruct(
 		&GameState->TransientArena, options_menu_state
 	);
-	ResetAssets(&GameState->Assets);
 	options_menu_state* SceneState = (options_menu_state*)(
 		GameState->SceneState
 	);

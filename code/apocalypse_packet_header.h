@@ -8,6 +8,7 @@ typedef enum
 	Packet_LatencyCheck,
 	Packet_LatencyCheckRsp,
 	Packet_Ready,
+	Packet_SetLeader,
 	Packet_SwitchLeader,
 	Packet_StateUpdate,
 	Packet_CardUpdate,

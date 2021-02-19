@@ -1820,7 +1820,8 @@ card* GetCardWithId(card_game_state* SceneState, uint32_t CardId)
 void SendGameState(
 	game_state* GameState,
 	card_game_state* SceneState,
-	bool SwitchingLeader
+	bool SwitchingLeader,
+	bool AlwaysSend
 )
 {
 	memory_arena* FrameArena = &GameState->FrameArena;
@@ -1853,7 +1854,7 @@ void SendGameState(
 		InitPacketHeader(
 			GameState, Header, Packet_StateUpdate, (uint8_t*) Payload
 		);
-		if(SwitchingLeader)
+		if(SwitchingLeader || AlwaysSend)
 		{
 			SocketSendErrorCheck(
 				GameState,
@@ -1985,7 +1986,7 @@ void SendGameState(
 		InitPacketHeader(
 			GameState, Header, Packet_CardUpdate, (uint8_t*) Payload
 		);
-		if(SwitchingLeader)
+		if(SwitchingLeader || AlwaysSend)
 		{
 			SocketSendErrorCheck(
 				GameState,
@@ -2526,6 +2527,14 @@ void UpdateAndRenderCardGame(
 						SceneState->IsLeader = true;
 						break;
 					}
+					case(Packet_SetLeader):
+					{
+						set_leader_payload* LeaderPayload = (
+							(set_leader_payload*) Payload
+						);
+						SceneState->IsLeader = LeaderPayload->IsLeader;
+						break;
+					}
 					case(Packet_SyncDone):
 					{
 						SceneState->SyncState = SyncState_Complete;
@@ -2802,31 +2811,51 @@ void UpdateAndRenderCardGame(
 			bool SwitchingLeader = (
 				EndTurn || (FrameStartStackTurn != SceneState->StackTurn)
 			);
-			SendGameState(GameState, SceneState, SwitchingLeader);
+			SendGameState(GameState, SceneState, SwitchingLeader, false);
 		}
 	}
 	else if(SceneState->SyncState == SyncState_Send)
 	{
-		SendGameState(GameState, SceneState, false);
-		// TODO: can we successfully switch leaders here? do we need a 
-		// CONT: set leader packet?
+		SendGameState(GameState, SceneState, false, true);
+		
+		{
+			set_leader_packet* SetLeaderPacket = PushStruct(
+				FrameArena, set_leader_packet
+			);
+			packet_header* Header = &SetLeaderPacket->Header;
+			set_leader_payload* Payload = &SetLeaderPacket->Payload;
+			Payload->IsLeader = !SceneState->IsLeader;
 
-		sync_done_packet* SyncDonePacket = PushStruct(
-			FrameArena, sync_done_packet
-		);
-		packet_header* Header = &SyncDonePacket->Header;
+			Header->DataSize = sizeof(set_leader_packet);
+			InitPacketHeader(
+				GameState, Header, Packet_SetLeader, (uint8_t*) Payload
+			);
 
-		Header->DataSize = sizeof(sync_done_packet);
-		InitPacketHeader(
-			GameState, Header, Packet_SyncDone, NULL
-		);
+			SocketSendErrorCheck(
+				GameState,
+				&SceneState->ConnectSocket,
+				&SceneState->ListenSocket,
+				Header
+			);
+		}
+		{
+			sync_done_packet* SyncDonePacket = PushStruct(
+				FrameArena, sync_done_packet
+			);
+			packet_header* Header = &SyncDonePacket->Header;
 
-		SocketSendErrorCheck(
-			GameState,
-			&SceneState->ConnectSocket,
-			&SceneState->ListenSocket,
-			Header
-		);
+			Header->DataSize = sizeof(sync_done_packet);
+			InitPacketHeader(
+				GameState, Header, Packet_SyncDone, NULL
+			);
+
+			SocketSendErrorCheck(
+				GameState,
+				&SceneState->ConnectSocket,
+				&SceneState->ListenSocket,
+				Header
+			);
+		}
 
 		SceneState->SyncState = SyncState_Complete;
 	}

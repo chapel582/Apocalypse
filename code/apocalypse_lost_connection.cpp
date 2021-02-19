@@ -89,6 +89,7 @@ void UpdateAndRenderLostConnection(
 						StackEntry->SceneState
 					);
 					CardGameState->ConnectSocket = SceneState->ConnectSocket;
+					CardGameState->SyncState = SyncState_Send;
 
 					{
 						join_game_type_packet* Packet = PushStruct(

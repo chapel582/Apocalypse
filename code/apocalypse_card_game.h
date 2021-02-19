@@ -183,6 +183,16 @@ struct switch_leader_packet
 	packet_header Header;
 };
 
+struct set_leader_payload
+{
+	bool IsLeader;
+};
+struct set_leader_packet
+{
+	packet_header Header;
+	set_leader_payload Payload;
+};
+
 struct card_update_payload
 {
 	uint32_t CardId;

@@ -44,6 +44,9 @@ struct join_game_state
 
 	connection_args ConnectionArgs;
 
+	uint32_t Seed;
+	bool SeedSet;
+	
 	packet_reader_data PacketReader;
 };
 

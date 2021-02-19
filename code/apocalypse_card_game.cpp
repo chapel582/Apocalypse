@@ -868,6 +868,7 @@ void StartCardGamePrep(
 	FormatDeckPath(Buffer, sizeof(Buffer), P2DeckName);
 	SceneArgs->P2Deck = LoadDeck(Buffer);
 	SceneArgs->NewCardGame = true;
+	SceneArgs->SeedSet = false;
 }
 
 void StartCardGamePrep(
@@ -909,13 +910,16 @@ void StartCardGamePrep(
 	SceneArgs->P1Deck = P1Deck;
 	SceneArgs->P2Deck = P2Deck;
 	SceneArgs->NewCardGame = true;
+	SceneArgs->SeedSet = false;
 }
 
 void ResumeCardGamePrep(
 	game_state* GameState,
 	bool IsLeader,
 	platform_socket* ListenSocket,
-	platform_socket* ConnectSocket
+	platform_socket* ConnectSocket,
+	uint32_t Seed,
+	bool SeedSet
 )
 {
 	// NOTE: for use in setting up a network game
@@ -945,6 +949,8 @@ void ResumeCardGamePrep(
 	}
 	SceneArgs->NetworkGame = true;
 	SceneArgs->NewCardGame = false;
+	SceneArgs->SeedSet = true;
+	SceneArgs->Seed = Seed;
 }
 
 void StartCardGameDataSetup(
@@ -1085,6 +1091,11 @@ void StartCardGameDataSetup(
 
 	SceneState->PacketReader = {};
 	SceneState->PacketReader.NetworkArena = &GameState->NetworkArena;
+
+	if(SceneArgs->SeedSet)
+	{
+		SceneState->Seed = SceneArgs->Seed;
+	}
 }
 
 void StartCardGame(
@@ -1197,8 +1208,12 @@ void StartCardGame(
 		}
 		// SECTION STOP: Shuffle deck
 
-		// TODO: this may not be a great way to seed. might be exploitable?
-		uint32_t Seed = (uint32_t) time(NULL);
+		if(!SceneArgs->SeedSet)
+		{
+			// TODO: this may not be a great way to seed. might be exploitable?
+			SceneState->Seed = (uint32_t) time(NULL);
+		}
+		uint32_t Seed = SceneState->Seed;
 		srand(Seed);
 		if(SceneState->NetworkGame && SceneState->IsLeader)
 		{
@@ -1253,14 +1268,22 @@ void StartCardGame(
 
 		SceneState->PlayerLife[Player_One] = 100.0f;
 		SceneState->PlayerLife[Player_Two] = 100.0f;
+		if(SceneState->IsLeader)
+		{
+			SceneState->SyncState = SyncState_Send;
+		}
+		else
+		{
+			SceneState->SyncState = SyncState_Read;
+		}
 	}
 	else
 	{
 		StartCardGameDataSetup(
 			GameState, SceneState, SceneArgs, WindowWidth, WindowHeight
 		);
+		SceneState->SyncState = SyncState_Read;
 		// TODO: handle unique ids
-		// TODO: handle seeding
 	}
 }
 
@@ -1794,6 +1817,659 @@ card* GetCardWithId(card_game_state* SceneState, uint32_t CardId)
 	return Card;
 }
 
+void SendGameState(
+	game_state* GameState,
+	card_game_state* SceneState,
+	bool SwitchingLeader
+)
+{
+	memory_arena* FrameArena = &GameState->FrameArena;
+	{
+		state_update_packet* StatePacket = PushStruct(
+			FrameArena, state_update_packet
+		);
+		packet_header* Header = &StatePacket->Header;
+		state_update_payload* Payload = &StatePacket->Payload;
+		
+		Payload->CurrentTurn = SceneState->CurrentTurn;
+		Payload->TurnTimer = SceneState->TurnTimer;
+		Payload->NextTurnTimer = SceneState->NextTurnTimer;
+		Payload->PlayerResources[Player_One] = (
+			SceneState->PlayerResources[Player_One]
+		);
+		Payload->PlayerResources[Player_Two] = (
+			SceneState->PlayerResources[Player_Two]
+		);
+		Payload->StackTurn = SceneState->StackTurn;
+		Payload->StackBuilding = SceneState->StackBuilding;
+		Payload->PlayerLife[Player_One] = (
+			SceneState->PlayerLife[Player_One]
+		);
+		Payload->PlayerLife[Player_Two] = (
+			SceneState->PlayerLife[Player_Two]
+		);
+
+		Header->DataSize = sizeof(state_update_packet);
+		InitPacketHeader(
+			GameState, Header, Packet_StateUpdate, (uint8_t*) Payload
+		);
+		if(SwitchingLeader)
+		{
+			SocketSendErrorCheck(
+				GameState,
+				&SceneState->ConnectSocket,
+				&SceneState->ListenSocket,
+				Header
+			);
+		}
+		else
+		{
+			ThrottledSocketSendErrorCheck(
+				GameState,
+				&SceneState->ConnectSocket,
+				&SceneState->ListenSocket,
+				Header
+			);
+		}
+
+		for(uint32_t Owner = Player_One; Owner < Player_Count; Owner++)
+		{
+			deck* Deck = SceneState->Decks + Owner;
+			deck_update_packet* DeckUpdatePacket = PushStruct(
+				FrameArena, deck_update_packet
+			);
+			
+			packet_header* DeckUpdateHeader = &DeckUpdatePacket->Header;
+			deck_update_payload* DeckUpdatePayload = (
+				&DeckUpdatePacket->Payload
+			);
+
+			uint32_t* InDeckHandles = PushArray(
+				FrameArena, Deck->InDeckCount, uint32_t
+			);
+			DeckUpdatePayload->Owner = (player_id) Owner;
+			DeckUpdatePayload->InDeckCount = Deck->InDeckCount;
+			DeckUpdatePayload->Offset = sizeof(deck_update_payload);
+			memcpy(
+				InDeckHandles,
+				Deck->InDeck,
+				sizeof(uint32_t) * Deck->InDeckCount
+			);
+
+			DeckUpdateHeader->DataSize = (
+				sizeof(deck_update_packet) +
+				Deck->InDeckCount * sizeof(uint32_t)
+			);
+			InitPacketHeader(
+				GameState,
+				DeckUpdateHeader,
+				Packet_DeckUpdate,
+				(uint8_t*) DeckUpdatePayload
+			);
+
+			if(SwitchingLeader)
+			{
+				SocketSendErrorCheck(
+					GameState,
+					&SceneState->ConnectSocket,
+					&SceneState->ListenSocket,
+					&DeckUpdatePacket->Header
+				);
+			}
+			else
+			{
+				ThrottledSocketSendErrorCheck(
+					GameState,
+					&SceneState->ConnectSocket,
+					&SceneState->ListenSocket,
+					&DeckUpdatePacket->Header
+				);
+			}
+		}
+	}
+
+	for(
+		uint32_t CardIndex = 0;
+		CardIndex < SceneState->MaxCards;
+		CardIndex++
+	)
+	{
+		card* Card = SceneState->Cards + CardIndex;
+		if(!Card->Active)
+		{
+			continue;
+		}
+
+		card_update_packet* CardPacket = PushStruct(
+			FrameArena, card_update_packet
+		);
+		card_update_payload* Payload = &CardPacket->Payload;
+		
+		Payload->CardId = Card->CardId;
+		Payload->DefId = Card->Definition->Id;
+		Payload->Owner = Card->Owner;
+		Payload->SetType = Card->SetType;
+
+		Payload->PlayDelta[RelativePlayer_Self] = (
+			Card->PlayDelta[RelativePlayer_Self]
+		);
+		Payload->PlayDelta[RelativePlayer_Opp] = (
+			Card->PlayDelta[RelativePlayer_Opp]
+		);
+		Payload->TapDelta[RelativePlayer_Self] = (
+			Card->TapDelta[RelativePlayer_Self]
+		);
+		Payload->TapDelta[RelativePlayer_Opp] = (
+			Card->TapDelta[RelativePlayer_Opp]
+		);
+		
+		Payload->TurnStartPlayDelta[RelativePlayer_Self] = (
+			Card->TurnStartPlayDelta[RelativePlayer_Self]
+		);
+		Payload->TurnStartPlayDelta[RelativePlayer_Opp] = (
+			Card->TurnStartPlayDelta[RelativePlayer_Opp]
+		);
+
+		Payload->TimeLeft = Card->TimeLeft;
+		Payload->TapsAvailable = Card->TapsAvailable;
+		Payload->TimesTapped = Card->TimesTapped;
+		Payload->Attack = Card->Attack;
+		Payload->TurnStartAttack= Card->TurnStartAttack;
+		Payload->Health = Card->Health;
+		Payload->TurnStartHealth = Card->TurnStartHealth;
+		Payload->TableauTags = Card->TableauTags;
+		Payload->StackTags = Card->StackTags;
+
+		packet_header* Header = &CardPacket->Header;
+		Header->DataSize = sizeof(card_update_packet);
+		InitPacketHeader(
+			GameState, Header, Packet_CardUpdate, (uint8_t*) Payload
+		);
+		if(SwitchingLeader)
+		{
+			SocketSendErrorCheck(
+				GameState,
+				&SceneState->ConnectSocket,
+				&SceneState->ListenSocket,
+				Header
+			);
+		}
+		else
+		{
+			ThrottledSocketSendErrorCheck(
+				GameState,
+				&SceneState->ConnectSocket,
+				&SceneState->ListenSocket,
+				Header
+			);
+		}
+	}
+
+	if(SwitchingLeader)
+	{
+		// NOTE: need to complete all send packet jobs because 
+		// CONT: otherwise we could have the far end become leader before
+		// CONT: state has synchronized
+		// CONT: TCP is ordered, threads are not
+		PlatformCompleteAllJobsAtPriority(
+			GameState->JobQueue, JobPriority_SendPacket
+		);
+		// NOTE: switch leadership to follower
+		switch_leader_packet* SwitchLeaderPacket = PushStruct(
+			FrameArena, switch_leader_packet
+		);
+		packet_header* Header = &SwitchLeaderPacket->Header;
+		Header->DataSize = sizeof(switch_leader_packet);
+		InitPacketHeader(GameState, Header, Packet_SwitchLeader, NULL);
+
+		SocketSendErrorCheck(
+			GameState,
+			&SceneState->ConnectSocket,
+			&SceneState->ListenSocket,
+			Header
+		);
+		SceneState->IsLeader = false;
+	}
+}
+
+void CardGameLogic(
+	game_state* GameState,
+	card_game_state* SceneState,
+	game_mouse_events* MouseEvents,
+	game_keyboard_events* KeyboardEvents,
+	float DtForFrame,
+	bool* EndTurn
+)
+{
+	ui_context* UiContext = &SceneState->UiContext;
+
+	// SECTION START: User input
+	// TODO: move to game memory
+	user_event_index UserEventIndex = 0;
+	int MouseEventIndex = 0;
+	int KeyboardEventIndex = 0;
+	while(
+		(MouseEventIndex < MouseEvents->Length) ||
+		(KeyboardEventIndex < KeyboardEvents->Length)
+	)
+	{
+		for(; MouseEventIndex < MouseEvents->Length; MouseEventIndex++)
+		{
+			game_mouse_event* MouseEvent = (
+				&MouseEvents->Events[MouseEventIndex]
+			);
+
+			if(MouseEvent->UserEventIndex != UserEventIndex)
+			{
+				break;
+			}
+
+			vector2 MouseEventWorldPos = TransformPosFromBasis(
+				&GameState->WorldToCamera,
+				TransformPosFromBasis(
+					&GameState->CameraToScreen, 
+					Vector2(MouseEvent->XPos, MouseEvent->YPos)
+				)
+			);
+			if(MouseEvent->Type == PrimaryUp)
+			{
+				// PlaySound(
+				// 	&GameState->PlayingSoundList,
+				// 	WavHandle_Bloop00,
+				// 	&GameState->TransientArena
+				// );
+				if(SceneState->StackBuilding)
+				{
+					StackBuildingPrimaryUpHandler(
+						GameState, SceneState, MouseEventWorldPos
+					);
+				}
+				else
+				{
+					StandardPrimaryUpHandler(
+						GameState, SceneState, MouseEventWorldPos
+					);
+				}
+			}
+			else if(MouseEvent->Type == SecondaryUp)
+			{
+				if(SceneState->SelectedCard != NULL)
+				{
+					DeselectCard(SceneState);
+				}
+			}
+			else if(MouseEvent->Type == MouseMove)
+			{
+				card* Card = &SceneState->Cards[0];
+				for(
+					uint32_t CardIndex = 0;
+					CardIndex < SceneState->MaxCards;
+					CardIndex++
+				)
+				{
+					if(Card->Active)
+					{
+						if(
+							PointInRectangle(
+								MouseEventWorldPos, Card->Rectangle
+							)
+						)
+						{
+							Card->HoveredOver = true;							
+						}
+						else
+						{
+							Card->HoveredOver = false;
+						}
+					}
+					Card++;
+				}
+			}
+
+			scroll_handle_mouse_code ScrollResult = ScrollHandleMouse(
+				UiContext,
+				&SceneState->StackScrollBar,
+				MouseEvent,
+				MouseEventWorldPos,
+				SceneState->StackScrollBar.Trough.Min.Y,
+				GetTop(SceneState->StackScrollBar.Trough)
+			);
+			if(ScrollResult == ScrollHandleMouse_Moved)
+			{
+				SetStackPositions(SceneState);
+			}
+
+			UserEventIndex++;
+		}
+
+		for(; KeyboardEventIndex < KeyboardEvents->Length; KeyboardEventIndex++)
+		{
+			game_keyboard_event* KeyboardEvent = (
+				&KeyboardEvents->Events[KeyboardEventIndex]
+			);
+			if(KeyboardEvent->UserEventIndex != UserEventIndex)
+			{
+				break;
+			}
+
+			bool TempEndTurn = false;
+			if(!SceneState->StackBuilding)
+			{
+				TempEndTurn = StandardKeyboardHandler(
+					GameState, SceneState, KeyboardEvent
+				);
+				// NOTE: this is not unnecessary. Don't want to overwrite EndTurn 
+				// CONT: with false by accident
+				if(TempEndTurn)
+				{
+					*EndTurn = TempEndTurn;
+				}
+			}
+			else
+			{
+				TempEndTurn = StackBuildingKeyboardHandler(
+					GameState, SceneState, KeyboardEvent
+				);
+				if(TempEndTurn)
+				{
+					EndStackBuilding(SceneState);
+				}
+			}
+
+			UserEventIndex++;
+		}
+	}
+	// SECTION STOP: User input
+
+	// SECTION START: Updating game state
+	// NOTE: not sure if we should finish all updates and then push to the 
+	// CONT: render group
+	// SECTION START: Turn timer update
+	bool WholeSecondPassed = false;
+	if(!(*EndTurn))
+	{
+		if(SceneState->StackBuilding)
+		{
+			if(SceneState->StackTurn == SceneState->CurrentTurn)
+			{
+				SceneState->TurnTimer -= DtForFrame;
+			}
+			else
+			{
+				SceneState->NextTurnTimer -= DtForFrame;
+				if(SceneState->NextTurnTimer <= 0.0f)
+				{
+					SceneState->NextTurnTimer = 0.0f;
+				}
+
+				if(SceneState->NextTurnTimer <= 0.0f)
+				{
+					EndStackBuilding(SceneState);
+				}
+			}
+		}
+		else
+		{
+			SceneState->TurnTimer -= DtForFrame;
+		}
+		// NOTE: switch turns
+		if(SceneState->TurnTimer <= 0)
+		{
+			*EndTurn = true;
+		}
+		else
+		{
+			uint16_t IntTurnTimer = (uint16_t) SceneState->TurnTimer;
+			WholeSecondPassed = (
+				(SceneState->LastWholeSecond - IntTurnTimer) >= 1
+			);
+			if(WholeSecondPassed)
+			{
+				SceneState->LastWholeSecond = IntTurnTimer;
+			}
+		}
+	}
+	if(*EndTurn)
+	{
+		EndStackBuilding(SceneState);
+
+		SetTurnTimer(SceneState, SceneState->NextTurnTimer);
+
+		if(SceneState->ShouldUpdateBaseline)
+		{
+			SceneState->BaselineNextTurnTimer += TURN_TIMER_INCREASE;
+			SceneState->ShouldUpdateBaseline = false;
+		}
+		else
+		{
+			SceneState->ShouldUpdateBaseline = true;
+		}
+		SceneState->NextTurnTimer = SceneState->BaselineNextTurnTimer;
+
+		SwitchTurns(GameState, SceneState);
+		for(
+			uint32_t CardIndex = 0;
+			CardIndex < SceneState->MaxCards;
+			CardIndex++
+		)
+		{
+			card* Card = &SceneState->Cards[CardIndex];
+			if(Card->Active)
+			{
+				Card->TimesTapped = 0;
+
+				tableau_effect_tags* EffectTags = &Card->TableauTags;
+				if(HasTag(EffectTags, TableauEffect_SelfWeaken))
+				{
+					if(Card->SetType == CardSet_Tableau)
+					{
+						Card->Attack = Card->TurnStartAttack;
+					}
+				}
+				if(HasTag(EffectTags, TableauEffect_SelfHandWeaken))
+				{
+					if(Card->SetType == CardSet_Hand)
+					{
+						Card->Attack = Card->TurnStartAttack;
+					}
+				}
+				if(HasTag(EffectTags, TableauEffect_OppStrengthen))
+				{
+					if(Card->SetType == CardSet_Tableau)
+					{
+						Card->Attack = Card->TurnStartAttack;
+					}
+				}
+				if(HasTag(EffectTags, TableauEffect_SelfLifeLoss))
+				{
+					if(Card->SetType == CardSet_Tableau)
+					{
+						Card->Health = Card->TurnStartHealth;
+					}
+				}
+				if(HasTag(EffectTags, TableauEffect_OppLifeGain))
+				{
+					if(Card->SetType == CardSet_Tableau)
+					{
+						Card->Health = Card->TurnStartHealth;
+					}
+				}
+				if(HasTag(EffectTags, TableauEffect_CostIncrease))
+				{
+					if(Card->SetType == CardSet_Hand)
+					{
+						Card->PlayDelta[RelativePlayer_Self] = (
+							Card->TurnStartPlayDelta[RelativePlayer_Self]
+						);
+					}
+				}
+				if(HasTag(EffectTags, TableauEffect_GiveIncrease))
+				{
+					if(Card->SetType == CardSet_Hand)
+					{
+						Card->PlayDelta[RelativePlayer_Opp] = (
+							Card->TurnStartPlayDelta[RelativePlayer_Opp]
+						);
+					}
+				}
+				if(HasTag(EffectTags, TableauEffect_TimeGrowth))
+				{
+					player_resources* PlayDelta = (
+						Card->PlayDelta + RelativePlayer_Self
+					);
+					for(
+						int Resource = 0;
+						Resource < PlayerResource_Count;
+						Resource++
+					)
+					{
+						PlayDelta->Resources[Resource] += 1;
+					}
+				}
+			}
+		}
+
+		DrawCard(GameState, SceneState, SceneState->CurrentTurn);
+	}
+	// SECTION STOP: Turn timer update
+	// SECTION START: Card update
+	{
+		card* Card = &SceneState->Cards[0];
+		for(
+			uint32_t CardIndex = 0;
+			CardIndex < SceneState->MaxCards;
+			CardIndex++
+		)
+		{
+			if(Card->Active)
+			{
+				Card->TimeLeft -= DtForFrame;
+
+				tableau_effect_tags* TableauTags = &Card->TableauTags;
+				if(HasTag(TableauTags, TableauEffect_SelfWeaken))
+				{
+					if(
+						Card->Owner == SceneState->CurrentTurn && 
+						Card->SetType == CardSet_Tableau
+					)
+					{
+						if(WholeSecondPassed)
+						{
+							Card->Attack -= 1;
+						}
+					}
+				}
+				if(HasTag(TableauTags, TableauEffect_SelfHandWeaken))
+				{
+					if(
+						Card->Owner == SceneState->CurrentTurn && 
+						Card->SetType == CardSet_Hand
+					)
+					{
+						if(WholeSecondPassed)
+						{
+							Card->Attack -= 1;
+						}
+					}
+				}
+				if(HasTag(TableauTags, TableauEffect_OppStrengthen))
+				{
+					if(
+						Card->Owner != SceneState->CurrentTurn && 
+						Card->SetType == CardSet_Tableau
+					)
+					{
+						if(WholeSecondPassed)
+						{
+							Card->Attack += 1;
+						}
+					}
+				}
+				if(HasTag(TableauTags, TableauEffect_SelfLifeLoss))
+				{
+					if(
+						Card->Owner == SceneState->CurrentTurn && 
+						Card->SetType == CardSet_Tableau
+					)
+					{
+						if(WholeSecondPassed)
+						{
+							Card->Health -= 1;
+						}
+						if(Card->Health <= 0)
+						{
+							SafeRemoveCardAndAlign(GameState, SceneState, Card);
+						}
+					}
+				}
+				if(HasTag(TableauTags, TableauEffect_OppLifeGain))
+				{
+					if(
+						Card->Owner != SceneState->CurrentTurn && 
+						Card->SetType == CardSet_Tableau
+					)
+					{
+						if(WholeSecondPassed)
+						{
+							Card->Health += 1;
+						}						
+					}
+				}
+				if(HasTag(TableauTags, TableauEffect_CostIncrease))
+				{
+					if(Card->SetType == CardSet_Hand)
+					{
+						if(WholeSecondPassed)
+						{
+							for(
+								int Index = 0;
+								Index < PlayerResource_Count;
+								Index++
+							)
+							{
+								int32_t* Resource = (
+									&Card->PlayDelta[RelativePlayer_Self].Resources[Index]
+								);
+								if(*Resource < 0)
+								{
+									*Resource -= 1;
+								}
+							}
+						}
+					}
+				}
+				if(HasTag(TableauTags, TableauEffect_GiveIncrease))
+				{
+					if(Card->SetType == CardSet_Hand)
+					{
+						if(WholeSecondPassed)
+						{
+							int32_t* Resources = (
+								Card->PlayDelta[RelativePlayer_Opp].Resources
+							);
+							for(
+								int Index = 0;
+								Index < PlayerResource_Count;
+								Index++
+							)
+							{
+								int32_t* Resource = Resources + Index;
+								if(*Resource > 0)
+								{
+									*Resource += 1;
+								}
+							}
+						}
+					}
+				}
+			}
+			Card++;
+		}
+	}
+	// SECTION STOP: Card update
+	// SECTION STOP: Updating game state
+}
+
 void UpdateAndRenderCardGame(
 	game_state* GameState,
 	card_game_state* SceneState,
@@ -1818,7 +2494,13 @@ void UpdateAndRenderCardGame(
 
 	// SECTION START: Read leader state
 	// TODO: refactor and reuse in other scenes that require packet reading?
-	if(SceneState->NetworkGame && !SceneState->IsLeader)
+	if(
+		SceneState->NetworkGame &&
+		(
+			!SceneState->IsLeader ||
+			SceneState->SyncState == SyncState_Read
+		)
+	)
 	{
 		// TODO: handle packets coming in pieces
 		bool StateUpdated = false;
@@ -1842,6 +2524,11 @@ void UpdateAndRenderCardGame(
 					case(Packet_SwitchLeader):
 					{
 						SceneState->IsLeader = true;
+						break;
+					}
+					case(Packet_SyncDone):
+					{
+						SceneState->SyncState = SyncState_Complete;
 						break;
 					}
 					case(Packet_StateUpdate):
@@ -2096,650 +2783,57 @@ void UpdateAndRenderCardGame(
 	}
 	// SECTION STOP: Read leader state
 
-	// NOTE: storing frame start stack turn has to be done after updating 
-	// CONT: card game state
-	player_id FrameStartStackTurn = SceneState->StackTurn;
-
-	// SECTION START: User input
-	// TODO: move to game memory
-	user_event_index UserEventIndex = 0;
-	int MouseEventIndex = 0;
-	int KeyboardEventIndex = 0;
-	while(
-		(MouseEventIndex < MouseEvents->Length) ||
-		(KeyboardEventIndex < KeyboardEvents->Length)
-	)
+	if(SceneState->SyncState == SyncState_Complete)
 	{
-		for(; MouseEventIndex < MouseEvents->Length; MouseEventIndex++)
-		{
-			game_mouse_event* MouseEvent = (
-				&MouseEvents->Events[MouseEventIndex]
-			);
+		// NOTE: storing frame start stack turn has to be done after updating 
+		// CONT: card game state
+		player_id FrameStartStackTurn = SceneState->StackTurn;
 
-			if(MouseEvent->UserEventIndex != UserEventIndex)
-			{
-				break;
-			}
-
-			vector2 MouseEventWorldPos = TransformPosFromBasis(
-				&GameState->WorldToCamera,
-				TransformPosFromBasis(
-					&GameState->CameraToScreen, 
-					Vector2(MouseEvent->XPos, MouseEvent->YPos)
-				)
-			);
-			if(MouseEvent->Type == PrimaryUp)
-			{
-				// PlaySound(
-				// 	&GameState->PlayingSoundList,
-				// 	WavHandle_Bloop00,
-				// 	&GameState->TransientArena
-				// );
-				if(SceneState->StackBuilding)
-				{
-					StackBuildingPrimaryUpHandler(
-						GameState, SceneState, MouseEventWorldPos
-					);
-				}
-				else
-				{
-					StandardPrimaryUpHandler(
-						GameState, SceneState, MouseEventWorldPos
-					);
-				}
-			}
-			else if(MouseEvent->Type == SecondaryUp)
-			{
-				if(SceneState->SelectedCard != NULL)
-				{
-					DeselectCard(SceneState);
-				}
-			}
-			else if(MouseEvent->Type == MouseMove)
-			{
-				card* Card = &SceneState->Cards[0];
-				for(
-					uint32_t CardIndex = 0;
-					CardIndex < SceneState->MaxCards;
-					CardIndex++
-				)
-				{
-					if(Card->Active)
-					{
-						if(
-							PointInRectangle(
-								MouseEventWorldPos, Card->Rectangle
-							)
-						)
-						{
-							Card->HoveredOver = true;							
-						}
-						else
-						{
-							Card->HoveredOver = false;
-						}
-					}
-					Card++;
-				}
-			}
-
-			scroll_handle_mouse_code ScrollResult = ScrollHandleMouse(
-				UiContext,
-				&SceneState->StackScrollBar,
-				MouseEvent,
-				MouseEventWorldPos,
-				SceneState->StackScrollBar.Trough.Min.Y,
-				GetTop(SceneState->StackScrollBar.Trough)
-			);
-			if(ScrollResult == ScrollHandleMouse_Moved)
-			{
-				SetStackPositions(SceneState);
-			}
-
-			UserEventIndex++;
-		}
-
-		for(; KeyboardEventIndex < KeyboardEvents->Length; KeyboardEventIndex++)
-		{
-			game_keyboard_event* KeyboardEvent = (
-				&KeyboardEvents->Events[KeyboardEventIndex]
-			);
-			if(KeyboardEvent->UserEventIndex != UserEventIndex)
-			{
-				break;
-			}
-
-			bool TempEndTurn = false;
-			if(!SceneState->StackBuilding)
-			{
-				TempEndTurn = StandardKeyboardHandler(
-					GameState, SceneState, KeyboardEvent
-				);
-				// NOTE: this is not unnecessary. Don't want to overwrite EndTurn 
-				// CONT: with false by accident
-				if(TempEndTurn)
-				{
-					EndTurn = TempEndTurn;
-				}
-			}
-			else
-			{
-				TempEndTurn = StackBuildingKeyboardHandler(
-					GameState, SceneState, KeyboardEvent
-				);
-				if(TempEndTurn)
-				{
-					EndStackBuilding(SceneState);
-				}
-			}
-
-			UserEventIndex++;
-		}
-	}
-	// SECTION STOP: User input
-
-	// SECTION START: Updating game state
-	// NOTE: not sure if we should finish all updates and then push to the 
-	// CONT: render group
-	// SECTION START: Turn timer update
-	bool WholeSecondPassed = false;
-	if(!EndTurn)
-	{
-		if(SceneState->StackBuilding)
-		{
-			if(SceneState->StackTurn == SceneState->CurrentTurn)
-			{
-				SceneState->TurnTimer -= DtForFrame;
-			}
-			else
-			{
-				SceneState->NextTurnTimer -= DtForFrame;
-				if(SceneState->NextTurnTimer <= 0.0f)
-				{
-					SceneState->NextTurnTimer = 0.0f;
-				}
-
-				if(SceneState->NextTurnTimer <= 0.0f)
-				{
-					EndStackBuilding(SceneState);
-				}
-			}
-		}
-		else
-		{
-			SceneState->TurnTimer -= DtForFrame;
-		}
-		// NOTE: switch turns
-		if(SceneState->TurnTimer <= 0)
-		{
-			EndTurn = true;
-		}
-		else
-		{
-			uint16_t IntTurnTimer = (uint16_t) SceneState->TurnTimer;
-			WholeSecondPassed = (
-				(SceneState->LastWholeSecond - IntTurnTimer) >= 1
-			);
-			if(WholeSecondPassed)
-			{
-				SceneState->LastWholeSecond = IntTurnTimer;
-			}
-		}
-	}
-	if(EndTurn)
-	{
-		EndStackBuilding(SceneState);
-
-		SetTurnTimer(SceneState, SceneState->NextTurnTimer);
-
-		if(SceneState->ShouldUpdateBaseline)
-		{
-			SceneState->BaselineNextTurnTimer += TURN_TIMER_INCREASE;
-			SceneState->ShouldUpdateBaseline = false;
-		}
-		else
-		{
-			SceneState->ShouldUpdateBaseline = true;
-		}
-		SceneState->NextTurnTimer = SceneState->BaselineNextTurnTimer;
-
-		SwitchTurns(GameState, SceneState);
-		for(
-			uint32_t CardIndex = 0;
-			CardIndex < SceneState->MaxCards;
-			CardIndex++
-		)
-		{
-			card* Card = &SceneState->Cards[CardIndex];
-			if(Card->Active)
-			{
-				Card->TimesTapped = 0;
-
-				tableau_effect_tags* EffectTags = &Card->TableauTags;
-				if(HasTag(EffectTags, TableauEffect_SelfWeaken))
-				{
-					if(Card->SetType == CardSet_Tableau)
-					{
-						Card->Attack = Card->TurnStartAttack;
-					}
-				}
-				if(HasTag(EffectTags, TableauEffect_SelfHandWeaken))
-				{
-					if(Card->SetType == CardSet_Hand)
-					{
-						Card->Attack = Card->TurnStartAttack;
-					}
-				}
-				if(HasTag(EffectTags, TableauEffect_OppStrengthen))
-				{
-					if(Card->SetType == CardSet_Tableau)
-					{
-						Card->Attack = Card->TurnStartAttack;
-					}
-				}
-				if(HasTag(EffectTags, TableauEffect_SelfLifeLoss))
-				{
-					if(Card->SetType == CardSet_Tableau)
-					{
-						Card->Health = Card->TurnStartHealth;
-					}
-				}
-				if(HasTag(EffectTags, TableauEffect_OppLifeGain))
-				{
-					if(Card->SetType == CardSet_Tableau)
-					{
-						Card->Health = Card->TurnStartHealth;
-					}
-				}
-				if(HasTag(EffectTags, TableauEffect_CostIncrease))
-				{
-					if(Card->SetType == CardSet_Hand)
-					{
-						Card->PlayDelta[RelativePlayer_Self] = (
-							Card->TurnStartPlayDelta[RelativePlayer_Self]
-						);
-					}
-				}
-				if(HasTag(EffectTags, TableauEffect_GiveIncrease))
-				{
-					if(Card->SetType == CardSet_Hand)
-					{
-						Card->PlayDelta[RelativePlayer_Opp] = (
-							Card->TurnStartPlayDelta[RelativePlayer_Opp]
-						);
-					}
-				}
-				if(HasTag(EffectTags, TableauEffect_TimeGrowth))
-				{
-					player_resources* PlayDelta = (
-						Card->PlayDelta + RelativePlayer_Self
-					);
-					for(
-						int Resource = 0;
-						Resource < PlayerResource_Count;
-						Resource++
-					)
-					{
-						PlayDelta->Resources[Resource] += 1;
-					}
-				}
-			}
-		}
-
-		DrawCard(GameState, SceneState, SceneState->CurrentTurn);
-	}
-	// SECTION STOP: Turn timer update
-	// SECTION START: Card update
-	{
-		card* Card = &SceneState->Cards[0];
-		for(
-			uint32_t CardIndex = 0;
-			CardIndex < SceneState->MaxCards;
-			CardIndex++
-		)
-		{
-			if(Card->Active)
-			{
-				Card->TimeLeft -= DtForFrame;
-
-				tableau_effect_tags* TableauTags = &Card->TableauTags;
-				if(HasTag(TableauTags, TableauEffect_SelfWeaken))
-				{
-					if(
-						Card->Owner == SceneState->CurrentTurn && 
-						Card->SetType == CardSet_Tableau
-					)
-					{
-						if(WholeSecondPassed)
-						{
-							Card->Attack -= 1;
-						}
-					}
-				}
-				if(HasTag(TableauTags, TableauEffect_SelfHandWeaken))
-				{
-					if(
-						Card->Owner == SceneState->CurrentTurn && 
-						Card->SetType == CardSet_Hand
-					)
-					{
-						if(WholeSecondPassed)
-						{
-							Card->Attack -= 1;
-						}
-					}
-				}
-				if(HasTag(TableauTags, TableauEffect_OppStrengthen))
-				{
-					if(
-						Card->Owner != SceneState->CurrentTurn && 
-						Card->SetType == CardSet_Tableau
-					)
-					{
-						if(WholeSecondPassed)
-						{
-							Card->Attack += 1;
-						}
-					}
-				}
-				if(HasTag(TableauTags, TableauEffect_SelfLifeLoss))
-				{
-					if(
-						Card->Owner == SceneState->CurrentTurn && 
-						Card->SetType == CardSet_Tableau
-					)
-					{
-						if(WholeSecondPassed)
-						{
-							Card->Health -= 1;
-						}
-						if(Card->Health <= 0)
-						{
-							SafeRemoveCardAndAlign(GameState, SceneState, Card);
-						}
-					}
-				}
-				if(HasTag(TableauTags, TableauEffect_OppLifeGain))
-				{
-					if(
-						Card->Owner != SceneState->CurrentTurn && 
-						Card->SetType == CardSet_Tableau
-					)
-					{
-						if(WholeSecondPassed)
-						{
-							Card->Health += 1;
-						}						
-					}
-				}
-				if(HasTag(TableauTags, TableauEffect_CostIncrease))
-				{
-					if(Card->SetType == CardSet_Hand)
-					{
-						if(WholeSecondPassed)
-						{
-							for(
-								int Index = 0;
-								Index < PlayerResource_Count;
-								Index++
-							)
-							{
-								int32_t* Resource = (
-									&Card->PlayDelta[RelativePlayer_Self].Resources[Index]
-								);
-								if(*Resource < 0)
-								{
-									*Resource -= 1;
-								}
-							}
-						}
-					}
-				}
-				if(HasTag(TableauTags, TableauEffect_GiveIncrease))
-				{
-					if(Card->SetType == CardSet_Hand)
-					{
-						if(WholeSecondPassed)
-						{
-							int32_t* Resources = (
-								Card->PlayDelta[RelativePlayer_Opp].Resources
-							);
-							for(
-								int Index = 0;
-								Index < PlayerResource_Count;
-								Index++
-							)
-							{
-								int32_t* Resource = Resources + Index;
-								if(*Resource > 0)
-								{
-									*Resource += 1;
-								}
-							}
-						}
-					}
-				}
-			}
-			Card++;
-		}
-	}
-	// SECTION STOP: Card update
-	// SECTION STOP: Updating game state
-
-	// SECTION START: Send data to follower
-	if(SceneState->NetworkGame && SceneState->IsLeader)
-	{
-		bool SwitchingLeader = (
-			EndTurn || (FrameStartStackTurn != SceneState->StackTurn)
+		CardGameLogic(
+			GameState,
+			SceneState,
+			MouseEvents,
+			KeyboardEvents,
+			DtForFrame,
+			&EndTurn
 		);
+		if(SceneState->NetworkGame && SceneState->IsLeader)
 		{
-			state_update_packet* StatePacket = PushStruct(
-				FrameArena, state_update_packet
+			bool SwitchingLeader = (
+				EndTurn || (FrameStartStackTurn != SceneState->StackTurn)
 			);
-			packet_header* Header = &StatePacket->Header;
-			state_update_payload* Payload = &StatePacket->Payload;
-			
-			Payload->CurrentTurn = SceneState->CurrentTurn;
-			Payload->TurnTimer = SceneState->TurnTimer;
-			Payload->NextTurnTimer = SceneState->NextTurnTimer;
-			Payload->PlayerResources[Player_One] = (
-				SceneState->PlayerResources[Player_One]
-			);
-			Payload->PlayerResources[Player_Two] = (
-				SceneState->PlayerResources[Player_Two]
-			);
-			Payload->StackTurn = SceneState->StackTurn;
-			Payload->StackBuilding = SceneState->StackBuilding;
-			Payload->PlayerLife[Player_One] = (
-				SceneState->PlayerLife[Player_One]
-			);
-			Payload->PlayerLife[Player_Two] = (
-				SceneState->PlayerLife[Player_Two]
-			);
-
-			Header->DataSize = sizeof(state_update_packet);
-			InitPacketHeader(
-				GameState, Header, Packet_StateUpdate, (uint8_t*) Payload
-			);
-			if(SwitchingLeader)
-			{
-				SocketSendErrorCheck(
-					GameState,
-					&SceneState->ConnectSocket,
-					&SceneState->ListenSocket,
-					Header
-				);
-			}
-			else
-			{
-				ThrottledSocketSendErrorCheck(
-					GameState,
-					&SceneState->ConnectSocket,
-					&SceneState->ListenSocket,
-					Header
-				);
-			}
-
-			for(uint32_t Owner = Player_One; Owner < Player_Count; Owner++)
-			{
-				deck* Deck = SceneState->Decks + Owner;
-				deck_update_packet* DeckUpdatePacket = PushStruct(
-					FrameArena, deck_update_packet
-				);
-				
-				packet_header* DeckUpdateHeader = &DeckUpdatePacket->Header;
-				deck_update_payload* DeckUpdatePayload = (
-					&DeckUpdatePacket->Payload
-				);
-
-				uint32_t* InDeckHandles = PushArray(
-					FrameArena, Deck->InDeckCount, uint32_t
-				);
-				DeckUpdatePayload->Owner = (player_id) Owner;
-				DeckUpdatePayload->InDeckCount = Deck->InDeckCount;
-				DeckUpdatePayload->Offset = sizeof(deck_update_payload);
-				memcpy(
-					InDeckHandles,
-					Deck->InDeck,
-					sizeof(uint32_t) * Deck->InDeckCount
-				);
-
-				DeckUpdateHeader->DataSize = (
-					sizeof(deck_update_packet) +
-					Deck->InDeckCount * sizeof(uint32_t)
-				);
-				InitPacketHeader(
-					GameState,
-					DeckUpdateHeader,
-					Packet_DeckUpdate,
-					(uint8_t*) DeckUpdatePayload
-				);
-
-				if(SwitchingLeader)
-				{
-					SocketSendErrorCheck(
-						GameState,
-						&SceneState->ConnectSocket,
-						&SceneState->ListenSocket,
-						&DeckUpdatePacket->Header
-					);
-				}
-				else
-				{
-					ThrottledSocketSendErrorCheck(
-						GameState,
-						&SceneState->ConnectSocket,
-						&SceneState->ListenSocket,
-						&DeckUpdatePacket->Header
-					);
-				}
-			}
-		}
-
-		for(
-			uint32_t CardIndex = 0;
-			CardIndex < SceneState->MaxCards;
-			CardIndex++
-		)
-		{
-			card* Card = SceneState->Cards + CardIndex;
-			if(!Card->Active)
-			{
-				continue;
-			}
-
-			card_update_packet* CardPacket = PushStruct(
-				FrameArena, card_update_packet
-			);
-			card_update_payload* Payload = &CardPacket->Payload;
-			
-			Payload->CardId = Card->CardId;
-			Payload->DefId = Card->Definition->Id;
-			Payload->Owner = Card->Owner;
-			Payload->SetType = Card->SetType;
-
-			Payload->PlayDelta[RelativePlayer_Self] = (
-				Card->PlayDelta[RelativePlayer_Self]
-			);
-			Payload->PlayDelta[RelativePlayer_Opp] = (
-				Card->PlayDelta[RelativePlayer_Opp]
-			);
-			Payload->TapDelta[RelativePlayer_Self] = (
-				Card->TapDelta[RelativePlayer_Self]
-			);
-			Payload->TapDelta[RelativePlayer_Opp] = (
-				Card->TapDelta[RelativePlayer_Opp]
-			);
-			
-			Payload->TurnStartPlayDelta[RelativePlayer_Self] = (
-				Card->TurnStartPlayDelta[RelativePlayer_Self]
-			);
-			Payload->TurnStartPlayDelta[RelativePlayer_Opp] = (
-				Card->TurnStartPlayDelta[RelativePlayer_Opp]
-			);
-
-			Payload->TimeLeft = Card->TimeLeft;
-			Payload->TapsAvailable = Card->TapsAvailable;
-			Payload->TimesTapped = Card->TimesTapped;
-			Payload->Attack = Card->Attack;
-			Payload->TurnStartAttack= Card->TurnStartAttack;
-			Payload->Health = Card->Health;
-			Payload->TurnStartHealth = Card->TurnStartHealth;
-			Payload->TableauTags = Card->TableauTags;
-			Payload->StackTags = Card->StackTags;
-
-			packet_header* Header = &CardPacket->Header;
-			Header->DataSize = sizeof(card_update_packet);
-			InitPacketHeader(
-				GameState, Header, Packet_CardUpdate, (uint8_t*) Payload
-			);
-			if(SwitchingLeader)
-			{
-				SocketSendErrorCheck(
-					GameState,
-					&SceneState->ConnectSocket,
-					&SceneState->ListenSocket,
-					Header
-				);
-			}
-			else
-			{
-				ThrottledSocketSendErrorCheck(
-					GameState,
-					&SceneState->ConnectSocket,
-					&SceneState->ListenSocket,
-					Header
-				);
-			}
-		}
-
-		if(SwitchingLeader)
-		{
-			// NOTE: need to complete all send packet jobs because 
-			// CONT: otherwise we could have the far end become leader before
-			// CONT: state has synchronized
-			// CONT: TCP is ordered, threads are not
-			PlatformCompleteAllJobsAtPriority(
-				GameState->JobQueue, JobPriority_SendPacket
-			);
-			// NOTE: switch leadership to follower
-			switch_leader_packet* SwitchLeaderPacket = PushStruct(
-				FrameArena, switch_leader_packet
-			);
-			packet_header* Header = &SwitchLeaderPacket->Header;
-			Header->DataSize = sizeof(switch_leader_packet);
-			InitPacketHeader(GameState, Header, Packet_SwitchLeader, NULL);
-
-			SocketSendErrorCheck(
-				GameState,
-				&SceneState->ConnectSocket,
-				&SceneState->ListenSocket,
-				Header
-			);
-			SceneState->IsLeader = false;
+			SendGameState(GameState, SceneState, SwitchingLeader);
 		}
 	}
-	// SECTION STOP: Send data to follower
+	else if(SceneState->SyncState == SyncState_Send)
+	{
+		SendGameState(GameState, SceneState, false);
+		// TODO: can we successfully switch leaders here? do we need a 
+		// CONT: set leader packet?
+
+		sync_done_packet* SyncDonePacket = PushStruct(
+			FrameArena, sync_done_packet
+		);
+		packet_header* Header = &SyncDonePacket->Header;
+
+		Header->DataSize = sizeof(sync_done_packet);
+		InitPacketHeader(
+			GameState, Header, Packet_SyncDone, NULL
+		);
+
+		SocketSendErrorCheck(
+			GameState,
+			&SceneState->ConnectSocket,
+			&SceneState->ListenSocket,
+			Header
+		);
+
+		SceneState->SyncState = SyncState_Complete;
+	}
+	else
+	{
+		ASSERT(SceneState->SyncState == SyncState_Read);
+	}
 
 	// SECTION START: Push render entries
 	render_group* RenderGroup = &GameState->RenderGroup;

@@ -90,23 +90,52 @@ void UpdateAndRenderLostConnection(
 					);
 					CardGameState->ConnectSocket = SceneState->ConnectSocket;
 
-					join_game_type_packet* Packet = PushStruct(
-						FrameArena, join_game_type_packet
-					);
-					join_game_type_payload* Payload = &Packet->Payload;
-					Payload->Type = JoinGameType_ResumeGame;
+					{
+						join_game_type_packet* Packet = PushStruct(
+							FrameArena, join_game_type_packet
+						);
+						join_game_type_payload* Payload = &Packet->Payload;
+						Payload->Type = JoinGameType_ResumeGame;
 
-					packet_header* Header = &Packet->Header; 
-					Header->DataSize = sizeof(join_game_type_packet);
-					InitPacketHeader(
-						GameState, Header, Packet_JoinGameType, (uint8_t*) Payload
-					);
-					SocketSendErrorCheck(
-						GameState,
-						&SceneState->ConnectSocket,
-						&SceneState->ListenSocket,
-						Header
-					);
+						packet_header* Header = &Packet->Header; 
+						Header->DataSize = sizeof(join_game_type_packet);
+						InitPacketHeader(
+							GameState,
+							Header,
+							Packet_JoinGameType,
+							(uint8_t*) Payload
+						);
+						SocketSendErrorCheck(
+							GameState,
+							&SceneState->ConnectSocket,
+							&SceneState->ListenSocket,
+							Header
+						);
+					}
+
+					// NOTE: next share the seed with the rejoining game
+					{
+						rand_seed_packet* RandSeedPacket = PushStruct(
+							FrameArena, rand_seed_packet
+						);
+						rand_seed_payload* Payload = &RandSeedPacket->Payload;
+						Payload->Seed = CardGameState->Seed;
+
+						packet_header* Header = &RandSeedPacket->Header; 
+						Header->DataSize = sizeof(rand_seed_packet);
+						InitPacketHeader(
+							GameState,
+							Header,
+							Packet_RandSeed,
+							(uint8_t*) Payload
+						);
+						SocketSendErrorCheck(
+							GameState,
+							&SceneState->ConnectSocket,
+							&SceneState->ListenSocket,
+							Header
+						);
+					}
 					break;
 				}
 				default:

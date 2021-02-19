@@ -112,9 +112,20 @@ struct card_game_event_header
 	uint32_t DataSize;
 };
 
+typedef enum
+{
+	SyncState_Undefined,
+	SyncState_Complete,
+	SyncState_Send,
+	SyncState_Read
+} sync_state;
+
 struct card_game_state
 {
 	ui_context UiContext;
+
+	uint32_t Seed;
+	sync_state SyncState;
 
 	uint32_t NextCardId;
 	player_id CurrentTurn;
@@ -162,6 +173,11 @@ struct card_game_state
 };
 
 #pragma pack(push, 1)
+struct sync_done_packet
+{
+	packet_header Header;
+};
+
 struct switch_leader_packet
 {
 	packet_header Header;
@@ -243,6 +259,8 @@ struct card_game_args
 	bool IsLeader;
 	bool NetworkGame;
 	bool NewCardGame;
+	uint32_t Seed;
+	bool SeedSet;
 };
 void StartCardGamePrep(
 	game_state* GameState, char* P1DeckName, char* P2DeckName
@@ -259,7 +277,9 @@ void ResumeCardGamePrep(
 	game_state* GameState,
 	bool IsLeader,
 	platform_socket* ListenSocket,
-	platform_socket* ConnectSocket
+	platform_socket* ConnectSocket,
+	uint32_t Seed,
+	bool SeedSet
 );
 
 #define APOCALYPSE_CARD_GAME_H

@@ -79,6 +79,8 @@ void StartJoinGame(
 
 	SceneState->PacketReader = {};
 	SceneState->PacketReader.NetworkArena = &GameState->NetworkArena;
+
+	SceneState->SeedSet = false;
 }
 
 void UpdateAndRenderJoinGame(
@@ -225,9 +227,18 @@ void UpdateAndRenderJoinGame(
 							SceneState->JoinGameType = JgtPayload->Type;
 							break;
 						}
+						case(Packet_RandSeed):
+						{
+							rand_seed_payload* RandSeedPayload = (
+								(rand_seed_payload*) Payload
+							);
+							SceneState->Seed = RandSeedPayload->Seed;
+							SceneState->SeedSet = true;
+							break;
+						}
 						default:
 						{
-							ASSERT(false);
+							// TODO: logging
 							break;
 						}
 					}
@@ -265,7 +276,12 @@ void UpdateAndRenderJoinGame(
 		else if(SceneState->JoinGameType == JoinGameType_ResumeGame)
 		{
 			ResumeCardGamePrep(
-				GameState, false, NULL, SceneState->ConnectSocket
+				GameState,
+				false,
+				NULL,
+				SceneState->ConnectSocket,
+				SceneState->Seed,
+				SceneState->SeedSet
 			);
 		}
 	}

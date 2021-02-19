@@ -15,7 +15,8 @@ typedef enum
 	Packet_DeckData,
 	Packet_DeckUpdate,
 	Packet_RandSeed,
-	Packet_JoinGameType
+	Packet_JoinGameType,
+	Packet_SyncDone
 } packet_type;
 
 /* TODO: make sure we handle all the following endianness cases

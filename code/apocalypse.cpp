@@ -279,7 +279,7 @@ void GameInitMemory(
 			GameState->TrackedRectanglesArena.Base
 		);
 
-		GameState->EmptyStack = true;
+		GameState->FullSceneSwitch = true;
 		GameState->PopScene = false;
 		GameState->SceneStackMaxLen = sizeof(GameState->SceneStack);
 	}
@@ -294,7 +294,9 @@ void AddSceneStackEntry(game_state* GameState)
 	scene_stack_entry* StackEntry = (
 		GameState->SceneStack + GameState->SceneStackLen
 	);
-	StackEntry->Scene = GameState->Scene; 
+	*StackEntry = {};
+	StackEntry->Scene = GameState->Scene;
+	StackEntry->SceneState = GameState->SceneState;
 	StackEntry->ResetTransientTo = GameState->TransientArena.Used;
 	StackEntry->ResetRectanglesTo = GameState->TrackedRectanglesArena.Used;
 	GameState->SceneStackLen++;
@@ -316,36 +318,22 @@ void GameUpdateAndRender(
 
 	GameState->Time += DtForFrame;
 
-	if(GameState->LastFrameScene != GameState->Scene || GameState->PopScene)
+	if(GameState->LastFrameScene != GameState->Scene)
 	{
-		size_t ResetRectanglesTo = 0;
-		size_t ResetTransientTo = 0;
-		if(GameState->PopScene)
+		GameState->FrameCount = 0;
+		GameState->TrackedRectanglesCount = 0;
+		GameState->PopScene = false;
+
+		if(GameState->FullSceneSwitch)
 		{
-			ASSERT(GameState->SceneStackLen > 0);
-			GameState->SceneStackLen--;
-			scene_stack_entry* StackEntry = (
-				GameState->SceneStack + GameState->SceneStackLen
-			);
-			ResetRectanglesTo = StackEntry->ResetRectanglesTo;
-			ResetTransientTo = StackEntry->ResetTransientTo;
-			GameState->Scene = StackEntry->Scene;
-		}
-		else
-		{
-			GameState->FrameCount = 0;
-			GameState->TrackedRectanglesCount = 0;
+			// NOTE: these will all happen if the scene switches without 
+			// CONT: incrementing the stack length
+			GameState->SceneStackLen = 0;
+			ResetMemArena(&GameState->TransientArena);
+			ResetMemArena(&GameState->TrackedRectanglesArena);
 			// NOTE: only reset assets on true scene switch
 			ResetAssets(&GameState->Assets);
-
-			if(GameState->EmptyStack && GameState->SceneStackLen > 0)
-			{			
-				// NOTE: empty stack clears the stack
-				GameState->SceneStackLen = 0;
-			}
 		}
-		ResetMemArena(&GameState->TransientArena, ResetTransientTo);
-		ResetMemArena(&GameState->TrackedRectanglesArena, ResetRectanglesTo);
 		
 		switch(GameState->Scene)
 		{
@@ -395,7 +383,23 @@ void GameUpdateAndRender(
 			}
 		}
 		ResetMemArena(&GameState->SceneArgsArena);
-		GameState->PopScene = false;
+	}
+	else if(GameState->PopScene)
+	{
+		ASSERT(GameState->SceneStackLen > 0);
+		GameState->SceneStackLen--;
+		scene_stack_entry* StackEntry = (
+			GameState->SceneStack + GameState->SceneStackLen
+		);
+		size_t ResetRectanglesTo = StackEntry->ResetRectanglesTo;
+		size_t ResetTransientTo = StackEntry->ResetTransientTo;
+		GameState->Scene = StackEntry->Scene;
+
+		ResetMemArena(&GameState->TransientArena, ResetTransientTo);
+		ResetMemArena(&GameState->TrackedRectanglesArena, ResetRectanglesTo);
+
+		GameState->SceneState = StackEntry->SceneState;
+		GameState->PopScene = false; // NOTE: after popping, no longer need to pop
 	}
 
 	GameState->CanSendPackets = (
@@ -522,7 +526,7 @@ void GameUpdateAndRender(
 			ASSERT(false);
 		}
 	}
-	GameState->EmptyStack = GameState->SceneStackLen <= OldStackLen;
+	GameState->FullSceneSwitch = GameState->SceneStackLen <= OldStackLen;
 	
 	RenderGroupToOutput(&GameState->RenderGroup, WindowWidth, WindowHeight);
 

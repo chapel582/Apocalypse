@@ -19,6 +19,7 @@ typedef enum
 
 typedef enum
 {
+	SceneType_Uninitialized,
 	SceneType_CardGame,
 	SceneType_MainMenu,
 	SceneType_DeckEditor,
@@ -34,6 +35,8 @@ struct scene_stack_entry
 	scene_type Scene;
 	size_t ResetTransientTo;
 	size_t ResetRectanglesTo;
+
+	void* SceneState;
 };
 
 struct game_state
@@ -82,7 +85,7 @@ struct game_state
 	scene_stack_entry SceneStack[10];
 	uint32_t SceneStackLen;
 	uint32_t SceneStackMaxLen;
-	bool EmptyStack; // NOTE: a command set by the previous frame's state
+	bool FullSceneSwitch;
 	bool PopScene;
 	void* SceneState;
 	void* SceneArgs;

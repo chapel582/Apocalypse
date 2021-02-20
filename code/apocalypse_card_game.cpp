@@ -2535,6 +2535,16 @@ void UpdateAndRenderCardGame(
 						SceneState->IsLeader = LeaderPayload->IsLeader;
 						break;
 					}
+					case(Packet_SetFrameCount):
+					{
+						set_frame_count_payload* SetFrameCountPayload = (
+							(set_frame_count_payload*) Payload
+						);
+						GameState->FrameCount = (
+							SetFrameCountPayload->FrameCount
+						);
+						break;
+					}
 					case(Packet_SyncDone):
 					{
 						SceneState->SyncState = SyncState_Complete;
@@ -2818,6 +2828,26 @@ void UpdateAndRenderCardGame(
 	{
 		SendGameState(GameState, SceneState, false, true);
 		
+		{
+			set_frame_count_packet* SetFrameCountPacket = PushStruct(
+				FrameArena, set_frame_count_packet
+			);
+			packet_header* Header = &SetFrameCountPacket->Header;
+			set_frame_count_payload* Payload = &SetFrameCountPacket->Payload;
+			Payload->FrameCount = GameState->FrameCount;
+
+			Header->DataSize = sizeof(set_frame_count_packet);
+			InitPacketHeader(
+				GameState, Header, Packet_SetFrameCount, (uint8_t*) Payload
+			);
+
+			SocketSendErrorCheck(
+				GameState,
+				&SceneState->ConnectSocket,
+				&SceneState->ListenSocket,
+				Header
+			);
+		}
 		{
 			set_leader_packet* SetLeaderPacket = PushStruct(
 				FrameArena, set_leader_packet

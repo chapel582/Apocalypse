@@ -11,6 +11,7 @@ typedef enum
 	Packet_SetLeader,
 	Packet_SwitchLeader,
 	Packet_StateUpdate,
+	Packet_SetFrameCount,
 	Packet_CardUpdate,
 	Packet_RemoveCard,
 	Packet_DeckData,
@@ -51,6 +52,16 @@ struct rand_seed_packet
 {
 	packet_header Header;
 	rand_seed_payload Payload;
+};
+
+struct set_frame_count_payload
+{
+	uint64_t FrameCount;
+};
+struct set_frame_count_packet
+{
+	packet_header Header;
+	set_frame_count_payload Payload;
 };
 #pragma pack(pop)
 

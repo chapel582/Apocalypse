@@ -53,8 +53,21 @@ void StartLostConnection(
 	);
 	SceneState->ListenSocket = SceneArgs->ListenSocket;
 	SceneState->ConnectSocket = SceneArgs->ConnectSocket;
-	SceneState->IsServer = SceneState->ListenSocket.IsValid;
 	PlatformCloseSocket(&SceneState->ConnectSocket);
+	
+	// NOTE: if you weren't the server, YOU ARE NOW
+	// CONT: time to step up, little client
+	if(!SceneState->ListenSocket.IsValid)
+	{
+		platform_socket_result ServerResult = PlatformCreateListen(
+			&SceneState->ListenSocket
+		);
+		if(ServerResult != PlatformSocketResult_Success)
+		{
+			// TODO: logging
+			ASSERT(false);
+		}
+	}
 
 	ui_context* UiContext = &SceneState->UiContext;
 	InitUiContext(UiContext);
@@ -73,85 +86,76 @@ void UpdateAndRenderLostConnection(
 
 	memory_arena* FrameArena = &GameState->FrameArena;
 
-	if(SceneState->IsServer)
+	platform_socket_result SocketResult = PlatformAcceptConnection(
+		&SceneState->ListenSocket, &SceneState->ConnectSocket
+	);
+	if(SocketResult == PlatformSocketResult_Success)
 	{
-		platform_socket_result SocketResult = PlatformAcceptConnection(
-			&SceneState->ListenSocket, &SceneState->ConnectSocket
-		);
-		if(SocketResult == PlatformSocketResult_Success)
+		scene_stack_entry* StackEntry = PeekSceneStack(GameState);
+		switch(StackEntry->Scene)
 		{
-			scene_stack_entry* StackEntry = PeekSceneStack(GameState);
-			switch(StackEntry->Scene)
+			case(SceneType_CardGame):
 			{
-				case(SceneType_CardGame):
+				card_game_state* CardGameState = (card_game_state*)(
+					StackEntry->SceneState
+				);
+				CardGameState->ConnectSocket = SceneState->ConnectSocket;
+				CardGameState->SyncState = SyncState_Send;
+
 				{
-					card_game_state* CardGameState = (card_game_state*)(
-						StackEntry->SceneState
+					join_game_type_packet* Packet = PushStruct(
+						FrameArena, join_game_type_packet
 					);
-					CardGameState->ConnectSocket = SceneState->ConnectSocket;
-					CardGameState->SyncState = SyncState_Send;
+					join_game_type_payload* Payload = &Packet->Payload;
+					Payload->Type = JoinGameType_ResumeGame;
 
-					{
-						join_game_type_packet* Packet = PushStruct(
-							FrameArena, join_game_type_packet
-						);
-						join_game_type_payload* Payload = &Packet->Payload;
-						Payload->Type = JoinGameType_ResumeGame;
-
-						packet_header* Header = &Packet->Header; 
-						Header->DataSize = sizeof(join_game_type_packet);
-						InitPacketHeader(
-							GameState,
-							Header,
-							Packet_JoinGameType,
-							(uint8_t*) Payload
-						);
-						SocketSendErrorCheck(
-							GameState,
-							&SceneState->ConnectSocket,
-							&SceneState->ListenSocket,
-							Header
-						);
-					}
-
-					// NOTE: next share the seed with the rejoining game
-					{
-						rand_seed_packet* RandSeedPacket = PushStruct(
-							FrameArena, rand_seed_packet
-						);
-						rand_seed_payload* Payload = &RandSeedPacket->Payload;
-						Payload->Seed = CardGameState->Seed;
-
-						packet_header* Header = &RandSeedPacket->Header; 
-						Header->DataSize = sizeof(rand_seed_packet);
-						InitPacketHeader(
-							GameState,
-							Header,
-							Packet_RandSeed,
-							(uint8_t*) Payload
-						);
-						SocketSendErrorCheck(
-							GameState,
-							&SceneState->ConnectSocket,
-							&SceneState->ListenSocket,
-							Header
-						);
-					}
-					break;
+					packet_header* Header = &Packet->Header; 
+					Header->DataSize = sizeof(join_game_type_packet);
+					InitPacketHeader(
+						GameState,
+						Header,
+						Packet_JoinGameType,
+						(uint8_t*) Payload
+					);
+					SocketSendErrorCheck(
+						GameState,
+						&SceneState->ConnectSocket,
+						&SceneState->ListenSocket,
+						Header
+					);
 				}
-				default:
+
+				// NOTE: next share the seed with the rejoining game
 				{
-					ASSERT(false);
+					rand_seed_packet* RandSeedPacket = PushStruct(
+						FrameArena, rand_seed_packet
+					);
+					rand_seed_payload* Payload = &RandSeedPacket->Payload;
+					Payload->Seed = CardGameState->Seed;
+
+					packet_header* Header = &RandSeedPacket->Header; 
+					Header->DataSize = sizeof(rand_seed_packet);
+					InitPacketHeader(
+						GameState,
+						Header,
+						Packet_RandSeed,
+						(uint8_t*) Payload
+					);
+					SocketSendErrorCheck(
+						GameState,
+						&SceneState->ConnectSocket,
+						&SceneState->ListenSocket,
+						Header
+					);
 				}
+				break;
 			}
-			GameState->PopScene = true;
+			default:
+			{
+				ASSERT(false);
+			}
 		}
-	}
-	else
-	{
-		// TODO:
-		// TODO: implementation error
-		ASSERT(false);
+		GameState->PopScene = true;
 	}
 	
 	user_event_index UserEventIndex = 0;

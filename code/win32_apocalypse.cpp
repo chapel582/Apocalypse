@@ -359,7 +359,7 @@ platform_socket_result PlatformCreateListen(platform_socket* ListenSocket)
 	}
 
 	ListenSocket->Socket = Win32ListenSocket;
-
+	ListenSocket->IsValid = true;
 	goto end;
 
 error:
@@ -418,6 +418,18 @@ end:
 	return Result;
 }
 
+void PlatformCloseSocket(platform_socket* Socket)
+{
+	int ShutdownResult = shutdown(Socket->Socket, SD_SEND);
+	if(ShutdownResult == SOCKET_ERROR)
+	{
+		// TODO: logging
+	}
+
+	closesocket(Socket->Socket);
+	Socket->IsValid = false;
+}
+
 void PlatformServerDisconnect(
 	platform_socket* ListenSocket, platform_socket* ClientSocket
 )
@@ -428,8 +440,8 @@ void PlatformServerDisconnect(
 		// TODO: logging
 	}
 
-	closesocket(ListenSocket->Socket);
-	closesocket(ClientSocket->Socket);
+	PlatformCloseSocket(ListenSocket);
+	PlatformCloseSocket(ClientSocket);
 	WSACleanup();
 }
 
@@ -514,7 +526,7 @@ platform_socket_result PlatformCreateClient(
 	}
 
 	ConnectSocket->Socket = Win32ConnectSocket;
-
+	ConnectSocket->IsValid = true;
 	goto end;
 
 error:
@@ -532,17 +544,6 @@ end:
 		freeaddrinfo(AddrInfo);
 	}
 	return Result;
-}
-
-void PlatformCloseSocket(platform_socket* Socket)
-{
-	int ShutdownResult = shutdown(Socket->Socket, SD_SEND);
-	if(ShutdownResult == SOCKET_ERROR)
-	{
-		// TODO: logging
-	}
-
-	closesocket(Socket->Socket);
 }
 
 void PlatformClientDisconnect(platform_socket* ConnectSocket)

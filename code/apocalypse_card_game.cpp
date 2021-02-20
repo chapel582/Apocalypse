@@ -890,7 +890,6 @@ void StartCardGamePrep(
 	if(ListenSocket)
 	{
 		SceneArgs->ListenSocket = *ListenSocket;
-		SceneArgs->ListenSocket.IsValid = true;
 	}
 	else
 	{
@@ -899,7 +898,6 @@ void StartCardGamePrep(
 	if(ConnectSocket)
 	{
 		SceneArgs->ConnectSocket = *ConnectSocket;
-		SceneArgs->ConnectSocket.IsValid = true;
 	}
 	else
 	{

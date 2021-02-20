@@ -139,7 +139,6 @@ void StartDeckSelectorPrep(
 	if(ListenSocket)
 	{
 		SceneArgs->ListenSocket = *ListenSocket;
-		SceneArgs->ListenSocket.IsValid = true;
 	}
 	else
 	{
@@ -148,7 +147,6 @@ void StartDeckSelectorPrep(
 	if(ConnectSocket)
 	{
 		SceneArgs->ConnectSocket = *ConnectSocket;
-		SceneArgs->ConnectSocket.IsValid = true;
 	}
 	else
 	{

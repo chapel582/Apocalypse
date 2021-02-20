@@ -1703,7 +1703,7 @@ inline void StackBuildingPrimaryUpHandler(
 	}
 }
 
-inline bool StandardKeyboardHandler(
+bool StandardKeyboardHandler(
 	game_state* GameState,
 	card_game_state* SceneState,
 	game_keyboard_event* KeyboardEvent
@@ -1748,7 +1748,7 @@ inline bool StandardKeyboardHandler(
 	return EndTurn;
 }
 
-inline bool StackBuildingKeyboardHandler(
+bool StackBuildingKeyboardHandler(
 	game_state* GameState,
 	card_game_state* SceneState,
 	game_keyboard_event* KeyboardEvent
@@ -1847,7 +1847,9 @@ void SendGameState(
 		Payload->PlayerLife[Player_Two] = (
 			SceneState->PlayerLife[Player_Two]
 		);
-
+		Payload->ShouldUpdateBaseline = SceneState->ShouldUpdateBaseline;
+		Payload->BaselineNextTurnTimer = SceneState->NextTurnTimer;
+		
 		Header->DataSize = sizeof(state_update_packet);
 		InitPacketHeader(
 			GameState, Header, Packet_StateUpdate, (uint8_t*) Payload
@@ -2228,7 +2230,7 @@ void CardGameLogic(
 			}
 		}
 	}
-	if(*EndTurn)
+	if(*EndTurn && (!SceneState->NetworkGame || SceneState->IsLeader))
 	{
 		EndStackBuilding(SceneState);
 
@@ -2604,6 +2606,12 @@ void UpdateAndRenderCardGame(
 							);
 							SceneState->PlayerResources[Player_Two] = (
 								LeaderState->PlayerResources[Player_One]
+							);
+							SceneState->ShouldUpdateBaseline = (
+								LeaderState->ShouldUpdateBaseline
+							);
+							SceneState->BaselineNextTurnTimer = (
+								LeaderState->BaselineNextTurnTimer
 							);
 						}
 						break;

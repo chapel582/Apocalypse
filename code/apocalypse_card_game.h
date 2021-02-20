@@ -236,8 +236,10 @@ struct state_update_payload
 	player_id CurrentTurn; // NOTE: current turn is relative to leader
 	float TurnTimer;
 	float NextTurnTimer;
+	float BaselineNextTurnTimer;
 	player_id StackTurn;
 	bool StackBuilding;
+	bool ShouldUpdateBaseline;
 	player_resources PlayerResources[Player_Count];
 	float PlayerLife[Player_Count];
 };

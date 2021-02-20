@@ -99,6 +99,9 @@ void UpdateAndRenderLostConnection(
 				card_game_state* CardGameState = (card_game_state*)(
 					StackEntry->SceneState
 				);
+				// NOTE: assigning the listen socket is necessary for former 
+				// CONT: clients that have become servers
+				CardGameState->ListenSocket = SceneState->ListenSocket;
 				CardGameState->ConnectSocket = SceneState->ConnectSocket;
 				CardGameState->SyncState = SyncState_Send;
 

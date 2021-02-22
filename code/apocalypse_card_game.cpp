@@ -2808,7 +2808,10 @@ void UpdateAndRenderCardGame(
 	}
 	// SECTION STOP: Read leader state
 
-	if(SceneState->SyncState == SyncState_Complete)
+	if(
+		(SceneState->SyncState == SyncState_Complete) ||
+		!SceneState->NetworkGame
+	)
 	{
 		// NOTE: storing frame start stack turn has to be done after updating 
 		// CONT: card game state

@@ -17,8 +17,8 @@ void PushInfoCard(
 	char* Name,
 	int16_t Attack,
 	int16_t Health,
-	player_resources* PlayDelta,
-	player_resources* TapDelta,
+	int16_t SelfPlayDelta,
+	int16_t OppPlayDelta,
 	char* Description,
 	int32_t TapsRemaining
 );

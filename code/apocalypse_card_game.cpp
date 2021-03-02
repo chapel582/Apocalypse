@@ -14,53 +14,6 @@
 #define RESOURCE_LEFT_PADDING 100.0f
 
 #define MAX_RESOURCE_STRING_SIZE 40
-void FormatResourceString(
-	char* ResourceString, player_resources* PlayerResources
-)
-{
-	snprintf(
-		ResourceString,
-		MAX_RESOURCE_STRING_SIZE,
-		"R:%d\nG:%d\nBlu:%d\nW:%d\nBla:%d",
-		PlayerResources->Resources[PlayerResource_Red],
-		PlayerResources->Resources[PlayerResource_Green],
-		PlayerResources->Resources[PlayerResource_Blue],
-		PlayerResources->Resources[PlayerResource_White],
-		PlayerResources->Resources[PlayerResource_Black]
-	);
-}
-
-inline char* GetResourceInitial(player_resource_type ResourceType)
-{
-	switch(ResourceType)
-	{
-		case(PlayerResource_Red):
-		{
-			return "R";
-		}
-		case(PlayerResource_Green):
-		{
-			return "G";
-		}
-		case(PlayerResource_Blue):
-		{
-			return "Blu";
-		}
-		case(PlayerResource_White):
-		{
-			return "W";
-		}
-		case(PlayerResource_Black):
-		{
-			return "Bla";
-		}
-		default:
-		{
-			ASSERT(false);
-			return NULL;
-		}
-	}
-}
 
 inline player_id GetOpponent(player_id Player)
 {
@@ -77,6 +30,32 @@ inline player_id GetOpponent(player_id Player)
 		ASSERT(false);
 		return Player_Count;
 	}
+}
+
+bool CanChangeTimers(card_game_state* SceneState, card* Card)
+{
+	player_id Owner = Card->Owner;
+	player_id Opponent = GetOpponent(Owner);
+	if(SceneState->NextTurnTimer[Owner] < Card->SelfPlayDelta)
+	{
+		return false;
+	}
+	else if(SceneState->NextTurnTimer[Opponent] < Card->OppPlayDelta)
+	{
+		return false;
+	}
+	else
+	{
+		return true;
+	}
+}
+
+void ChangeTimers(card_game_state* SceneState, card* Card)
+{
+	player_id Owner = Card->Owner;
+	player_id Opponent = GetOpponent(Owner);
+	SceneState->NextTurnTimer[Owner] += Card->SelfPlayDelta;
+	SceneState->NextTurnTimer[Opponent] += Card->OppPlayDelta;
 }
 
 void CannotActivateCardMessage(
@@ -361,18 +340,10 @@ void InitCardWithDef(
 	Card->TurnStartHealth = Definition->Health;
 	Card->TableauTags = Definition->TableauTags;
 	Card->StackTags = Definition->StackTags;
-	
-	for(
-		int PlayerIndex = 0;
-		PlayerIndex < Player_Count;
-		PlayerIndex++
-	)
-	{
-		Card->PlayDelta[PlayerIndex] = Definition->PlayDelta[PlayerIndex];
-		Card->TapDelta[PlayerIndex] = Definition->TapDelta[PlayerIndex];
-		Card->TurnStartPlayDelta[PlayerIndex] = Definition->PlayDelta[PlayerIndex];
-		Card->TurnStartTapDelta[PlayerIndex] = Definition->TapDelta[PlayerIndex];
-	}
+	Card->SelfPlayDelta = Definition->SelfPlayDelta;
+	Card->TurnStartSelfPlayDelta = Definition->SelfPlayDelta;
+	Card->OppPlayDelta = Definition->OppPlayDelta;
+	Card->TurnStartOppPlayDelta = Definition->OppPlayDelta;
 }
 void InitCardWithDef(
 	card_game_state* SceneState,
@@ -454,157 +425,26 @@ void InitDeckCard(
 	DeckCard->Definition = Definitions->Array + CardId;
 }
 
-float GetTimeChangeFromCard(card* Card, player_resources* Delta)
+bool CheckAndTap(card_game_state* SceneState, card* Card)
 {
-	int32_t SelfResourceDelta = SumResources(Delta + RelativePlayer_Self);
-	int32_t OppResourceDelta = SumResources(Delta + RelativePlayer_Opp);
-	float TimeChange = (
-		RESOURCE_TO_TIME * (SelfResourceDelta - OppResourceDelta)
-	);
-	return TimeChange;
-}
-
-bool CheckAndTapLand(
-	game_state* GameState, card_game_state* SceneState, card* Card
-)
-{
-	bool Tapped = false;
-
-	float TimeChange = GetTimeChangeFromCard(Card, Card->TapDelta);
-	
-	if(TimeChange <= SceneState->TurnTimer)
-	{
-		SceneState->TurnTimer -= TimeChange;
-		Tapped = true;
-	}
-	return Tapped;
-}
-
-bool CheckAndTap(
-	game_state* GameState, card_game_state* SceneState, card* Card
-)
-{
-	player_resources* PlayerResources = SceneState->PlayerResources;
-	player_resources* Deltas = Card->TapDelta;
-	
 	// NOTE: only activate card if you have the resources for it
-	player_resources* ChangeTarget = &PlayerResources[Card->Owner];
-	player_resources* Delta = &Deltas[RelativePlayer_Self];
-	bool Tapped = CanChangeResources(ChangeTarget, Delta);
+	bool Tapped = Card->TimesTapped < Card->TapsAvailable;
 	if(Tapped)
 	{
-		tableau_effect_tags* TableauTags = &Card->TableauTags;
-		if(HasTag(TableauTags, TableauEffect_Land))
-		{
-			Tapped = CheckAndTapLand(GameState, SceneState, Card);
-		}
-		if(HasTag(TableauTags, TableauEffect_DrawExtra))
-		{
-			card* DrawnCard = DrawCard(GameState, SceneState, Card->Owner);
-			if(DrawnCard != NULL)
-			{
-				float TimeChange = GetTimeChangeFromCard(
-					DrawnCard, DrawnCard->PlayDelta
-				);
-
-				SceneState->TurnTimer += TimeChange;
-				Tapped = true;
-			}
-		}
-		if(HasTag(TableauTags, TableauEffect_DrawOppExtra))
-		{
-			card* DrawnCard = DrawCard(
-				GameState, SceneState, GetOpponent(Card->Owner)
-			);
-			if(DrawnCard != NULL)
-			{
-				float TimeChange = GetTimeChangeFromCard(
-					DrawnCard, DrawnCard->PlayDelta
-				);
-
-				SceneState->NextTurnTimer += TimeChange;
-				Tapped = true;
-			}
-		}
-
-		if(Tapped)
-		{
-			if(HasTag(TableauTags, TableauEffect_GetTime))
-			{
-				int32_t SelfResourceDelta = SumResources(
-					Card->TapDelta + RelativePlayer_Self
-				);
-				float TimeChange = RESOURCE_TO_TIME * SelfResourceDelta;
-
-				SceneState->TurnTimer += TimeChange;
-			}
-			else
-			{
-				ChangeResources(ChangeTarget, Delta);
-			}
-
-			player_id Opp = GetOpponent(Card->Owner);
-			ChangeTarget = &PlayerResources[Opp];
-			Delta = &Deltas[RelativePlayer_Opp];
-			
-			if(HasTag(TableauTags, TableauEffect_GiveTime))
-			{
-				int32_t OppResourceDelta = SumResources(
-					Card->TapDelta + RelativePlayer_Opp
-				);
-				float TimeChange = RESOURCE_TO_TIME * OppResourceDelta;
-
-				SceneState->NextTurnTimer += TimeChange;
-			}
-			else
-			{
-				ChangeResources(ChangeTarget, Delta);
-			}
-
-			if(HasTag(TableauTags, TableauEffect_TimeGrowth))
-			{
-				int32_t SelfResourceDelta = SumResources(
-					Card->PlayDelta + RelativePlayer_Self
-				);
-				float TimeChange = RESOURCE_TO_TIME * SelfResourceDelta;
-
-				SceneState->TurnTimer += TimeChange;
-				card_set* Tableau = SceneState->Tableaus + Card->Owner;
-				RemoveCardAndAlign(Tableau, Card);
-				card_set* Hand = SceneState->Hands + Card->Owner;
-				AddCardAndAlign(Hand, Card);
-			}
-		}
+		// NOTE: card effects on tap can be added here
+		Card->TimesTapped++;
 	}
-	Card->TimesTapped++;
-
 	return Tapped;
 }
 
-bool CheckAndPlay(
-	game_state* GameState, card_game_state* SceneState, card* Card
-)
+bool CheckAndPlay(card_game_state* SceneState, card* Card)
 {
 	// NOTE: only activate card if you have the resources for it
-	player_resources* PlayerResources = SceneState->PlayerResources;
-	player_resources* Deltas = Card->PlayDelta;
-
-	player_resources* ChangeTarget = &PlayerResources[Card->Owner];
-	player_resources* Delta = &Deltas[RelativePlayer_Self];
-	bool Played = CanChangeResources(ChangeTarget, Delta);
+	bool Played = CanChangeTimers(SceneState, Card);
 	if(Played)
 	{		
-		// NOTE: card effects on play can be added here
-		
-		// TODO: see if this conditional is still needed
-		if(Played)
-		{
-			ChangeResources(ChangeTarget, Delta);
-			player_id Opp = GetOpponent(Card->Owner);
-			ChangeTarget = &PlayerResources[Opp];
-			Delta = &Deltas[RelativePlayer_Opp];
-			ChangeResources(ChangeTarget, Delta);
-		}
+		// NOTE: card effects on play can be added here		
+		ChangeTimers(SceneState, Card);
 	}
 	return Played;
 }
@@ -984,9 +824,6 @@ void StartCardGameDataSetup(
 		&GameState->TransientArena, Player_Count, deck
 	);
 
-	SceneState->PlayerResources = PushArray(
-		&GameState->TransientArena, Player_Count, player_resources
-	);
 	SceneState->Hands = PushArray(
 		&GameState->TransientArena, Player_Count, card_set
 	);
@@ -1248,21 +1085,9 @@ void StartCardGame(
 		SceneState->BaselineNextTurnTimer = (
 			SceneState->TurnTimer + TURN_TIMER_INCREASE
 		);
+		SceneState->NextTurnTimer[Player_One] = SceneState->BaselineNextTurnTimer;
+		SceneState->NextTurnTimer[Player_Two] = SceneState->BaselineNextTurnTimer;
 		SceneState->ShouldUpdateBaseline = false;
-		SceneState->NextTurnTimer = SceneState->BaselineNextTurnTimer;
-
-		for(int PlayerIndex = 0; PlayerIndex < Player_Count; PlayerIndex++)
-		{
-			player_resources* PlayerResources = (
-				&SceneState->PlayerResources[PlayerIndex]
-			);
-			// TODO: initialize to 0?
-			SetResource(PlayerResources, PlayerResource_Red, rand() % 10 + 1);
-			SetResource(PlayerResources, PlayerResource_Green, rand() % 10 + 1);
-			SetResource(PlayerResources, PlayerResource_Blue, rand() % 10 + 1);
-			SetResource(PlayerResources, PlayerResource_White, rand() % 10 + 1);
-			SetResource(PlayerResources, PlayerResource_Black, rand() % 10 + 1);
-		}
 
 		SceneState->PlayerLife[Player_One] = 100.0f;
 		SceneState->PlayerLife[Player_Two] = 100.0f;
@@ -1356,7 +1181,7 @@ bool AddCardToSet(
 	return AddCardToSet(CardSet, Card);
 }
 
-void PushTurnTimer(
+void PushNextTurnTimer(
 	card_game_state* SceneState,
 	player_id Player,
 	render_group* RenderGroup,
@@ -1379,15 +1204,8 @@ void PushTurnTimer(
 	}
 
 	int32_t TurnTimerCeil = 0;
-	if(SceneState->CurrentTurn == Player)
-	{
-		TurnTimerCeil = Int32Ceil(SceneState->TurnTimer);
-	}
-	else
-	{
-		TurnTimerCeil = Int32Ceil(SceneState->NextTurnTimer);
-	}
-
+	TurnTimerCeil = Int32Ceil(SceneState->NextTurnTimer[Player]);
+	
 	uint32_t MaxTurnTimerCharacters = 10;
 	char* TurnTimerString = PushArray(
 		FrameArena, MaxTurnTimerCharacters, char
@@ -1441,9 +1259,7 @@ inline void StandardPrimaryUpHandler(
 				{
 					if(SelectedCard == NULL)
 					{
-						bool WasPlayed = CheckAndPlay(
-							GameState, SceneState, Card
-						);
+						bool WasPlayed = CheckAndPlay(SceneState, Card);
 						if(WasPlayed)
 						{
 							NormalPlayCard(GameState, SceneState, Card);
@@ -1458,38 +1274,15 @@ inline void StandardPrimaryUpHandler(
 
 					else
 					{
-						bool Tapped = CheckAndTap(
-							GameState, SceneState, SelectedCard
-						);
+						bool Tapped = CheckAndTap(SceneState, SelectedCard);
 						if(Tapped)
 						{
 							DeselectCard(SceneState);
-							float TimeChange = (
-								GetTimeChangeFromCard(Card, Card->PlayDelta)
-							);
-
-							bool HasSelfBurn = HasTag(
-								&SelectedCard->TableauTags, 
-								TableauEffect_SelfBurn
-							);
 							attack_card_result Result = AttackCard(
 								GameState, SceneState, SelectedCard, Card
 							);
-							if(Result.AttackedDied)
-							{
-								if(HasSelfBurn)
-								{
-									/*NOTE: 
-									TimeChange is subtracted because
-									we want the opposite effect from
-									if it was played. If it would 
-									cost the player time to play it,
-									it now gives time. And vice 
-									versa 
-									*/
-									SceneState->TurnTimer -= TimeChange;
-								}
-							}
+							// NOTE: can add effects that happen after an attack
+							// CONT: here 
 						}
 					}
 				}
@@ -1499,15 +1292,9 @@ inline void StandardPrimaryUpHandler(
 					{
 						if(Card->TimesTapped < Card->TapsAvailable)
 						{
-							player_resources* ChangeTarget = (
-								&SceneState->PlayerResources[Card->Owner]
+							bool CanActivate = CanChangeTimers(
+								SceneState, Card
 							);
-							player_resources* Delta = (
-								&Card->TapDelta[Card->Owner]
-							);
-							bool CanActivate = CanChangeResources(
-								ChangeTarget, Delta
-							);										
 							if(CanActivate)
 							{
 								SelectCard(SceneState, Card);
@@ -1522,35 +1309,14 @@ inline void StandardPrimaryUpHandler(
 					}
 					else
 					{
-						if(SelectedCard == Card)
+						if(SelectedCard != Card)
 						{
-							tableau_effect_tags* Tags = (
-								&Card->TableauTags
-							);
-							if(
-								HasTag(Tags, TableauEffect_Land) ||
-								HasTag(Tags, TableauEffect_DrawExtra) ||
-								HasTag(Tags, TableauEffect_DrawOppExtra) ||
-								HasTag(Tags, TableauEffect_TimeGrowth) ||
-								HasTag(Tags, TableauEffect_AttackTimer)
-							)
-							{
-								player_id Owner = SelectedCard->Owner;
-								DeselectCard(SceneState);
-								CheckAndTap(
-									GameState, SceneState, SelectedCard
-								);
-
-								if(HasTag(Tags, TableauEffect_AttackTimer))
-								{
-									SceneState->NextTurnTimer -= Card->Attack;
-								}
-							}
+							DeselectCard(SceneState);
+							SelectCard(SceneState, Card);
 						}
 						else
 						{
 							DeselectCard(SceneState);
-							SelectCard(SceneState, Card);
 						}
 					}
 				}
@@ -1568,43 +1334,13 @@ inline void StandardPrimaryUpHandler(
 					if(Card->SetType == CardSet_Tableau)
 					{
 						player_id Owner = SelectedCard->Owner;
-						bool Tapped = CheckAndTap(
-							GameState,
-							SceneState,
-							SelectedCard
-						);
+						bool Tapped = CheckAndTap(SceneState, SelectedCard);
 						if(Tapped)
 						{
 							DeselectCard(SceneState);
 							AttackCard(
 								GameState, SceneState, SelectedCard, Card
 							);
-						}
-					}
-					else if(
-						Card->SetType == CardSet_Hand && 
-						HasTag(
-							&SelectedCard->TableauTags, TableauEffect_OppBurn
-						)									
-					)
-					{
-						bool Tapped = CheckAndTap(
-							GameState, SceneState, SelectedCard
-						);
-						if(Tapped)
-						{
-							DeselectCard(SceneState);
-							float TimeChange = (
-								GetTimeChangeFromCard(Card, Card->PlayDelta)
-							);
-
-							attack_card_result Result = AttackCard(
-								GameState, SceneState, SelectedCard, Card
-							);
-							if(Result.AttackedDied)
-							{
-								SceneState->NextTurnTimer -= TimeChange;
-							}
 						}
 					}
 				}
@@ -1626,11 +1362,7 @@ inline void StandardPrimaryUpHandler(
 			{
 				// TODO: give a confirmation option for attacking yourself
 				player_id Owner = SelectedCard->Owner;
-				bool Tapped = CheckAndTap(
-					GameState,
-					SceneState,
-					SelectedCard
-				);
+				bool Tapped = CheckAndTap(SceneState, SelectedCard);
 				if(Tapped)
 				{
 					DeselectCard(SceneState);
@@ -1669,7 +1401,7 @@ inline void StackBuildingPrimaryUpHandler(
 			{
 				if(Card->SetType == CardSet_Hand)
 				{
-					bool WasPlayed = CheckAndPlay(GameState, SceneState, Card);
+					bool WasPlayed = CheckAndPlay(SceneState, Card);
 					if(WasPlayed)
 					{
 						WasPlayed = StackBuildingPlayCard(
@@ -1832,12 +1564,11 @@ void SendGameState(
 		
 		Payload->CurrentTurn = SceneState->CurrentTurn;
 		Payload->TurnTimer = SceneState->TurnTimer;
-		Payload->NextTurnTimer = SceneState->NextTurnTimer;
-		Payload->PlayerResources[Player_One] = (
-			SceneState->PlayerResources[Player_One]
+		Payload->NextTurnTimer[Player_One] = (
+			SceneState->NextTurnTimer[Player_One]
 		);
-		Payload->PlayerResources[Player_Two] = (
-			SceneState->PlayerResources[Player_Two]
+		Payload->NextTurnTimer[Player_Two] = (
+			SceneState->NextTurnTimer[Player_Two]
 		);
 		Payload->StackTurn = SceneState->StackTurn;
 		Payload->StackBuilding = SceneState->StackBuilding;
@@ -1848,7 +1579,7 @@ void SendGameState(
 			SceneState->PlayerLife[Player_Two]
 		);
 		Payload->ShouldUpdateBaseline = SceneState->ShouldUpdateBaseline;
-		Payload->BaselineNextTurnTimer = SceneState->NextTurnTimer;
+		Payload->BaselineNextTurnTimer = SceneState->BaselineNextTurnTimer;
 		
 		Header->DataSize = sizeof(state_update_packet);
 		InitPacketHeader(
@@ -1951,26 +1682,6 @@ void SendGameState(
 		Payload->Owner = Card->Owner;
 		Payload->SetType = Card->SetType;
 
-		Payload->PlayDelta[RelativePlayer_Self] = (
-			Card->PlayDelta[RelativePlayer_Self]
-		);
-		Payload->PlayDelta[RelativePlayer_Opp] = (
-			Card->PlayDelta[RelativePlayer_Opp]
-		);
-		Payload->TapDelta[RelativePlayer_Self] = (
-			Card->TapDelta[RelativePlayer_Self]
-		);
-		Payload->TapDelta[RelativePlayer_Opp] = (
-			Card->TapDelta[RelativePlayer_Opp]
-		);
-		
-		Payload->TurnStartPlayDelta[RelativePlayer_Self] = (
-			Card->TurnStartPlayDelta[RelativePlayer_Self]
-		);
-		Payload->TurnStartPlayDelta[RelativePlayer_Opp] = (
-			Card->TurnStartPlayDelta[RelativePlayer_Opp]
-		);
-
 		Payload->TimeLeft = Card->TimeLeft;
 		Payload->TapsAvailable = Card->TapsAvailable;
 		Payload->TimesTapped = Card->TimesTapped;
@@ -1978,6 +1689,10 @@ void SendGameState(
 		Payload->TurnStartAttack= Card->TurnStartAttack;
 		Payload->Health = Card->Health;
 		Payload->TurnStartHealth = Card->TurnStartHealth;
+		Payload->SelfPlayDelta = Card->SelfPlayDelta;
+		Payload->TurnStartSelfPlayDelta = Card->TurnStartSelfPlayDelta;
+		Payload->OppPlayDelta = Card->OppPlayDelta;
+		Payload->TurnStartOppPlayDelta = Card->TurnStartOppPlayDelta;
 		Payload->TableauTags = Card->TableauTags;
 		Payload->StackTags = Card->StackTags;
 
@@ -2197,13 +1912,14 @@ void CardGameLogic(
 			}
 			else
 			{
-				SceneState->NextTurnTimer -= DtForFrame;
-				if(SceneState->NextTurnTimer <= 0.0f)
+				player_id NextTurnPlayer = GetOpponent(SceneState->CurrentTurn);
+				SceneState->NextTurnTimer[NextTurnPlayer] -= DtForFrame;
+				if(SceneState->NextTurnTimer[NextTurnPlayer] <= 0.0f)
 				{
-					SceneState->NextTurnTimer = 0.0f;
+					SceneState->NextTurnTimer[NextTurnPlayer] = 0.0f;
 				}
 
-				if(SceneState->NextTurnTimer <= 0.0f)
+				if(SceneState->NextTurnTimer[NextTurnPlayer] <= 0.0f)
 				{
 					EndStackBuilding(SceneState);
 				}
@@ -2234,7 +1950,8 @@ void CardGameLogic(
 	{
 		EndStackBuilding(SceneState);
 
-		SetTurnTimer(SceneState, SceneState->NextTurnTimer);
+		player_id NextTurnPlayer = GetOpponent(SceneState->CurrentTurn);
+		SetTurnTimer(SceneState, SceneState->NextTurnTimer[NextTurnPlayer]);
 
 		if(SceneState->ShouldUpdateBaseline)
 		{
@@ -2245,9 +1962,12 @@ void CardGameLogic(
 		{
 			SceneState->ShouldUpdateBaseline = true;
 		}
-		SceneState->NextTurnTimer = SceneState->BaselineNextTurnTimer;
+		SceneState->NextTurnTimer[NextTurnPlayer] = (
+			SceneState->BaselineNextTurnTimer
+		);
 
 		SwitchTurns(GameState, SceneState);
+		// NOTE: reset values to turn start values here (when appropriate)
 		for(
 			uint32_t CardIndex = 0;
 			CardIndex < SceneState->MaxCards;
@@ -2263,13 +1983,6 @@ void CardGameLogic(
 				if(HasTag(EffectTags, TableauEffect_SelfWeaken))
 				{
 					if(Card->SetType == CardSet_Tableau)
-					{
-						Card->Attack = Card->TurnStartAttack;
-					}
-				}
-				if(HasTag(EffectTags, TableauEffect_SelfHandWeaken))
-				{
-					if(Card->SetType == CardSet_Hand)
 					{
 						Card->Attack = Card->TurnStartAttack;
 					}
@@ -2299,32 +2012,14 @@ void CardGameLogic(
 				{
 					if(Card->SetType == CardSet_Hand)
 					{
-						Card->PlayDelta[RelativePlayer_Self] = (
-							Card->TurnStartPlayDelta[RelativePlayer_Self]
-						);
+						Card->SelfPlayDelta = Card->TurnStartSelfPlayDelta;
 					}
 				}
 				if(HasTag(EffectTags, TableauEffect_GiveIncrease))
 				{
 					if(Card->SetType == CardSet_Hand)
 					{
-						Card->PlayDelta[RelativePlayer_Opp] = (
-							Card->TurnStartPlayDelta[RelativePlayer_Opp]
-						);
-					}
-				}
-				if(HasTag(EffectTags, TableauEffect_TimeGrowth))
-				{
-					player_resources* PlayDelta = (
-						Card->PlayDelta + RelativePlayer_Self
-					);
-					for(
-						int Resource = 0;
-						Resource < PlayerResource_Count;
-						Resource++
-					)
-					{
-						PlayDelta->Resources[Resource] += 1;
+						Card->OppPlayDelta = Card->TurnStartOppPlayDelta;
 					}
 				}
 			}
@@ -2352,19 +2047,6 @@ void CardGameLogic(
 					if(
 						Card->Owner == SceneState->CurrentTurn && 
 						Card->SetType == CardSet_Tableau
-					)
-					{
-						if(WholeSecondPassed)
-						{
-							Card->Attack -= 1;
-						}
-					}
-				}
-				if(HasTag(TableauTags, TableauEffect_SelfHandWeaken))
-				{
-					if(
-						Card->Owner == SceneState->CurrentTurn && 
-						Card->SetType == CardSet_Hand
 					)
 					{
 						if(WholeSecondPassed)
@@ -2422,20 +2104,7 @@ void CardGameLogic(
 					{
 						if(WholeSecondPassed)
 						{
-							for(
-								int Index = 0;
-								Index < PlayerResource_Count;
-								Index++
-							)
-							{
-								int32_t* Resource = (
-									&Card->PlayDelta[RelativePlayer_Self].Resources[Index]
-								);
-								if(*Resource < 0)
-								{
-									*Resource -= 1;
-								}
-							}
+							Card->SelfPlayDelta -= 1;
 						}
 					}
 				}
@@ -2445,21 +2114,7 @@ void CardGameLogic(
 					{
 						if(WholeSecondPassed)
 						{
-							int32_t* Resources = (
-								Card->PlayDelta[RelativePlayer_Opp].Resources
-							);
-							for(
-								int Index = 0;
-								Index < PlayerResource_Count;
-								Index++
-							)
-							{
-								int32_t* Resource = Resources + Index;
-								if(*Resource > 0)
-								{
-									*Resource += 1;
-								}
-							}
+							Card->SelfPlayDelta += 1;
 						}
 					}
 				}
@@ -2566,8 +2221,11 @@ void UpdateAndRenderCardGame(
 								SwitchTurns(GameState, SceneState);
 							}
 							SceneState->TurnTimer = LeaderState->TurnTimer;
-							SceneState->NextTurnTimer = (
-								LeaderState->NextTurnTimer
+							SceneState->NextTurnTimer[Player_Two] = (
+								LeaderState->NextTurnTimer[Player_One]
+							);
+							SceneState->NextTurnTimer[Player_One] = (
+								LeaderState->NextTurnTimer[Player_Two]
 							);
 
 							SceneState->StackBuilding = (
@@ -2599,14 +2257,6 @@ void UpdateAndRenderCardGame(
 
 							SceneState->LastFrame = Header->FrameId;
 
-							// NOTE: resources are organized relative to the 
-							// CONT: leader
-							SceneState->PlayerResources[Player_One] = (
-								LeaderState->PlayerResources[Player_Two]
-							);
-							SceneState->PlayerResources[Player_Two] = (
-								LeaderState->PlayerResources[Player_One]
-							);
 							SceneState->ShouldUpdateBaseline = (
 								LeaderState->ShouldUpdateBaseline
 							);
@@ -2674,27 +2324,6 @@ void UpdateAndRenderCardGame(
 							);
 						}
 
-						// NOTE: player resource deltas are always relative,  
-						CardToChange->PlayDelta[RelativePlayer_Self] = (
-							CardUpdate->PlayDelta[RelativePlayer_Self]
-						);
-						CardToChange->PlayDelta[RelativePlayer_Opp] = (
-							CardUpdate->PlayDelta[RelativePlayer_Opp]
-						);
-						CardToChange->TapDelta[RelativePlayer_Self] = (
-							CardUpdate->TapDelta[RelativePlayer_Self]
-						);
-						CardToChange->TapDelta[RelativePlayer_Opp] = (
-							CardUpdate->TapDelta[RelativePlayer_Opp]
-						);
-						
-						CardToChange->TurnStartPlayDelta[RelativePlayer_Self] = (
-							CardUpdate->TurnStartPlayDelta[RelativePlayer_Self]
-						);
-						CardToChange->TurnStartPlayDelta[RelativePlayer_Opp] = (
-							CardUpdate->TurnStartPlayDelta[RelativePlayer_Opp]
-						);
-
 						CardToChange->TimeLeft = CardUpdate->TimeLeft;
 						CardToChange->TapsAvailable = CardUpdate->TapsAvailable;
 						CardToChange->TimesTapped = CardUpdate->TimesTapped;
@@ -2706,6 +2335,15 @@ void UpdateAndRenderCardGame(
 						CardToChange->TurnStartHealth = (
 							CardUpdate->TurnStartHealth
 						);
+						CardToChange->SelfPlayDelta = CardUpdate->SelfPlayDelta;
+						CardToChange->TurnStartSelfPlayDelta = (
+							CardUpdate->TurnStartSelfPlayDelta
+						);
+						CardToChange->OppPlayDelta = CardUpdate->OppPlayDelta;
+						CardToChange->TurnStartOppPlayDelta = (
+							CardUpdate->TurnStartOppPlayDelta
+						);
+
 						CardToChange->TableauTags = CardUpdate->TableauTags;
 						CardToChange->StackTags = CardUpdate->StackTags;
 
@@ -2907,8 +2545,36 @@ void UpdateAndRenderCardGame(
 	render_group* RenderGroup = &GameState->RenderGroup;
 	PushClear(RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
 
-	PushTurnTimer(SceneState, Player_One, RenderGroup, Assets, FrameArena);
-	PushTurnTimer(SceneState, Player_Two, RenderGroup, Assets, FrameArena);
+	PushNextTurnTimer(SceneState, Player_One, RenderGroup, Assets, FrameArena);
+	PushNextTurnTimer(SceneState, Player_Two, RenderGroup, Assets, FrameArena);
+
+	// NOTE: push current turn timer
+	{
+		// TODO: it'd be cool if there was a stack effect here for the "stack" turn timers
+		char* TimeString = PushArray(
+			FrameArena, MAX_RESOURCE_STRING_SIZE, char
+		);
+		snprintf(
+			TimeString,
+			MAX_RESOURCE_STRING_SIZE,
+			"%d",
+			Int32Ceil(SceneState->TurnTimer)
+		);
+		PushText(
+			RenderGroup,
+			Assets,
+			FontHandle_TestFont,
+			TimeString,
+			MAX_RESOURCE_STRING_SIZE,
+			50.0f,
+			Vector2(
+				ScreenDimInWorld.X - RESOURCE_LEFT_PADDING,
+				(ScreenDimInWorld.Y / 2.0f)
+			),
+			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+			FrameArena
+		);
+	}
 
 	// SECTION START: Push cards
 	{
@@ -2987,8 +2653,8 @@ void UpdateAndRenderCardGame(
 						Card->Definition->Name,
 						Card->Attack,
 						Card->Health,
-						Card->PlayDelta,
-						Card->TapDelta,
+						Card->SelfPlayDelta,
+						Card->OppPlayDelta,
 						Card->Definition->Name,
 						Card->TapsAvailable - Card->TimesTapped
 					);
@@ -2998,50 +2664,6 @@ void UpdateAndRenderCardGame(
 		}
 	}
 	// SECTION STOP: Push cards
-
-	// SECTION START: Push resources
-	{
-		char* ResourceString = PushArray(
-			FrameArena, MAX_RESOURCE_STRING_SIZE, char
-		);
-		FormatResourceString(
-			ResourceString, &SceneState->PlayerResources[Player_One]
-		);
-		float Padding = 15.0f;
-		PushText(
-			RenderGroup,
-			Assets,
-			FontHandle_TestFont,
-			ResourceString,
-			MAX_RESOURCE_STRING_SIZE,
-			RESOURCE_TEXT_HEIGHT,
-			Vector2(
-				ScreenDimInWorld.X - RESOURCE_LEFT_PADDING,
-				(ScreenDimInWorld.Y / 2.0f) - Padding
-			),
-			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-			FrameArena
-		);
-
-		FormatResourceString(
-			ResourceString, &SceneState->PlayerResources[Player_Two]
-		);
-		PushText(
-			RenderGroup,
-			Assets,
-			FontHandle_TestFont,
-			ResourceString,
-			MAX_RESOURCE_STRING_SIZE,
-			RESOURCE_TEXT_HEIGHT,
-			Vector2(
-				ScreenDimInWorld.X - RESOURCE_LEFT_PADDING,
-				(ScreenDimInWorld.Y / 2.0f) + 80.0f + Padding
-			),
-			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
-			FrameArena
-		);
-	}
-	// SECTION STOP: Push resources
 
 	// SECTION START: Push player life totals
 	{

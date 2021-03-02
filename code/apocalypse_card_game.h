@@ -49,15 +49,10 @@ struct card
 	uint64_t LastFrame; // NOTE: last frame that leader updated this card on
 	uint32_t CardId; // NOTE: distinct from definition ID
 	card_definition* Definition;
-	player_resources PlayDelta[Player_Count];
-	player_resources TapDelta[Player_Count];
-	
-	player_resources TurnStartPlayDelta[Player_Count];
-	player_resources TurnStartTapDelta[Player_Count];
 
 	rectangle Rectangle;
 	card_set_type SetType;
-	float TimeLeft;
+	float TimeLeft; // TODO: is this anything?
 	vector4 Color;
 	// TODO: we're getting several bools here...time to move to flags?
 	bool Active;
@@ -69,6 +64,10 @@ struct card
 	player_id Owner;
 	int32_t TapsAvailable;
 	int32_t TimesTapped;
+	int16_t SelfPlayDelta;
+	int16_t TurnStartSelfPlayDelta;
+	int16_t OppPlayDelta;
+	int16_t TurnStartOppPlayDelta;
 	int16_t Attack;
 	int16_t TurnStartAttack;
 	int16_t Health;
@@ -133,8 +132,6 @@ struct card_game_state
 	float TurnTimer;
 	bool ShouldUpdateBaseline;
 	float BaselineNextTurnTimer;
-	float NextTurnTimer;
-	player_resources* PlayerResources;
 	card* Cards;
 	card* SelectedCard;
 	uint32_t MaxCards;
@@ -152,6 +149,7 @@ struct card_game_state
 
 	float PlayerLife[Player_Count];
 	rectangle PlayerLifeRects[Player_Count];
+	float NextTurnTimer[Player_Count];
 
 	player_id StackTurn;
 	bool StackBuilding;
@@ -199,15 +197,14 @@ struct card_update_payload
 	uint32_t DefId;
 	player_id Owner;
 	card_set_type SetType;
-	player_resources PlayDelta[Player_Count];
-	player_resources TapDelta[Player_Count];
 	
-	player_resources TurnStartPlayDelta[Player_Count];
-	player_resources TurnStartTapDelta[Player_Count];
-
-	float TimeLeft;
+	float TimeLeft; // TODO: does this do anything?
 	int32_t TapsAvailable;
 	int32_t TimesTapped;
+	int16_t SelfPlayDelta;
+	int16_t TurnStartSelfPlayDelta;
+	int16_t OppPlayDelta;
+	int16_t TurnStartOppPlayDelta;
 	int16_t Attack;
 	int16_t TurnStartAttack;
 	int16_t Health;
@@ -234,14 +231,15 @@ struct remove_card_packet
 struct state_update_payload
 {
 	player_id CurrentTurn; // NOTE: current turn is relative to leader
-	float TurnTimer;
-	float NextTurnTimer;
-	float BaselineNextTurnTimer;
 	player_id StackTurn;
+
 	bool StackBuilding;
 	bool ShouldUpdateBaseline;
-	player_resources PlayerResources[Player_Count];
+
+	float TurnTimer;
+	float BaselineNextTurnTimer;
 	float PlayerLife[Player_Count];
+	float NextTurnTimer[Player_Count];
 };
 struct state_update_packet
 {

@@ -1,41 +1,6 @@
 #include "apocalypse_info_card.h"
 #include "apocalypse_string.h"
-#include "apocalypse_player_resources.h"
 #include "apocalypse_player_id.h"
-
-void AppendResourceStringToInfoCard(
-	player_resources* Deltas,
-	string_appender* StringAppender,
-	char* SelfOrOpp,
-	char* DeltaType
-)
-{
-	bool NonZeroDelta = false;
-	for(
-		int DeltaIndex = 0;
-		DeltaIndex < PlayerResource_Count;
-		DeltaIndex++
-	)
-	{
-		uint32_t Delta = Deltas->Resources[DeltaIndex];
-		if(Delta != 0)
-		{
-			if(!NonZeroDelta)
-			{
-				AppendToString(
-					StringAppender, "%s: %s\n", SelfOrOpp, DeltaType
-				);
-				NonZeroDelta = true;
-			}
-			AppendToString(
-				StringAppender,
-				"%s: %d\n",
-				GetResourceInitial((player_resource_type) DeltaIndex),
-				Delta
-			);
-		}
-	}
-}
 
 #define ATTACK_HEALTH_MAX_LENGTH 8
 
@@ -50,8 +15,8 @@ void PushInfoCard(
 	char* Name,
 	int16_t Attack,
 	int16_t Health,
-	player_resources* PlayDelta,
-	player_resources* TapDelta,
+	int16_t SelfPlayDelta,
+	int16_t OppPlayDelta,
 	char* Description,
 	int32_t TapsRemaining
 )
@@ -78,20 +43,8 @@ void PushInfoCard(
 	AppendToString(&StringAppender, "%s\n", Name);
 	AppendToString(&StringAppender, "Attack: %d\n", Attack);
 	AppendToString(&StringAppender, "Health: %d\n", Health);
-
-	AppendResourceStringToInfoCard(
-		PlayDelta + Player_One, &StringAppender, "Self", "Play"
-	);
-	AppendResourceStringToInfoCard(
-		TapDelta + Player_One, &StringAppender, "Self", "Tap"
-	);
-
-	AppendResourceStringToInfoCard(
-		PlayDelta + Player_Two, &StringAppender, "Opp", "Play"
-	);
-	AppendResourceStringToInfoCard(
-		TapDelta + Player_Two, &StringAppender, "Opp", "Tap"
-	);
+	AppendToString(&StringAppender, "SelfPlayDelta: %d\n", SelfPlayDelta);
+	AppendToString(&StringAppender, "OppPlayDelta: %d\n", OppPlayDelta);
 
 	if(TapsRemaining >= 0)
 	{
@@ -139,8 +92,8 @@ inline void PushInfoCard(
 		Definition->Name,
 		Definition->Attack,
 		Definition->Health,
-		Definition->PlayDelta,
-		Definition->TapDelta,
+		Definition->SelfPlayDelta,
+		Definition->OppPlayDelta,
 		Definition->Description,
 		TapsRemaining
 	);

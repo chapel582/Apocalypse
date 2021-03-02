@@ -1,7 +1,6 @@
 #ifndef APOCALYPSE_CARD_DEFINITIONS_H
 
 #include "apocalypse_player_id.h"
-#include "apocalypse_player_resources.h"
 
 #include <stdint.h>
 #include <string.h>
@@ -10,22 +9,41 @@
 
 typedef enum
 {
-	TableauEffect_Land,
+	/* 
+	NOTE: card attack decreases during owner's turn, resets at end of owner's
+	turn
+	*/
 	TableauEffect_SelfWeaken,
+	/* 
+	NOTE: card attack increases during opponent's turn, resets at end of 
+	opponent's turn
+	*/
 	TableauEffect_OppStrengthen,
+	/*
+	NOTE: card life decreases during owner's turn, resets at end of owner's
+	turn
+	*/
 	TableauEffect_SelfLifeLoss,
+	/*
+	NOTE: card life increases during opponent's turn, resets at end of 
+	opponent's turn
+	*/
 	TableauEffect_OppLifeGain,
+	/*
+	NOTE: cost increases during owner's turn, resets at end of owner's turn
+	*/
 	TableauEffect_CostIncrease,
-	TableauEffect_GiveIncrease,
-	TableauEffect_SelfBurn,
-	TableauEffect_OppBurn,
-	TableauEffect_DrawExtra,
-	TableauEffect_DrawOppExtra,
-	TableauEffect_GiveTime,
-	TableauEffect_GetTime,
-	TableauEffect_SelfHandWeaken,
-	TableauEffect_TimeGrowth,
-	TableauEffect_AttackTimer
+	/*
+	NOTE: time given to opponent increases during owner's turn, resets at end of
+	owner's turn
+	*/
+	TableauEffect_GiveIncrease
+
+	/*
+	TODO: Unimplemented card ideas
+	A tag that gives your opponent time on an attack
+	A tag that causes a card to require your time to attack
+	*/
 } tableau_effect;
 
 struct tableau_effect_tags
@@ -50,6 +68,14 @@ typedef enum
 {
 	StackEffect_HurtOpp,
 	StackEffect_DisableNext
+	/*
+	TODO: Unimplemented card ideas
+	Card that lets a player draw a card at the cost of their next turn time
+	Card that lets both players draw a card (at the cost of time for both players)
+	Card that lets you reshuffle your deck
+	Card that lets you view your top few cards
+	Card that lets you draw another card
+	*/
 } stack_effect;
 
 struct stack_effect_tags
@@ -79,11 +105,11 @@ inline bool HasAnyTag(stack_effect_tags* Tags)
 struct card_definition
 {
 	uint32_t Id;
-	player_resources PlayDelta[Player_Count];
-	player_resources TapDelta[Player_Count];
 	int32_t TapsAvailable;
 	int16_t Attack;
 	int16_t Health;
+	int16_t SelfPlayDelta;
+	int16_t OppPlayDelta;
 	char Name[CARD_NAME_SIZE];
 	char Description[CARD_DESCRIPTION_SIZE];
 	tableau_effect_tags TableauTags;
@@ -109,7 +135,9 @@ inline void InitCard(
 	uint32_t Id,
 	int32_t TapsAvailable,
 	int16_t Attack,
-	int16_t Health
+	int16_t Health,
+	int16_t SelfPlayDelta,
+	int16_t OppPlayDelta
 )
 {
 	*Card = {};
@@ -117,6 +145,8 @@ inline void InitCard(
 	Card->TapsAvailable = TapsAvailable;
 	Card->Attack = Attack;
 	Card->Health = Health;
+	Card->SelfPlayDelta = SelfPlayDelta;
+	Card->OppPlayDelta = OppPlayDelta;
 }
 
 inline void SetName(card_definition* Definition, char* Name, uint32_t NameSize)

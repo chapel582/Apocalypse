@@ -43,6 +43,7 @@ typedef enum
 	TODO: Unimplemented card ideas
 	A tag that gives your opponent time on an attack
 	A tag that causes a card to require your time to attack
+	A tag that has a card switch from attacking to healing over time (like attack loss, but with negative values permitted)
 	*/
 } tableau_effect;
 

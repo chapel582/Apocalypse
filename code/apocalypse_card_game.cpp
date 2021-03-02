@@ -2053,6 +2053,10 @@ void CardGameLogic(
 						{
 							Card->Attack -= 1;
 						}
+						if(Card->Attack < 0)
+						{
+							Card->Attack = 0;
+						}
 					}
 				}
 				if(HasTag(TableauTags, TableauEffect_OppStrengthen))

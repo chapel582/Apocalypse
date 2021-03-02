@@ -2224,7 +2224,7 @@ void UpdateAndRenderCardGame(
 							{
 								SwitchTurns(GameState, SceneState);
 							}
-							SceneState->TurnTimer = LeaderState->TurnTimer;
+							SetTurnTimer(SceneState, LeaderState->TurnTimer);
 							SceneState->NextTurnTimer[Player_Two] = (
 								LeaderState->NextTurnTimer[Player_One]
 							);

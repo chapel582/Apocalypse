@@ -36,11 +36,11 @@ bool CanChangeTimers(card_game_state* SceneState, card* Card)
 {
 	player_id Owner = Card->Owner;
 	player_id Opponent = GetOpponent(Owner);
-	if(SceneState->NextTurnTimer[Owner] < Card->SelfPlayDelta)
+	if((SceneState->NextTurnTimer[Owner] + Card->SelfPlayDelta) < 0)
 	{
 		return false;
 	}
-	else if(SceneState->NextTurnTimer[Opponent] < Card->OppPlayDelta)
+	else if((SceneState->NextTurnTimer[Opponent] + Card->OppPlayDelta) < 0)
 	{
 		return false;
 	}

@@ -233,7 +233,6 @@ struct state_update_payload
 	player_id StackTurn;
 
 	bool StackBuilding;
-	bool ShouldUpdateBaseline;
 
 	float TurnTimer;
 	float PlayerLife[Player_Count];

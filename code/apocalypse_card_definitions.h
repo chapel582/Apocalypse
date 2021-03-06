@@ -67,7 +67,13 @@ inline bool HasTag(tableau_effect_tags* Tags, tableau_effect Check)
 
 typedef enum
 {
+	/*
+	NOTE: this effect is boring and should probably only be for testing
+	*/
 	StackEffect_HurtOpp,
+	/*
+	NOTE: This is a test effect only
+	*/
 	StackEffect_DisableNext
 	/*
 	TODO: Unimplemented card ideas

@@ -404,7 +404,7 @@ void DrawFullHand(card_game_state* SceneState, player_id Player)
 	deck* Deck = &SceneState->Decks[Player];
 	for(
 		int CardIndex = 0;
-		CardIndex < MAX_CARDS_PER_SET;
+		CardIndex < DEFAULT_HAND_SIZE;
 		CardIndex++
 	)
 	{
@@ -1081,13 +1081,9 @@ void StartCardGame(
 			DrawFullHand(SceneState, Player_Two);
 		}
 
-		SetTurnTimer(SceneState, 20.0f);
-		SceneState->BaselineNextTurnTimer = (
-			SceneState->TurnTimer + TURN_TIMER_INCREASE
-		);
-		SceneState->NextTurnTimer[Player_One] = SceneState->BaselineNextTurnTimer;
-		SceneState->NextTurnTimer[Player_Two] = SceneState->BaselineNextTurnTimer;
-		SceneState->ShouldUpdateBaseline = false;
+		SetTurnTimer(SceneState, DEFAULT_NEXT_TURN_TIMER);
+		SceneState->NextTurnTimer[Player_One] = DEFAULT_NEXT_TURN_TIMER;
+		SceneState->NextTurnTimer[Player_Two] = DEFAULT_NEXT_TURN_TIMER;
 
 		SceneState->PlayerLife[Player_One] = 100.0f;
 		SceneState->PlayerLife[Player_Two] = 100.0f;
@@ -1578,8 +1574,6 @@ void SendGameState(
 		Payload->PlayerLife[Player_Two] = (
 			SceneState->PlayerLife[Player_Two]
 		);
-		Payload->ShouldUpdateBaseline = SceneState->ShouldUpdateBaseline;
-		Payload->BaselineNextTurnTimer = SceneState->BaselineNextTurnTimer;
 		
 		Header->DataSize = sizeof(state_update_packet);
 		InitPacketHeader(
@@ -1953,18 +1947,7 @@ void CardGameLogic(
 		player_id NextTurnPlayer = GetOpponent(SceneState->CurrentTurn);
 		SetTurnTimer(SceneState, SceneState->NextTurnTimer[NextTurnPlayer]);
 
-		if(SceneState->ShouldUpdateBaseline)
-		{
-			SceneState->BaselineNextTurnTimer += TURN_TIMER_INCREASE;
-			SceneState->ShouldUpdateBaseline = false;
-		}
-		else
-		{
-			SceneState->ShouldUpdateBaseline = true;
-		}
-		SceneState->NextTurnTimer[NextTurnPlayer] = (
-			SceneState->BaselineNextTurnTimer
-		);
+		SceneState->NextTurnTimer[NextTurnPlayer] = DEFAULT_NEXT_TURN_TIMER;
 
 		SwitchTurns(GameState, SceneState);
 		// NOTE: reset values to turn start values here (when appropriate)
@@ -2260,13 +2243,6 @@ void UpdateAndRenderCardGame(
 							);
 
 							SceneState->LastFrame = Header->FrameId;
-
-							SceneState->ShouldUpdateBaseline = (
-								LeaderState->ShouldUpdateBaseline
-							);
-							SceneState->BaselineNextTurnTimer = (
-								LeaderState->BaselineNextTurnTimer
-							);
 						}
 						break;
 					}

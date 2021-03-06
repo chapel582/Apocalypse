@@ -1,8 +1,8 @@
 #ifndef APOCALYPSE_CARD_GAME_H
 
-#define MAX_CARDS_PER_SET 7
-#define RESOURCE_TO_TIME 5.0f
-#define TURN_TIMER_INCREASE 10.0f
+#define DEFAULT_HAND_SIZE 5
+#define MAX_CARDS_PER_SET 64
+#define DEFAULT_NEXT_TURN_TIMER 40.0f
 #define MISSED_UPDATES_BEFORE_DESTRUCTION 5 // NOTE: measured in frames
 #include "apocalypse_socket.h"
 #include "apocalypse_platform.h"
@@ -131,7 +131,6 @@ struct card_game_state
 	int16_t LastWholeSecond;
 	float TurnTimer;
 	bool ShouldUpdateBaseline;
-	float BaselineNextTurnTimer;
 	card* Cards;
 	card* SelectedCard;
 	uint32_t MaxCards;
@@ -237,7 +236,6 @@ struct state_update_payload
 	bool ShouldUpdateBaseline;
 
 	float TurnTimer;
-	float BaselineNextTurnTimer;
 	float PlayerLife[Player_Count];
 	float NextTurnTimer[Player_Count];
 };

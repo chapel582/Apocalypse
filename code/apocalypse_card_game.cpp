@@ -408,7 +408,7 @@ void RemoveCardsFromDataSet(
 	memcpy(
 		DataSet->Cards + StartIndex,
 		DataSet->Cards + StartIndex + RemoveCount,
-		RemoveCount * sizeof(card_data)
+		(DataSet->CardCount - RemoveCount) * sizeof(card_data)
 	);
 	DataSet->CardCount -= RemoveCount;
 }

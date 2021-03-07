@@ -2,6 +2,7 @@
 
 #define DEFAULT_HAND_SIZE 5
 #define MAX_CARDS_PER_SET 64
+#define MAX_CARDS_PER_DATA_SET 256
 #define DEFAULT_NEXT_TURN_TIMER 40.0f
 #define MISSED_UPDATES_BEFORE_DESTRUCTION 5 // NOTE: measured in frames
 #include "apocalypse_socket.h"
@@ -29,22 +30,21 @@ typedef enum
 	CardSet_Count
 } card_set_type;
 
-struct deck_card
+typedef enum
 {
-	card_definition* Definition;
-	bool InDeck;
-};
+	CardDataSet_Draw,
+	CardDataSet_Discard,
+	CardDataSet_Lost,
+	CardDataSet_Count
+} card_data_set_type;
 
 struct deck
 {
-	deck_card Cards[MAX_CARDS_IN_DECK];
+	card_definition* Cards[MAX_CARDS_IN_DECK];
 	uint32_t CardCount;
-	// NOTE: these arrays are handles into the Cards Array
-	uint32_t InDeck[MAX_CARDS_IN_DECK];
-	uint32_t InDeckCount;
 };
 
-struct card
+struct card // TODO: maybe rename to active or visible card?
 {
 	uint64_t LastFrame; // NOTE: last frame that leader updated this card on
 	uint32_t CardId; // NOTE: distinct from definition ID
@@ -79,11 +79,33 @@ struct card
 struct card_set
 {
 	card* Cards[MAX_CARDS_PER_SET];
-	int CardCount;
+	uint32_t CardCount;
 	float ScreenWidth;
 	float CardWidth;
 	float YPos;
 	card_set_type Type;
+};
+
+struct card_data
+{
+	uint32_t CardId;
+	card_definition* Definition;
+	
+	player_id Owner;
+	int32_t TapsAvailable;
+	int16_t SelfPlayDelta;
+	int16_t OppPlayDelta;
+	int16_t Attack;
+	int16_t Health;
+	tableau_effect_tags TableauTags;
+	stack_effect_tags StackTags;
+};
+
+struct card_data_set
+{
+	card_data Cards[MAX_CARDS_PER_DATA_SET];
+	uint32_t CardCount;
+	card_data_set_type Type;
 };
 
 struct card_stack_entry
@@ -135,6 +157,8 @@ struct card_game_state
 	card* SelectedCard;
 	uint32_t MaxCards;
 	deck* Decks;
+	card_data_set DrawSets[Player_Count];
+	card_data_set DiscardSets[Player_Count];
 	card_set* Hands;
 	card_set* Tableaus;
 	vector2 InfoCardCenter;

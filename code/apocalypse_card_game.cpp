@@ -358,24 +358,101 @@ void InitCardWithDef(
 	Card->Owner = Owner;
 }
 
-void InitCardWithDeckCard(
-	card_game_state* SceneState, deck* Deck, card* Card, player_id Owner
+void InitCardWithCardData(card* Card, card_data* CardData)
+{
+	Card->LastFrame = 0;
+	Card->CardId = CardData->CardId;
+	Card->Definition = CardData->Definition;
+	
+	Card->Owner = CardData->Owner;
+	Card->TapsAvailable = CardData->TapsAvailable;
+	Card->SelfPlayDelta = CardData->SelfPlayDelta;
+	Card->OppPlayDelta = CardData->OppPlayDelta;
+	Card->Attack = CardData->Attack;
+	Card->Health = CardData->Health;
+	Card->TableauTags = CardData->TableauTags;
+	Card->StackTags = CardData->StackTags;
+
+	Card->TurnStartAttack = Card->Attack;
+	Card->TurnStartHealth = Card->Health;
+	Card->TurnStartSelfPlayDelta = Card->SelfPlayDelta;
+	Card->TurnStartOppPlayDelta = Card->OppPlayDelta;
+}
+
+void AddCardToCardDataSet(card* Card, card_data_set* CardDataSet)
+{
+	ASSERT(CardDataSet->CardCount < MAX_CARDS_PER_DATA_SET);
+	card_data* CardData = CardDataSet->Cards + CardDataSet->CardCount;
+	CardDataSet->CardCount++;
+
+	*CardData = {};
+
+	CardData->CardId = Card->CardId;
+	CardData->Definition = Card->Definition;
+	
+	CardData->Owner = Card->Owner;
+	CardData->TapsAvailable = Card->TapsAvailable;
+	CardData->SelfPlayDelta = Card->SelfPlayDelta;
+	CardData->OppPlayDelta = Card->OppPlayDelta;
+	CardData->Attack = Card->Attack;
+	CardData->Health = Card->Health;
+	CardData->TableauTags = Card->TableauTags;
+	CardData->StackTags = Card->StackTags;
+}
+
+void RemoveCardsFromDataSet(
+	card_data_set* DataSet, uint32_t StartIndex, uint32_t RemoveCount
 )
 {
-	ASSERT(Deck->InDeckCount > 0);
-	ASSERT(Deck->InDeck[0] < MAX_CARDS_IN_DECK);
-	deck_card* CardToDraw = Deck->Cards + Deck->InDeck[0];
-
-	// NOTE: remove the top card from the deck
-	Deck->InDeckCount--;
+	ASSERT(RemoveCount < DataSet->CardCount);
 	memcpy(
-		Deck->InDeck, Deck->InDeck + 1, Deck->InDeckCount * sizeof(uint32_t)
+		DataSet->Cards + StartIndex,
+		DataSet->Cards + StartIndex + RemoveCount,
+		RemoveCount * sizeof(card_data)
 	);
+	DataSet->CardCount--;
+}
 
-	card_definition* Definition = CardToDraw->Definition;
+void ShuffleDrawSet(
+	card_game_state* SceneState, player_id Player
+)
+{
+	card_data_set* DrawSet = SceneState->DrawSets + Player;
+	for(uint32_t Index = 0; Index < DrawSet->CardCount; Index++)
+	{
+		uint32_t NewIndex = rand() % DrawSet->CardCount;
+		card_data Temp = DrawSet->Cards[NewIndex];
+		card_data* OldPlace = DrawSet->Cards + Index;
+		card_data* NewPlace = DrawSet->Cards + NewIndex;
+		*NewPlace = *OldPlace;
+		*OldPlace = Temp;
+	}
+}
 
-	InitCardWithDef(SceneState, Card, Definition);
-	Card->Owner = Owner;
+void DiscardFullHand(
+	game_state* GameState, card_game_state* SceneState, player_id Player
+)
+{
+	card_set* Hand = SceneState->Hands + Player;
+	card_data_set* DiscardSet = SceneState->DiscardSets + Player;
+
+	for(uint32_t CardIndex = 0; CardIndex < MAX_CARDS_PER_SET; CardIndex++)
+	{
+		if(Hand->CardCount == 0)
+		{
+			break;
+		}
+
+		card* Card = Hand->Cards[CardIndex];
+		if(Card == NULL)
+		{
+			continue;
+		}
+
+		AddCardToCardDataSet(Card, DiscardSet);
+		SafeRemoveCard(GameState, SceneState, Card);
+	}
+	AlignCardSet(Hand);
 }
 
 card* DrawCard(
@@ -391,38 +468,65 @@ card* DrawCard(
 		);
 		return NULL;
 	}
-	deck* Deck = &SceneState->Decks[Owner];
+	card_data_set* DrawSet = SceneState->DrawSets + Owner;
+	card_data* CardData = DrawSet->Cards;
 	
 	card* Card = GetInactiveCard(SceneState);
-	InitCardWithDeckCard(SceneState, Deck, Card, Owner);
+	InitCardWithCardData(Card, CardData);
 	AddCardAndAlign(CardSet, Card);
+	RemoveCardsFromDataSet(DrawSet, 0, 1);
 	return Card;
 }
 
 void DrawFullHand(card_game_state* SceneState, player_id Player)
 {
-	deck* Deck = &SceneState->Decks[Player];
-	for(
-		int CardIndex = 0;
-		CardIndex < DEFAULT_HAND_SIZE;
-		CardIndex++
-	)
+	card_set* Hand = SceneState->Hands + Player;
+	ASSERT(Hand->CardCount == 0);
+
+	card_data_set* DrawSet = SceneState->DrawSets + Player;
+	
+	int CardsToDraw = 0;
+	if(DrawSet->CardCount >= DEFAULT_HAND_SIZE)
+	{
+		CardsToDraw = DEFAULT_HAND_SIZE;
+	}
+	else
+	{
+		card_data_set* DiscardSet = SceneState->DiscardSets + Player;
+		memcpy(DrawSet->Cards, DiscardSet->Cards, DiscardSet->CardCount);
+		DrawSet->CardCount = DiscardSet->CardCount;
+		DiscardSet->CardCount = 0;
+		ShuffleDrawSet(SceneState, Player);
+
+		if(DrawSet->CardCount >= DEFAULT_HAND_SIZE)
+		{
+			CardsToDraw = DEFAULT_HAND_SIZE;
+		}
+		else
+		{
+			CardsToDraw = DrawSet->CardCount;
+		}
+	}
+
+	for(int CardIndex = 0; CardIndex < CardsToDraw; CardIndex++)
 	{
 		card* Card = GetInactiveCard(SceneState);
-		InitCardWithDeckCard(SceneState, Deck, Card, Player);
-		AddCardToSet(&SceneState->Hands[Player], Card);
-		Card++;
+		card_data* CardData = DrawSet->Cards + CardIndex;
+
+		InitCardWithCardData(Card, CardData);
+		AddCardToSet(Hand, Card);
 	}
 	AlignCardSet(&SceneState->Hands[Player]);
+	RemoveCardsFromDataSet(DrawSet, 0, CardsToDraw);
 }
 
 void InitDeckCard(
-	deck_card* DeckCard, card_definitions* Definitions, uint32_t CardId
+	card_definition** DeckCard, card_definitions* Definitions, uint32_t CardId
 )
 {
 	// TODO: Might want a way to protect against card id out of range
 	ASSERT(CardId < Definitions->NumCards);
-	DeckCard->Definition = Definitions->Array + CardId;
+	*DeckCard = Definitions->Array + CardId;
 }
 
 bool CheckAndTap(card_game_state* SceneState, card* Card)
@@ -981,8 +1085,8 @@ void StartCardGame(
 			*Deck = {};
 			Deck->CardCount = LoadedDeck->Header.CardCount;
 
-			deck_card* DeckCard = &Deck->Cards[0];
-			*DeckCard = {};
+			card_definition** DeckCard = Deck->Cards;
+			*DeckCard = NULL;
 			InitDeckCard(
 				DeckCard, SceneState->Definitions, LoadedDeck->Ids[0]
 			);
@@ -992,8 +1096,8 @@ void StartCardGame(
 				CardIndex++
 			)
 			{
-				DeckCard = &Deck->Cards[CardIndex];
-				*DeckCard = {};
+				DeckCard = Deck->Cards + CardIndex;
+				*DeckCard = NULL;
 				InitDeckCard(
 					DeckCard,
 					SceneState->Definitions,
@@ -1002,47 +1106,6 @@ void StartCardGame(
 			}
 		}
 
-		// SECTION START: Shuffle deck
-		for(
-			int PlayerIndex = Player_One;
-			PlayerIndex < Player_Count;
-			PlayerIndex++
-		)
-		{
-			deck* Deck = &SceneState->Decks[PlayerIndex];
-
-			Deck->InDeckCount = 0;
-			uint32_t OutOfDeckCount = Deck->CardCount - Deck->InDeckCount;
-			while(OutOfDeckCount > 0)
-			{
-				int32_t ShuffleIndex = rand() % OutOfDeckCount;
-				int32_t CardToShuffleHandle = -1;
-				for(
-					int32_t CardIndex = 0;
-					CardIndex < ((int32_t) Deck->CardCount);
-					CardIndex++
-				)
-				{
-					deck_card* DeckCard = Deck->Cards + CardIndex;
-					if(!DeckCard->InDeck)
-					{
-						ShuffleIndex--;
-					}
-
-					if(ShuffleIndex < 0)
-					{
-						CardToShuffleHandle = CardIndex;
-						break;
-					}
-				}
-				ASSERT(CardToShuffleHandle != -1);
-				Deck->InDeck[Deck->InDeckCount] = CardToShuffleHandle;
-				Deck->InDeckCount++;
-				OutOfDeckCount = Deck->CardCount - Deck->InDeckCount;
-			}
-		}
-		// SECTION STOP: Shuffle deck
-
 		if(!SceneArgs->SeedSet)
 		{
 			// TODO: this may not be a great way to seed. might be exploitable?
@@ -1050,6 +1113,7 @@ void StartCardGame(
 		}
 		uint32_t Seed = SceneState->Seed;
 		srand(Seed);
+
 		if(SceneState->NetworkGame && SceneState->IsLeader)
 		{
 			memory_arena* FrameArena = &GameState->FrameArena;
@@ -1072,11 +1136,57 @@ void StartCardGame(
 			);
 		}
 
+		// NOTE: initialize discard sets
+		card_data_set* DiscardSet = SceneState->DiscardSets + Player_One;
+		*DiscardSet = {};
+		DiscardSet->Type = CardDataSet_Discard;
+		DiscardSet = SceneState->DiscardSets + Player_Two;
+		*DiscardSet = {};
+		DiscardSet->Type = CardDataSet_Discard;
+
 		if(
 			!SceneState->NetworkGame || 
 			(SceneState->NetworkGame && SceneState->IsLeader)
 		)
 		{
+			// NOTE: initialize draw sets
+			for(
+				uint32_t PlayerIndex = Player_One;
+				PlayerIndex < Player_Count;
+				PlayerIndex++
+			)
+			{
+				deck* Deck = SceneState->Decks + PlayerIndex;
+				card_data_set* DrawSet = SceneState->DrawSets + PlayerIndex;
+				*DrawSet = {};
+				DrawSet->Type = CardDataSet_Draw;
+				for(
+					uint32_t CardIndex = 0;
+					CardIndex < Deck->CardCount;
+					CardIndex++
+				)
+				{
+					card_definition* CardDefinition = Deck->Cards[CardIndex];
+					card_data* CardData = DrawSet->Cards + CardIndex;
+					
+					CardData->CardId = SceneState->NextCardId++;
+					CardData->Definition = CardDefinition;
+					
+					CardData->Owner = (player_id) PlayerIndex;
+					CardData->TapsAvailable = CardDefinition->TapsAvailable;
+					CardData->SelfPlayDelta = CardDefinition->SelfPlayDelta;
+					CardData->OppPlayDelta = CardDefinition->OppPlayDelta;
+					CardData->Attack = CardDefinition->Attack;
+					CardData->Health = CardDefinition->Health;
+					CardData->TableauTags = CardDefinition->TableauTags;
+					CardData->StackTags = CardDefinition->StackTags;
+
+					DrawSet->CardCount++;
+				}
+			}
+			ShuffleDrawSet(SceneState, Player_One);
+			ShuffleDrawSet(SceneState, Player_Two);
+
 			DrawFullHand(SceneState, Player_One);
 			DrawFullHand(SceneState, Player_Two);
 		}
@@ -1598,60 +1708,62 @@ void SendGameState(
 			);
 		}
 
-		for(uint32_t Owner = Player_One; Owner < Player_Count; Owner++)
-		{
-			deck* Deck = SceneState->Decks + Owner;
-			deck_update_packet* DeckUpdatePacket = PushStruct(
-				FrameArena, deck_update_packet
-			);
+		// TODO: fix me!
+		// for(uint32_t Owner = Player_One; Owner < Player_Count; Owner++)
+		// {
+		// 	// TODO: update draw and discard pile updates
+		// 	deck* Deck = SceneState->Decks + Owner;
+		// 	deck_update_packet* DeckUpdatePacket = PushStruct(
+		// 		FrameArena, deck_update_packet
+		// 	);
 			
-			packet_header* DeckUpdateHeader = &DeckUpdatePacket->Header;
-			deck_update_payload* DeckUpdatePayload = (
-				&DeckUpdatePacket->Payload
-			);
+		// 	packet_header* DeckUpdateHeader = &DeckUpdatePacket->Header;
+		// 	deck_update_payload* DeckUpdatePayload = (
+		// 		&DeckUpdatePacket->Payload
+		// 	);
 
-			uint32_t* InDeckHandles = PushArray(
-				FrameArena, Deck->InDeckCount, uint32_t
-			);
-			DeckUpdatePayload->Owner = (player_id) Owner;
-			DeckUpdatePayload->InDeckCount = Deck->InDeckCount;
-			DeckUpdatePayload->Offset = sizeof(deck_update_payload);
-			memcpy(
-				InDeckHandles,
-				Deck->InDeck,
-				sizeof(uint32_t) * Deck->InDeckCount
-			);
+		// 	uint32_t* InDeckHandles = PushArray(
+		// 		FrameArena, Deck->InDeckCount, uint32_t
+		// 	);
+		// 	DeckUpdatePayload->Owner = (player_id) Owner;
+		// 	DeckUpdatePayload->InDeckCount = Deck->InDeckCount;
+		// 	DeckUpdatePayload->Offset = sizeof(deck_update_payload);
+		// 	memcpy(
+		// 		InDeckHandles,
+		// 		Deck->InDeck,
+		// 		sizeof(uint32_t) * Deck->InDeckCount
+		// 	);
 
-			DeckUpdateHeader->DataSize = (
-				sizeof(deck_update_packet) +
-				Deck->InDeckCount * sizeof(uint32_t)
-			);
-			InitPacketHeader(
-				GameState,
-				DeckUpdateHeader,
-				Packet_DeckUpdate,
-				(uint8_t*) DeckUpdatePayload
-			);
+		// 	DeckUpdateHeader->DataSize = (
+		// 		sizeof(deck_update_packet) +
+		// 		Deck->InDeckCount * sizeof(uint32_t)
+		// 	);
+		// 	InitPacketHeader(
+		// 		GameState,
+		// 		DeckUpdateHeader,
+		// 		Packet_DeckUpdate,
+		// 		(uint8_t*) DeckUpdatePayload
+		// 	);
 
-			if(SwitchingLeader)
-			{
-				SocketSendErrorCheck(
-					GameState,
-					&SceneState->ConnectSocket,
-					&SceneState->ListenSocket,
-					&DeckUpdatePacket->Header
-				);
-			}
-			else
-			{
-				ThrottledSocketSendErrorCheck(
-					GameState,
-					&SceneState->ConnectSocket,
-					&SceneState->ListenSocket,
-					&DeckUpdatePacket->Header
-				);
-			}
-		}
+		// 	if(SwitchingLeader)
+		// 	{
+		// 		SocketSendErrorCheck(
+		// 			GameState,
+		// 			&SceneState->ConnectSocket,
+		// 			&SceneState->ListenSocket,
+		// 			&DeckUpdatePacket->Header
+		// 		);
+		// 	}
+		// 	else
+		// 	{
+		// 		ThrottledSocketSendErrorCheck(
+		// 			GameState,
+		// 			&SceneState->ConnectSocket,
+		// 			&SceneState->ListenSocket,
+		// 			&DeckUpdatePacket->Header
+		// 		);
+		// 	}
+		// }
 	}
 
 	for(
@@ -1949,6 +2061,9 @@ void CardGameLogic(
 
 		SceneState->NextTurnTimer[NextTurnPlayer] = DEFAULT_NEXT_TURN_TIMER;
 
+		DiscardFullHand(GameState, SceneState, SceneState->CurrentTurn);
+		DrawFullHand(SceneState, SceneState->CurrentTurn);
+
 		SwitchTurns(GameState, SceneState);
 		// NOTE: reset values to turn start values here (when appropriate)
 		for(
@@ -2007,8 +2122,6 @@ void CardGameLogic(
 				}
 			}
 		}
-
-		DrawCard(GameState, SceneState, SceneState->CurrentTurn);
 	}
 	// SECTION STOP: Turn timer update
 	// SECTION START: Card update
@@ -2343,22 +2456,23 @@ void UpdateAndRenderCardGame(
 					}
 					case(Packet_DeckUpdate):
 					{
-						deck_update_payload* DeckUpdatePayload = (
-							(deck_update_payload*) Payload
-						);
-						player_id Owner = GetOpponent(
-							DeckUpdatePayload->Owner
-						);
-						deck* Deck = SceneState->Decks + Owner;
-						Deck->InDeckCount = DeckUpdatePayload->InDeckCount;
-						memcpy(
-							Deck->InDeck,
-							(
-								(uint8_t*) DeckUpdatePayload +
-								DeckUpdatePayload->Offset
-							),
-							sizeof(uint32_t) * Deck->InDeckCount
-						);
+						// TODO: fix me!
+						// deck_update_payload* DeckUpdatePayload = (
+						// 	(deck_update_payload*) Payload
+						// );
+						// player_id Owner = GetOpponent(
+						// 	DeckUpdatePayload->Owner
+						// );
+						// deck* Deck = SceneState->Decks + Owner;
+						// Deck->InDeckCount = DeckUpdatePayload->InDeckCount;
+						// memcpy(
+						// 	Deck->InDeck,
+						// 	(
+						// 		(uint8_t*) DeckUpdatePayload +
+						// 		DeckUpdatePayload->Offset
+						// 	),
+						// 	sizeof(uint32_t) * Deck->InDeckCount
+						// );
 						break;
 					}
 					case(Packet_RandSeed):

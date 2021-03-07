@@ -11,7 +11,7 @@
 #include "apocalypse_packet_header.h"
 
 #define RESOURCE_TEXT_HEIGHT 15.0f
-#define RESOURCE_LEFT_PADDING 100.0f
+#define RESOURCE_LEFT_PADDING 150.0f
 
 #define MAX_RESOURCE_STRING_SIZE 40
 
@@ -1011,8 +1011,9 @@ void StartCardGameDataSetup(
 	// NOTE: the padding here is based on the height of the resource text info
 	// CONT: this is all kinda hard-coded until we have a good scheme for UI
 	// CONT: and also resolution scaling
+	// TODO: handle ui scaling here
 	float Padding = 95.0f;
-	vector2 PlayerLifeRectDim = Vector2(90.0f, 30.0f);
+	vector2 PlayerLifeRectDim = Vector2(145.0f, 30.0f);
 	SceneState->PlayerLifeRects[Player_One] = MakeRectangle(
 		Vector2(
 			ScreenDimInWorld.X - RESOURCE_LEFT_PADDING,
@@ -1024,6 +1025,37 @@ void StartCardGameDataSetup(
 		Vector2(
 			ScreenDimInWorld.X - RESOURCE_LEFT_PADDING,
 			(ScreenDimInWorld.Y / 2.0f) + Padding + RESOURCE_TEXT_HEIGHT + 2.0f
+		),
+		PlayerLifeRectDim
+	);
+
+	float YPadding = 10.0f;
+	SceneState->PlayerDrawRects[Player_One] = MakeRectangle(
+		(
+			GetBottomLeft(SceneState->PlayerLifeRects[Player_One]) -
+			Vector2(0.0f, PlayerLifeRectDim.Y + YPadding)
+		),
+		PlayerLifeRectDim
+	);
+	SceneState->PlayerDrawRects[Player_Two] = MakeRectangle(
+		(
+			GetTopLeft(SceneState->PlayerLifeRects[Player_Two]) +
+			Vector2(0.0f, YPadding)
+		),
+		PlayerLifeRectDim
+	);
+
+	SceneState->PlayerDiscardRects[Player_One] = MakeRectangle(
+		(
+			GetBottomLeft(SceneState->PlayerDrawRects[Player_One]) -
+			Vector2(0.0f, PlayerLifeRectDim.Y + YPadding)
+		),
+		PlayerLifeRectDim
+	);
+	SceneState->PlayerDiscardRects[Player_Two] = MakeRectangle(
+		(
+			GetTopLeft(SceneState->PlayerDrawRects[Player_Two]) +
+			Vector2(0.0f, YPadding)
 		),
 		PlayerLifeRectDim
 	);
@@ -2761,20 +2793,18 @@ void UpdateAndRenderCardGame(
 
 	// SECTION START: Push player life totals
 	{
-		#define MAX_PLAYER_LIFE_STRING 16
 		char* PlayerLifeString = PushArray(
-			FrameArena, MAX_PLAYER_LIFE_STRING, char
+			FrameArena, MAX_RESOURCE_STRING_SIZE, char
 		);
 		snprintf(
 			PlayerLifeString,
 			MAX_RESOURCE_STRING_SIZE,
-			"P1:%d",
+			"P1 Life:%d",
 			(int) SceneState->PlayerLife[Player_One]
 		);
 
 		vector4 White = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 		vector4 Black = Vector4(0.0f, 0.0f, 0.0f, 1.0f);
-		float Padding = 95.0f;
 		rectangle* PlayerLifeRects = SceneState->PlayerLifeRects;
 		PushSizedBitmap(
 			RenderGroup,
@@ -2802,7 +2832,7 @@ void UpdateAndRenderCardGame(
 		snprintf(
 			PlayerLifeString,
 			MAX_RESOURCE_STRING_SIZE,
-			"P2:%d",
+			"P2 Life:%d",
 			(int) SceneState->PlayerLife[Player_Two]
 		);
 		PushSizedBitmap(
@@ -2829,6 +2859,140 @@ void UpdateAndRenderCardGame(
 		);
 	}
 	// SECTION STOP: Push player life totals
+
+	// SECTION START: Push player draw/discard totals
+	{
+		vector4 White = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+		vector4 Black = Vector4(0.0f, 0.0f, 0.0f, 1.0f);
+
+		char* PlayerString = PushArray(
+			FrameArena, MAX_RESOURCE_STRING_SIZE, char
+		);
+		snprintf(
+			PlayerString,
+			MAX_RESOURCE_STRING_SIZE,
+			"P1 Draw:%d",
+			(int) SceneState->DrawSets[Player_One].CardCount
+		);
+
+		rectangle* PlayerDrawRects = SceneState->PlayerDrawRects;
+		rectangle* CurrentRect = PlayerDrawRects + Player_One;
+		PushSizedBitmap(
+			RenderGroup,
+			Assets,
+			BitmapHandle_TestCard2,
+			GetCenter(*CurrentRect),
+			Vector2(CurrentRect->Dim.X, 0.0f),
+			Vector2(0.0f, CurrentRect->Dim.Y),
+			White,
+			1
+		);
+		PushText(
+			RenderGroup,
+			Assets,
+			FontHandle_TestFont,
+			PlayerString,
+			MAX_RESOURCE_STRING_SIZE,
+			CurrentRect->Dim.Y,
+			CurrentRect->Min,
+			Black,
+			FrameArena,
+			2
+		);
+
+		snprintf(
+			PlayerString,
+			MAX_RESOURCE_STRING_SIZE,
+			"P2 Draw:%d",
+			(int) SceneState->DrawSets[Player_Two].CardCount
+		);
+
+		CurrentRect = PlayerDrawRects + Player_Two;
+		PushSizedBitmap(
+			RenderGroup,
+			Assets,
+			BitmapHandle_TestCard2,
+			GetCenter(*CurrentRect),
+			Vector2(CurrentRect->Dim.X, 0.0f),
+			Vector2(0.0f, CurrentRect->Dim.Y),
+			White,
+			1
+		);
+		PushText(
+			RenderGroup,
+			Assets,
+			FontHandle_TestFont,
+			PlayerString,
+			MAX_RESOURCE_STRING_SIZE,
+			CurrentRect->Dim.Y,
+			CurrentRect->Min,
+			Black,
+			FrameArena,
+			2
+		);
+
+		snprintf(
+			PlayerString,
+			MAX_RESOURCE_STRING_SIZE,
+			"P1 Disc:%d",
+			(int) SceneState->DiscardSets[Player_One].CardCount
+		);
+		rectangle* PlayerDiscardRects = SceneState->PlayerDiscardRects;
+		CurrentRect = PlayerDiscardRects + Player_One;
+		PushSizedBitmap(
+			RenderGroup,
+			Assets,
+			BitmapHandle_TestCard2,
+			GetCenter(*CurrentRect),
+			Vector2(CurrentRect->Dim.X, 0.0f),
+			Vector2(0.0f, CurrentRect->Dim.Y),
+			White,
+			1
+		);
+		PushText(
+			RenderGroup,
+			Assets,
+			FontHandle_TestFont,
+			PlayerString,
+			MAX_RESOURCE_STRING_SIZE,
+			CurrentRect->Dim.Y,
+			CurrentRect->Min,
+			Black,
+			FrameArena,
+			2
+		);
+
+		snprintf(
+			PlayerString,
+			MAX_RESOURCE_STRING_SIZE,
+			"P2 Disc:%d",
+			(int) SceneState->DiscardSets[Player_Two].CardCount
+		);
+		CurrentRect = PlayerDiscardRects + Player_Two;
+		PushSizedBitmap(
+			RenderGroup,
+			Assets,
+			BitmapHandle_TestCard2,
+			GetCenter(*CurrentRect),
+			Vector2(CurrentRect->Dim.X, 0.0f),
+			Vector2(0.0f, CurrentRect->Dim.Y),
+			White,
+			1
+		);
+		PushText(
+			RenderGroup,
+			Assets,
+			FontHandle_TestFont,
+			PlayerString,
+			MAX_RESOURCE_STRING_SIZE,
+			CurrentRect->Dim.Y,
+			CurrentRect->Min,
+			Black,
+			FrameArena,
+			2
+		);
+	}
+	// SECTION STOP: Push player draw/discard totals
 
 	PushCenteredAlert(&SceneState->Alert, GameState, ScreenDimInWorld);
 

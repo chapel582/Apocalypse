@@ -5,6 +5,7 @@
 #define MAX_CARDS_PER_DATA_SET 256
 #define DEFAULT_NEXT_TURN_TIMER 40.0f
 #define MISSED_UPDATES_BEFORE_DESTRUCTION 5 // NOTE: measured in frames
+
 #include "apocalypse_socket.h"
 #include "apocalypse_platform.h"
 #include "apocalypse_vector.h"
@@ -173,6 +174,9 @@ struct card_game_state
 	float PlayerLife[Player_Count];
 	rectangle PlayerLifeRects[Player_Count];
 	float NextTurnTimer[Player_Count];
+
+	rectangle PlayerDrawRects[Player_Count];
+	rectangle PlayerDiscardRects[Player_Count];
 
 	player_id StackTurn;
 	bool StackBuilding;

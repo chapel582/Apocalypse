@@ -404,7 +404,7 @@ void RemoveCardsFromDataSet(
 	card_data_set* DataSet, uint32_t StartIndex, uint32_t RemoveCount
 )
 {
-	ASSERT(RemoveCount < DataSet->CardCount);
+	ASSERT(RemoveCount <= DataSet->CardCount);
 	memcpy(
 		DataSet->Cards + StartIndex,
 		DataSet->Cards + StartIndex + RemoveCount,

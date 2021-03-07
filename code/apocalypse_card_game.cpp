@@ -410,7 +410,7 @@ void RemoveCardsFromDataSet(
 		DataSet->Cards + StartIndex + RemoveCount,
 		RemoveCount * sizeof(card_data)
 	);
-	DataSet->CardCount--;
+	DataSet->CardCount -= RemoveCount;
 }
 
 void ShuffleDrawSet(

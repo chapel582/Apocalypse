@@ -52,7 +52,6 @@ struct card
 
 	rectangle Rectangle;
 	card_set_type SetType;
-	float TimeLeft; // TODO: is this anything?
 	vector4 Color;
 	// TODO: we're getting several bools here...time to move to flags?
 	bool Active;
@@ -197,7 +196,6 @@ struct card_update_payload
 	player_id Owner;
 	card_set_type SetType;
 	
-	float TimeLeft; // TODO: does this do anything?
 	int32_t TapsAvailable;
 	int32_t TimesTapped;
 	int16_t SelfPlayDelta;

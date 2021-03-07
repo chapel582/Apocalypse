@@ -307,7 +307,6 @@ card* GetInactiveCard(card_game_state* SceneState, int32_t CardId = -1)
 	*Card = {};
 	Card->Rectangle.Dim.X = SceneState->CardWidth;
 	Card->Rectangle.Dim.Y = SceneState->CardHeight;
-	Card->TimeLeft = 10.0f;
 	Card->Active = true;
 	Card->Visible = true;
 	vector4* Color = &Card->Color;
@@ -1676,7 +1675,6 @@ void SendGameState(
 		Payload->Owner = Card->Owner;
 		Payload->SetType = Card->SetType;
 
-		Payload->TimeLeft = Card->TimeLeft;
 		Payload->TapsAvailable = Card->TapsAvailable;
 		Payload->TimesTapped = Card->TimesTapped;
 		Payload->Attack = Card->Attack;
@@ -2022,8 +2020,6 @@ void CardGameLogic(
 		{
 			if(Card->Active)
 			{
-				Card->TimeLeft -= DtForFrame;
-
 				tableau_effect_tags* TableauTags = &Card->TableauTags;
 				if(HasTag(TableauTags, TableauEffect_SelfWeaken))
 				{
@@ -2304,7 +2300,6 @@ void UpdateAndRenderCardGame(
 							);
 						}
 
-						CardToChange->TimeLeft = CardUpdate->TimeLeft;
 						CardToChange->TapsAvailable = CardUpdate->TapsAvailable;
 						CardToChange->TimesTapped = CardUpdate->TimesTapped;
 						CardToChange->Attack = CardUpdate->Attack;

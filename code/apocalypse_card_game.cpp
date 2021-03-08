@@ -3045,6 +3045,75 @@ void UpdateAndRenderCardGame(
 	}
 	// SECTION STOP: Push player draw/discard totals
 
+	// SECTION START: push cards in card data set
+	if(SceneState->ViewingCardDataSet != NULL)
+	{
+		vector4 White = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+
+		RenderGroup->ColorMultiply = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+
+		card_data_set* DataSet = SceneState->ViewingCardDataSet;
+		uint32_t CardsPerRow = 10;
+
+		float Width = SceneState->CardWidth;
+		float ScreenWidthInWorld = ScreenDimInWorld.X;
+		float SpaceSize = (
+			(ScreenWidthInWorld - (CardsPerRow * Width)) / (CardsPerRow + 1)
+		);
+		float DistanceBetweenCardPos = SpaceSize + Width;
+
+		vector2 Dim = Vector2(SceneState->CardWidth, SceneState->CardHeight);
+		vector2 RowStart = Vector2(SpaceSize, 1.1f * Dim.Y);
+		vector2 NextCol = Vector2(DistanceBetweenCardPos, 0.0f);
+		vector2 NextRow = Vector2(0.0f, 1.1f * Dim.Y);
+		uint32_t Rows = (DataSet->CardCount / CardsPerRow) + 1;
+		for(uint32_t Row = 0; Row < Rows; Row++)
+		{
+			vector2 CurrentMin = RowStart;
+			for(uint32_t Col = 0; Col < CardsPerRow; Col++)
+			{
+				uint32_t CardIndex = Row * CardsPerRow + Col;
+				if(CardIndex >= DataSet->CardCount)
+				{
+					break;
+				}
+				card_data* CardData = DataSet->Cards + CardIndex;
+				card_definition* Definition = CardData->Definition;
+
+				rectangle Rectangle = MakeRectangle(CurrentMin, Dim);
+
+				vector2 Center = GetCenter(Rectangle);
+				PushSizedBitmap(
+					RenderGroup,
+					Assets,
+					BitmapHandle_TestCard2,
+					Center,
+					Vector2(Rectangle.Dim.X, 0.0f),
+					Vector2(0.0f, Rectangle.Dim.Y),
+					White,
+					1
+				);
+				PushTextCentered(
+					RenderGroup,
+					Assets,
+					FontHandle_TestFont,
+					Definition->Name,
+					CARD_NAME_SIZE,
+					0.2f * Rectangle.Dim.Y,
+					Center,
+					Vector4(0, 0, 0, 1),
+					FrameArena,
+					2
+				);
+
+				CurrentMin += NextCol;
+			}
+
+			RowStart += NextRow;
+		}
+	}
+	// SECTION STOP: push cards in card data set
+
 	PushCenteredAlert(&SceneState->Alert, GameState, ScreenDimInWorld);
 
 	if(CanScroll(&SceneState->StackScrollBar))

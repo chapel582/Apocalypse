@@ -2715,7 +2715,7 @@ void UpdateAndRenderCardGame(
 	PushClear(RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
 	if(SceneState->ViewingCardDataSet != NULL)
 	{
-		RenderGroup->ColorMultiply = Vector4(0.65f, 0.65f, 0.65f, 1.0f);
+		RenderGroup->ColorMultiply = Vector4(0.5f, 0.5f, 0.5f, 0.5f);
 	}
 	else
 	{
@@ -3063,7 +3063,9 @@ void UpdateAndRenderCardGame(
 		float DistanceBetweenCardPos = SpaceSize + Width;
 
 		vector2 Dim = Vector2(SceneState->CardWidth, SceneState->CardHeight);
-		vector2 RowStart = Vector2(SpaceSize, 1.1f * Dim.Y);
+		vector2 RowStart = Vector2(
+			SpaceSize, ScreenDimInWorld.Y - 1.1f * Dim.Y
+		);
 		vector2 NextCol = Vector2(DistanceBetweenCardPos, 0.0f);
 		vector2 NextRow = Vector2(0.0f, 1.1f * Dim.Y);
 		uint32_t Rows = (DataSet->CardCount / CardsPerRow) + 1;
@@ -3082,6 +3084,7 @@ void UpdateAndRenderCardGame(
 
 				rectangle Rectangle = MakeRectangle(CurrentMin, Dim);
 
+				// TODO: don't hardcode the layers
 				vector2 Center = GetCenter(Rectangle);
 				PushSizedBitmap(
 					RenderGroup,
@@ -3091,7 +3094,7 @@ void UpdateAndRenderCardGame(
 					Vector2(Rectangle.Dim.X, 0.0f),
 					Vector2(0.0f, Rectangle.Dim.Y),
 					White,
-					1
+					3
 				);
 				PushTextCentered(
 					RenderGroup,
@@ -3103,13 +3106,13 @@ void UpdateAndRenderCardGame(
 					Center,
 					Vector4(0, 0, 0, 1),
 					FrameArena,
-					2
+					4
 				);
 
 				CurrentMin += NextCol;
 			}
 
-			RowStart += NextRow;
+			RowStart -= NextRow;
 		}
 	}
 	// SECTION STOP: push cards in card data set

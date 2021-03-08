@@ -1030,14 +1030,15 @@ void StartCardGameDataSetup(
 	);
 
 	float YPadding = 10.0f;
-	SceneState->PlayerDrawRects[Player_One] = MakeRectangle(
+	rectangle* DrawRects = SceneState->DrawRects;
+	DrawRects[Player_One] = MakeRectangle(
 		(
 			GetBottomLeft(SceneState->PlayerLifeRects[Player_One]) -
 			Vector2(0.0f, PlayerLifeRectDim.Y + YPadding)
 		),
 		PlayerLifeRectDim
 	);
-	SceneState->PlayerDrawRects[Player_Two] = MakeRectangle(
+	DrawRects[Player_Two] = MakeRectangle(
 		(
 			GetTopLeft(SceneState->PlayerLifeRects[Player_Two]) +
 			Vector2(0.0f, YPadding)
@@ -1045,18 +1046,16 @@ void StartCardGameDataSetup(
 		PlayerLifeRectDim
 	);
 
-	SceneState->PlayerDiscardRects[Player_One] = MakeRectangle(
+	rectangle* DiscardRects = SceneState->DiscardRects;
+	DiscardRects[Player_One] = MakeRectangle(
 		(
-			GetBottomLeft(SceneState->PlayerDrawRects[Player_One]) -
+			GetBottomLeft(DrawRects[Player_One]) -
 			Vector2(0.0f, PlayerLifeRectDim.Y + YPadding)
 		),
 		PlayerLifeRectDim
 	);
-	SceneState->PlayerDiscardRects[Player_Two] = MakeRectangle(
-		(
-			GetTopLeft(SceneState->PlayerDrawRects[Player_Two]) +
-			Vector2(0.0f, YPadding)
-		),
+	DiscardRects[Player_Two] = MakeRectangle(
+		GetTopLeft(DrawRects[Player_Two]) + Vector2(0.0f, YPadding),
 		PlayerLifeRectDim
 	);
 
@@ -1514,6 +1513,22 @@ inline void StandardPrimaryUpHandler(
 				}
 			}
 		}
+		else if(
+			PointInRectangle(
+				MouseEventWorldPos, SceneState->DrawRects[Player]
+			)
+		)
+		{
+			SceneState->ViewingCardDataSet = SceneState->DrawSets + Player;
+		}
+		else if(
+			PointInRectangle(
+				MouseEventWorldPos, SceneState->DiscardRects[Player]
+			)
+		)
+		{
+			SceneState->ViewingCardDataSet = SceneState->DiscardSets + Player;
+		}
 	}
 }
 
@@ -1660,6 +1675,28 @@ bool StackBuildingKeyboardHandler(
 	}
 
 	return EndTurn;
+}
+
+void CardDataSetViewKeyboardHandler(
+	game_state* GameState,
+	card_game_state* SceneState,
+	game_keyboard_event* KeyboardEvent
+)
+{
+	if(
+		!KeyboardEvent->IsDown && 
+		(KeyboardEvent->IsDown != KeyboardEvent->WasDown)
+	)
+	{
+		switch(KeyboardEvent->Code)
+		{			
+			case(0x1B): // NOTE: Escape V-code
+			{
+				SceneState->ViewingCardDataSet = NULL;
+				break;
+			}
+		}
+	}
 }
 
 card* GetCardWithId(card_game_state* SceneState, uint32_t CardId)
@@ -2007,7 +2044,13 @@ void CardGameLogic(
 			}
 
 			bool TempEndTurn = false;
-			if(!SceneState->StackBuilding)
+			if(SceneState->ViewingCardDataSet != NULL)
+			{
+				CardDataSetViewKeyboardHandler(
+					GameState, SceneState, KeyboardEvent
+				);
+			}
+			else if(!SceneState->StackBuilding)
 			{
 				TempEndTurn = StandardKeyboardHandler(
 					GameState, SceneState, KeyboardEvent
@@ -2670,6 +2713,14 @@ void UpdateAndRenderCardGame(
 	// SECTION START: Push render entries
 	render_group* RenderGroup = &GameState->RenderGroup;
 	PushClear(RenderGroup, Vector4(0.25f, 0.25f, 0.25f, 1.0f));
+	if(SceneState->ViewingCardDataSet != NULL)
+	{
+		RenderGroup->ColorMultiply = Vector4(0.65f, 0.65f, 0.65f, 1.0f);
+	}
+	else
+	{
+		RenderGroup->ColorMultiply = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	}
 
 	PushNextTurnTimer(SceneState, Player_One, RenderGroup, Assets, FrameArena);
 	PushNextTurnTimer(SceneState, Player_Two, RenderGroup, Assets, FrameArena);
@@ -2875,8 +2926,8 @@ void UpdateAndRenderCardGame(
 			(int) SceneState->DrawSets[Player_One].CardCount
 		);
 
-		rectangle* PlayerDrawRects = SceneState->PlayerDrawRects;
-		rectangle* CurrentRect = PlayerDrawRects + Player_One;
+		rectangle* DrawRects = SceneState->DrawRects;
+		rectangle* CurrentRect = DrawRects + Player_One;
 		PushSizedBitmap(
 			RenderGroup,
 			Assets,
@@ -2907,7 +2958,7 @@ void UpdateAndRenderCardGame(
 			(int) SceneState->DrawSets[Player_Two].CardCount
 		);
 
-		CurrentRect = PlayerDrawRects + Player_Two;
+		CurrentRect = DrawRects + Player_Two;
 		PushSizedBitmap(
 			RenderGroup,
 			Assets,
@@ -2937,8 +2988,8 @@ void UpdateAndRenderCardGame(
 			"P1 Disc:%d",
 			(int) SceneState->DiscardSets[Player_One].CardCount
 		);
-		rectangle* PlayerDiscardRects = SceneState->PlayerDiscardRects;
-		CurrentRect = PlayerDiscardRects + Player_One;
+		rectangle* DiscardRects = SceneState->DiscardRects;
+		CurrentRect = DiscardRects + Player_One;
 		PushSizedBitmap(
 			RenderGroup,
 			Assets,
@@ -2968,7 +3019,7 @@ void UpdateAndRenderCardGame(
 			"P2 Disc:%d",
 			(int) SceneState->DiscardSets[Player_Two].CardCount
 		);
-		CurrentRect = PlayerDiscardRects + Player_Two;
+		CurrentRect = DiscardRects + Player_Two;
 		PushSizedBitmap(
 			RenderGroup,
 			Assets,

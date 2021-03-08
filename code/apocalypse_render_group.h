@@ -117,6 +117,8 @@ struct render_group
 
 	rectangle ClipRects[16]; // TODO: make larger
 	uint32_t NumClipRects;
+
+	vector4 ColorMultiply;
 };
 
 typedef enum 

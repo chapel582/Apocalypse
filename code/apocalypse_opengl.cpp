@@ -134,8 +134,9 @@ void RenderGroupToOutput(
 	// SECTION START: render to output
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_SCISSOR_TEST);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_BLEND);
-	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
 	glViewport(0, 0, WindowWidth, WindowHeight);
 

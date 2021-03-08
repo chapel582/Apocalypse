@@ -175,8 +175,8 @@ struct card_game_state
 	rectangle PlayerLifeRects[Player_Count];
 	float NextTurnTimer[Player_Count];
 
-	rectangle PlayerDrawRects[Player_Count];
-	rectangle PlayerDiscardRects[Player_Count];
+	rectangle DrawRects[Player_Count];
+	rectangle DiscardRects[Player_Count];
 
 	player_id StackTurn;
 	bool StackBuilding;
@@ -185,6 +185,8 @@ struct card_game_state
 	float StackYStart;
 	vector2 StackEntryInfoDim;
 	scroll_bar StackScrollBar;
+
+	card_data_set* ViewingCardDataSet;
 
 	// NOTE: server is assumed to be leader (has final say on game state)
 	bool IsLeader;

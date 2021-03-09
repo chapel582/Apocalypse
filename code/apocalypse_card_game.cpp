@@ -1588,6 +1588,34 @@ inline void StackBuildingPrimaryUpHandler(
 	}
 }
 
+inline void CardDataSetViewPrimaryUpHandler(
+	game_state* GameState,
+	card_game_state* SceneState,
+	vector2 MouseEventWorldPos
+)
+{
+	card_data_set* DataSet = SceneState->ViewingCardDataSet;
+	ASSERT(DataSet != NULL);
+
+	bool AnyClicked = false;
+	for(uint32_t CardIndex = 0; CardIndex < DataSet->CardCount; CardIndex++)
+	{
+		card_data* CardData = DataSet->Cards + CardIndex;
+		rectangle Rectangle = CardData->Rectangle;
+		if(PointInRectangle(MouseEventWorldPos, Rectangle))
+		{
+			DataSet->ShowInfoCard = CardData;
+			AnyClicked = true;
+			break;
+		}
+	}
+
+	if(!AnyClicked)
+	{
+		DataSet->ShowInfoCard = NULL;
+	}
+}
+
 bool StandardKeyboardHandler(
 	game_state* GameState,
 	card_game_state* SceneState,
@@ -1692,6 +1720,9 @@ void CardDataSetViewKeyboardHandler(
 		{			
 			case(0x1B): // NOTE: Escape V-code
 			{
+				card_data_set* DataSet = SceneState->ViewingCardDataSet;
+				DataSet->ShowInfoCard = NULL;
+
 				SceneState->ViewingCardDataSet = NULL;
 				break;
 			}
@@ -1964,12 +1995,13 @@ void CardGameLogic(
 			);
 			if(MouseEvent->Type == PrimaryUp)
 			{
-				// PlaySound(
-				// 	&GameState->PlayingSoundList,
-				// 	WavHandle_Bloop00,
-				// 	&GameState->TransientArena
-				// );
-				if(SceneState->StackBuilding)
+				if(SceneState->ViewingCardDataSet != NULL)
+				{
+					CardDataSetViewPrimaryUpHandler(
+						GameState, SceneState, MouseEventWorldPos
+					);
+				}
+				else if(SceneState->StackBuilding)
 				{
 					StackBuildingPrimaryUpHandler(
 						GameState, SceneState, MouseEventWorldPos
@@ -2615,6 +2647,47 @@ void UpdateAndRenderCardGame(
 	}
 	// SECTION STOP: Read leader state
 
+	// SECTION START: calculate data set rectangles
+	if(SceneState->ViewingCardDataSet != NULL)
+	{
+		card_data_set* DataSet = SceneState->ViewingCardDataSet;
+		uint32_t CardsPerRow = 10;
+
+		float Width = SceneState->CardWidth;
+		float ScreenWidthInWorld = ScreenDimInWorld.X;
+		float SpaceSize = (
+			(ScreenWidthInWorld - (CardsPerRow * Width)) / (CardsPerRow + 1)
+		);
+		float DistanceBetweenCardPos = SpaceSize + Width;
+
+		vector2 Dim = Vector2(SceneState->CardWidth, SceneState->CardHeight);
+		vector2 RowStart = Vector2(
+			SpaceSize, ScreenDimInWorld.Y - 1.1f * Dim.Y
+		);
+		vector2 NextCol = Vector2(DistanceBetweenCardPos, 0.0f);
+		vector2 NextRow = Vector2(0.0f, 1.1f * Dim.Y);
+		uint32_t Rows = (DataSet->CardCount / CardsPerRow) + 1;
+		for(uint32_t Row = 0; Row < Rows; Row++)
+		{
+			vector2 CurrentMin = RowStart;
+			for(uint32_t Col = 0; Col < CardsPerRow; Col++)
+			{
+				uint32_t CardIndex = Row * CardsPerRow + Col;
+				if(CardIndex >= DataSet->CardCount)
+				{
+					break;
+				}
+				card_data* CardData = DataSet->Cards + CardIndex;
+				CardData->Rectangle = MakeRectangle(CurrentMin, Dim);
+
+				CurrentMin += NextCol;
+			}
+
+			RowStart -= NextRow;
+		}
+	}
+	// SECTION STOP: calculate data set rectangles
+
 	if(
 		(SceneState->SyncState == SyncState_Complete) ||
 		!SceneState->NetworkGame
@@ -3048,71 +3121,66 @@ void UpdateAndRenderCardGame(
 	// SECTION START: push cards in card data set
 	if(SceneState->ViewingCardDataSet != NULL)
 	{
+		uint32_t CardDataLayer = 3;
+		uint32_t InfoLayer = CardDataLayer + 1;
 		vector4 White = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-
 		RenderGroup->ColorMultiply = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 
 		card_data_set* DataSet = SceneState->ViewingCardDataSet;
-		uint32_t CardsPerRow = 10;
-
-		float Width = SceneState->CardWidth;
-		float ScreenWidthInWorld = ScreenDimInWorld.X;
-		float SpaceSize = (
-			(ScreenWidthInWorld - (CardsPerRow * Width)) / (CardsPerRow + 1)
-		);
-		float DistanceBetweenCardPos = SpaceSize + Width;
-
-		vector2 Dim = Vector2(SceneState->CardWidth, SceneState->CardHeight);
-		vector2 RowStart = Vector2(
-			SpaceSize, ScreenDimInWorld.Y - 1.1f * Dim.Y
-		);
-		vector2 NextCol = Vector2(DistanceBetweenCardPos, 0.0f);
-		vector2 NextRow = Vector2(0.0f, 1.1f * Dim.Y);
-		uint32_t Rows = (DataSet->CardCount / CardsPerRow) + 1;
-		for(uint32_t Row = 0; Row < Rows; Row++)
+		for(uint32_t CardIndex = 0; CardIndex < DataSet->CardCount; CardIndex++)
 		{
-			vector2 CurrentMin = RowStart;
-			for(uint32_t Col = 0; Col < CardsPerRow; Col++)
-			{
-				uint32_t CardIndex = Row * CardsPerRow + Col;
-				if(CardIndex >= DataSet->CardCount)
-				{
-					break;
-				}
-				card_data* CardData = DataSet->Cards + CardIndex;
-				card_definition* Definition = CardData->Definition;
+			card_data* CardData = DataSet->Cards + CardIndex;
+			card_definition* Definition = CardData->Definition;
 
-				rectangle Rectangle = MakeRectangle(CurrentMin, Dim);
+			rectangle Rectangle = CardData->Rectangle;
 
-				// TODO: don't hardcode the layers
-				vector2 Center = GetCenter(Rectangle);
-				PushSizedBitmap(
-					RenderGroup,
-					Assets,
-					BitmapHandle_TestCard2,
-					Center,
-					Vector2(Rectangle.Dim.X, 0.0f),
-					Vector2(0.0f, Rectangle.Dim.Y),
-					White,
-					3
-				);
-				PushTextCentered(
-					RenderGroup,
-					Assets,
-					FontHandle_TestFont,
-					Definition->Name,
-					CARD_NAME_SIZE,
-					0.2f * Rectangle.Dim.Y,
-					Center,
-					Vector4(0, 0, 0, 1),
-					FrameArena,
-					4
-				);
-
-				CurrentMin += NextCol;
-			}
-
-			RowStart -= NextRow;
+			// TODO: don't hardcode the layers
+			vector2 Center = GetCenter(Rectangle);
+			PushSizedBitmap(
+				RenderGroup,
+				Assets,
+				BitmapHandle_TestCard2,
+				Center,
+				Vector2(Rectangle.Dim.X, 0.0f),
+				Vector2(0.0f, Rectangle.Dim.Y),
+				White,
+				CardDataLayer
+			);
+			PushTextCentered(
+				RenderGroup,
+				Assets,
+				FontHandle_TestFont,
+				Definition->Name,
+				CARD_NAME_SIZE,
+				0.2f * Rectangle.Dim.Y,
+				Center,
+				Vector4(0, 0, 0, 1),
+				FrameArena,
+				CardDataLayer
+			);
+		}
+		if(DataSet->ShowInfoCard)
+		{
+			card_data* CardData = DataSet->ShowInfoCard;
+			card_definition* Definition = CardData->Definition;
+			
+			PushInfoCard(
+				RenderGroup,
+				Assets,
+				SceneState->InfoCardCenter,
+				SceneState->InfoCardXBound,
+				SceneState->InfoCardYBound,
+				White,
+				FrameArena,
+				Definition->Name,
+				CardData->Attack,
+				CardData->Health,
+				CardData->SelfPlayDelta,
+				CardData->OppPlayDelta,
+				Definition->Name,
+				CardData->TapsAvailable,
+				InfoLayer
+			);
 		}
 	}
 	// SECTION STOP: push cards in card data set

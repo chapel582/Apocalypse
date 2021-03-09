@@ -100,6 +100,8 @@ struct card_data
 	int16_t Health;
 	tableau_effect_tags TableauTags;
 	stack_effect_tags StackTags;
+
+	rectangle Rectangle;
 };
 
 struct card_data_set
@@ -107,6 +109,7 @@ struct card_data_set
 	card_data Cards[MAX_CARDS_PER_DATA_SET];
 	uint32_t CardCount;
 	card_data_set_type Type;
+	card_data* ShowInfoCard;
 };
 
 struct card_stack_entry

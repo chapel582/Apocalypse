@@ -90,7 +90,7 @@ screen_pos_dim GetScreenPosDim(
 	return Result;
 }
 
-inline void PushBitmap(
+void PushBitmap(
 	render_group* Group,
 	loaded_bitmap* Bitmap,
 	basis* Basis,
@@ -112,7 +112,7 @@ inline void PushBitmap(
 	Entry->Header.Layer = Layer;
 	Entry->Header.ClipRectIndex = ClipRectIndex;
 	Entry->Bitmap = Bitmap;
-	Entry->Color = Color;
+	Entry->Color = Hadamard(Color, Group->ColorMultiply);
 
 	screen_pos_dim ScreenPosDim = GetScreenPosDim(
 		Basis, Group->WorldToCamera, Group->CameraToScreen
@@ -126,7 +126,7 @@ inline void PushBitmap(
 	);
 }
 
-inline void PushCenteredBitmap(
+void PushCenteredBitmap(
 	render_group* Group,
 	loaded_bitmap* Bitmap,
 	vector2 Center,
@@ -162,7 +162,7 @@ inline void PushCenteredBitmap(
 	PushBitmap(Group, Bitmap, &Basis, Color, Layer, ClipRectIndex);
 }
 
-inline void PushCenteredBitmap(
+void PushCenteredBitmap(
 	render_group* Group,
 	assets* Assets,
 	bitmap_handle BitmapHandle,
@@ -183,7 +183,7 @@ inline void PushCenteredBitmap(
 	}
 }
 
-inline void PushSizedBitmap(
+void PushSizedBitmap(
 	render_group* Group,
 	loaded_bitmap* Bitmap,
 	vector2 Center,
@@ -236,7 +236,7 @@ inline void PushSizedBitmap(
 	);
 }
 
-inline void PushSizedBitmap(
+void PushSizedBitmap(
 	render_group* Group,
 	assets* Assets,
 	bitmap_handle BitmapHandle,
@@ -264,7 +264,7 @@ inline void PushSizedBitmap(
 	}
 }
 
-inline void PushSizedBitmap(
+void PushSizedBitmap(
 	render_group* Group,
 	assets* Assets,
 	bitmap_handle BitmapHandle,
@@ -320,7 +320,7 @@ void PushParticles(
 	}
 }
 
-inline void PushGlyph(
+void PushGlyph(
 	render_group* Group,
 	assets* Assets,
 	font_handle FontHandle,
@@ -350,7 +350,7 @@ inline void PushGlyph(
 	}
 }
 
-inline void PushOffsetGlyph(
+void PushOffsetGlyph(
 	render_group* Group,
 	assets* Assets,
 	font_handle FontHandle,
@@ -739,7 +739,7 @@ end:
 	return Result;
 }
 
-inline void PushRect(
+void PushRect(
 	render_group* Group, rectangle Rectangle, vector4 Color, uint32_t Layer = 1
 )
 {
@@ -752,7 +752,7 @@ inline void PushRect(
 	Entry->Header = {};
 	Entry->Header.Type = EntryType_Rectangle;
 	Entry->Header.Layer = Layer;
-	Entry->Color = Color;
+	Entry->Color = Hadamard(Color, Group->ColorMultiply);
 
 	basis Basis = MakeBasis(
 		GetBottomLeft(Rectangle), Vector2(1.0f, 0.0f), Vector2(0.0f, 1.0f)
@@ -766,14 +766,14 @@ inline void PushRect(
 	Entry->YAxis = ((float) Rectangle.Dim.Y) * ScreenPosDim.YAxis;
 }
 
-inline void PushClear(render_group* Group, vector4 Color, uint32_t Layer)
+void PushClear(render_group* Group, vector4 Color, uint32_t Layer)
 {
 	render_entry_clear* Entry = PushStruct(Group->Arena, render_entry_clear);
 	Group->NumEntries++;
 	Entry->Header = {};
 	Entry->Header.Type = EntryType_Clear;
 	Entry->Header.Layer = Layer;
-	Entry->Color = Color;
+	Entry->Color = Hadamard(Color, Group->ColorMultiply);
 }
 
 bool IsInRotatedQuad(
@@ -793,7 +793,7 @@ bool IsInRotatedQuad(
 	return (Edge0 < 0) && (Edge1 < 0) && (Edge2 < 0) && (Edge3 < 0);
 }
 
-inline vector4 Unpack4x8(uint32_t Packed)
+vector4 Unpack4x8(uint32_t Packed)
 {
 	return Vector4(
 		(float) ((Packed >> 16) & 0xFF),
@@ -803,7 +803,7 @@ inline vector4 Unpack4x8(uint32_t Packed)
 	);
 }
 
-inline vector4 Rgb255ToNormalColor(vector4 C)
+vector4 Rgb255ToNormalColor(vector4 C)
 {
 	vector4 Result;
 
@@ -815,7 +815,7 @@ inline vector4 Rgb255ToNormalColor(vector4 C)
 	return Result;
 }
 
-inline vector4 NormalColorToRgb255(vector4 C)
+vector4 NormalColorToRgb255(vector4 C)
 {
 	vector4 Result;
 
@@ -1113,7 +1113,7 @@ void DrawBitmap(
 	}
 }
 
-inline __m128 VectorizedUnpack4x8(uint32_t Packed)
+__m128 VectorizedUnpack4x8(uint32_t Packed)
 {
 	__m128 Result;
 	float* Element = (float*) &Result;
@@ -1129,7 +1129,7 @@ struct bilinear_sample
 	uint32_t A, B, C, D;
 };
 
-inline bilinear_sample BilinearSample(
+bilinear_sample BilinearSample(
 	loaded_bitmap* Texture, int32_t X, int32_t Y
 )
 {

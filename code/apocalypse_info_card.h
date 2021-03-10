@@ -20,7 +20,8 @@ void PushInfoCard(
 	int16_t SelfPlayDelta,
 	int16_t OppPlayDelta,
 	char* Description,
-	int32_t TapsRemaining
+	int32_t TapsRemaining,
+	uint32_t Layer = 1
 );
 void PushInfoCard(
 	render_group* RenderGroup,
@@ -31,7 +32,8 @@ void PushInfoCard(
 	vector4 Color,
 	memory_arena* FrameArena,
 	card_definition* Definition,
-	int32_t TapsRemaining
+	int32_t TapsRemaining,
+	uint32_t Layer = 1
 );
 
 #define APOCALYPSE_INFO_CARD_H

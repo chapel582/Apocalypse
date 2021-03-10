@@ -2,8 +2,10 @@
 
 #define DEFAULT_HAND_SIZE 5
 #define MAX_CARDS_PER_SET 64
+#define MAX_CARDS_PER_DATA_SET 256
 #define DEFAULT_NEXT_TURN_TIMER 40.0f
 #define MISSED_UPDATES_BEFORE_DESTRUCTION 5 // NOTE: measured in frames
+
 #include "apocalypse_socket.h"
 #include "apocalypse_platform.h"
 #include "apocalypse_vector.h"
@@ -29,22 +31,21 @@ typedef enum
 	CardSet_Count
 } card_set_type;
 
-struct deck_card
+typedef enum
 {
-	card_definition* Definition;
-	bool InDeck;
-};
+	CardDataSet_Draw,
+	CardDataSet_Discard,
+	CardDataSet_Lost,
+	CardDataSet_Count
+} card_data_set_type;
 
 struct deck
 {
-	deck_card Cards[MAX_CARDS_IN_DECK];
+	card_definition* Cards[MAX_CARDS_IN_DECK];
 	uint32_t CardCount;
-	// NOTE: these arrays are handles into the Cards Array
-	uint32_t InDeck[MAX_CARDS_IN_DECK];
-	uint32_t InDeckCount;
 };
 
-struct card
+struct card // TODO: maybe rename to active or visible card?
 {
 	uint64_t LastFrame; // NOTE: last frame that leader updated this card on
 	uint32_t CardId; // NOTE: distinct from definition ID
@@ -78,11 +79,36 @@ struct card
 struct card_set
 {
 	card* Cards[MAX_CARDS_PER_SET];
-	int CardCount;
+	uint32_t CardCount;
 	float ScreenWidth;
 	float CardWidth;
 	float YPos;
 	card_set_type Type;
+};
+
+struct card_data
+{
+	uint32_t CardId;
+	card_definition* Definition;
+	
+	player_id Owner;
+	int32_t TapsAvailable;
+	int16_t SelfPlayDelta;
+	int16_t OppPlayDelta;
+	int16_t Attack;
+	int16_t Health;
+	tableau_effect_tags TableauTags;
+	stack_effect_tags StackTags;
+
+	rectangle Rectangle;
+};
+
+struct card_data_set
+{
+	card_data Cards[MAX_CARDS_PER_DATA_SET];
+	uint32_t CardCount;
+	card_data_set_type Type;
+	card_data* ShowInfoCard;
 };
 
 struct card_stack_entry
@@ -134,6 +160,8 @@ struct card_game_state
 	card* SelectedCard;
 	uint32_t MaxCards;
 	deck* Decks;
+	card_data_set DrawSets[Player_Count];
+	card_data_set DiscardSets[Player_Count];
 	card_set* Hands;
 	card_set* Tableaus;
 	vector2 InfoCardCenter;
@@ -149,6 +177,9 @@ struct card_game_state
 	rectangle PlayerLifeRects[Player_Count];
 	float NextTurnTimer[Player_Count];
 
+	rectangle DrawRects[Player_Count];
+	rectangle DiscardRects[Player_Count];
+
 	player_id StackTurn;
 	bool StackBuilding;
 	card_stack_entry Stack[256];
@@ -156,6 +187,8 @@ struct card_game_state
 	float StackYStart;
 	vector2 StackEntryInfoDim;
 	scroll_bar StackScrollBar;
+
+	card_data_set* ViewingCardDataSet;
 
 	// NOTE: server is assumed to be leader (has final say on game state)
 	bool IsLeader;
@@ -242,16 +275,31 @@ struct state_update_packet
 	state_update_payload Payload;
 };
 
-struct deck_update_payload
+struct card_data_update
+{
+	uint32_t CardId;
+	uint32_t DefId;
+	
+	int32_t TapsAvailable;
+	int16_t SelfPlayDelta;
+	int16_t OppPlayDelta;
+	int16_t Attack;
+	int16_t Health;
+	tableau_effect_tags TableauTags;
+	stack_effect_tags StackTags;
+};
+
+struct card_data_set_update_payload
 {
 	player_id Owner;
-	uint32_t InDeckCount;
-	uint32_t Offset;
+	card_data_set_type Type;
+	uint32_t CardCount;
+	// NOTE: followed by CardCount card_data_set_update structures
 };
-struct deck_update_packet
+struct card_data_set_update_packet
 {
 	packet_header Header;
-	deck_update_payload Payload;
+	card_data_set_update_payload Payload;
 };
 #pragma pack(pop)
 

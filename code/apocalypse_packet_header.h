@@ -15,7 +15,7 @@ typedef enum
 	Packet_CardUpdate,
 	Packet_RemoveCard,
 	Packet_DeckData,
-	Packet_DeckUpdate,
+	Packet_CardDataSetUpdate,
 	Packet_RandSeed,
 	Packet_JoinGameType,
 	Packet_SyncDone

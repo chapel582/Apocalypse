@@ -213,6 +213,7 @@ void GameInitMemory(
 		RenderGroup->Arena = &GameState->RenderArena;
 		RenderGroup->WorldToCamera = &GameState->WorldToCamera;
 		RenderGroup->CameraToScreen = &GameState->CameraToScreen;
+		RenderGroup->ColorMultiply = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 		
 		uint32_t WindowWidth = 0;
 		uint32_t WindowHeight = 0;

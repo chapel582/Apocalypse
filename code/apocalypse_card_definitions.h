@@ -82,6 +82,7 @@ typedef enum
 	Card that lets you reshuffle your deck
 	Card that lets you view your top few cards
 	Card that lets you draw another card
+	Card that makes you shuffle and draw from the discard pile
 	*/
 } stack_effect;
 

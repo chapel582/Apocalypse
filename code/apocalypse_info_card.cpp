@@ -18,7 +18,8 @@ void PushInfoCard(
 	int16_t SelfPlayDelta,
 	int16_t OppPlayDelta,
 	char* Description,
-	int32_t TapsRemaining
+	int32_t TapsRemaining,
+	uint32_t Layer
 )
 {
 	PushSizedBitmap(
@@ -28,7 +29,8 @@ void PushInfoCard(
 		InfoCardCenter,
 		InfoCardXBound,
 		InfoCardYBound,
-		Color
+		Color,
+		Layer
 	);
 
 	uint32_t MaxCharacters = (
@@ -65,7 +67,8 @@ void PushInfoCard(
 		20.0f,
 		TopLeft,
 		Vector4(0.0f, 0.0f, 0.0f, 1.0f),
-		FrameArena
+		FrameArena,
+		Layer
 	);
 }
 
@@ -78,7 +81,8 @@ inline void PushInfoCard(
 	vector4 Color,
 	memory_arena* FrameArena,
 	card_definition* Definition,
-	int32_t TapsRemaining
+	int32_t TapsRemaining,
+	uint32_t Layer
 )
 {
 	PushInfoCard(
@@ -95,6 +99,7 @@ inline void PushInfoCard(
 		Definition->SelfPlayDelta,
 		Definition->OppPlayDelta,
 		Definition->Description,
-		TapsRemaining
+		TapsRemaining,
+		Layer
 	);
 }

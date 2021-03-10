@@ -277,16 +277,31 @@ struct state_update_packet
 	state_update_payload Payload;
 };
 
-struct deck_update_payload
+struct card_data_update
+{
+	uint32_t CardId;
+	uint32_t DefId;
+	
+	int32_t TapsAvailable;
+	int16_t SelfPlayDelta;
+	int16_t OppPlayDelta;
+	int16_t Attack;
+	int16_t Health;
+	tableau_effect_tags TableauTags;
+	stack_effect_tags StackTags;
+};
+
+struct card_data_set_update_payload
 {
 	player_id Owner;
-	uint32_t InDeckCount;
-	uint32_t Offset;
+	card_data_set_type Type;
+	uint32_t CardCount;
+	// NOTE: followed by CardCount card_data_set_update structures
 };
-struct deck_update_packet
+struct card_data_set_update_packet
 {
 	packet_header Header;
-	deck_update_payload Payload;
+	card_data_set_update_payload Payload;
 };
 #pragma pack(pop)
 

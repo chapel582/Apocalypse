@@ -1753,6 +1753,77 @@ card* GetCardWithId(card_game_state* SceneState, uint32_t CardId)
 	return Card;
 }
 
+void SendCardDataSetUpdates(
+	game_state* GameState,
+	card_game_state* SceneState,
+	memory_arena* FrameArena,
+	card_data_set* DataSet,
+	player_id Owner,
+	bool SwitchingLeader
+)
+{
+	card_data_set_update_packet* UpdatePacket = PushStruct(
+		FrameArena, card_data_set_update_packet
+	);
+	card_data_update* CardUpdates = PushArray(
+		FrameArena, DataSet->CardCount, card_data_update, 1
+	);
+	
+	packet_header* UpdateHeader = &UpdatePacket->Header;
+	card_data_set_update_payload* UpdatePayload = &UpdatePacket->Payload;
+
+	UpdatePayload->Owner = Owner;
+	UpdatePayload->Type = DataSet->Type;
+	UpdatePayload->CardCount = DataSet->CardCount;
+
+	for(uint32_t CardIndex = 0; CardIndex < DataSet->CardCount; CardIndex++)
+	{
+		card_data* CardData = DataSet->Cards + CardIndex;
+		card_data_update* Update = CardUpdates + CardIndex;
+
+		Update->CardId = CardData->CardId;
+		Update->DefId = CardData->Definition->Id;
+		
+		Update->TapsAvailable = CardData->TapsAvailable;
+		Update->SelfPlayDelta = CardData->SelfPlayDelta;
+		Update->OppPlayDelta = CardData->OppPlayDelta;
+		Update->Attack = CardData->Attack;
+		Update->Health = CardData->Health;
+		Update->TableauTags = CardData->TableauTags;
+		Update->StackTags = CardData->StackTags;
+	}
+
+	UpdateHeader->DataSize = (
+		sizeof(card_data_set_update_packet) +
+		UpdatePayload->CardCount * sizeof(card_data_update)
+	);
+	InitPacketHeader(
+		GameState,
+		UpdateHeader,
+		Packet_CardDataSetUpdate,
+		(uint8_t*) UpdatePayload
+	);
+
+	if(SwitchingLeader)
+	{
+		SocketSendErrorCheck(
+			GameState,
+			&SceneState->ConnectSocket,
+			&SceneState->ListenSocket,
+			&UpdatePacket->Header
+		);
+	}
+	else
+	{
+		ThrottledSocketSendErrorCheck(
+			GameState,
+			&SceneState->ConnectSocket,
+			&SceneState->ListenSocket,
+			&UpdatePacket->Header
+		);
+	}
+}
+
 void SendGameState(
 	game_state* GameState,
 	card_game_state* SceneState,
@@ -1808,62 +1879,27 @@ void SendGameState(
 			);
 		}
 
-		// TODO: fix me!
-		// for(uint32_t Owner = Player_One; Owner < Player_Count; Owner++)
-		// {
-		// 	// TODO: update draw and discard pile updates
-		// 	deck* Deck = SceneState->Decks + Owner;
-		// 	deck_update_packet* DeckUpdatePacket = PushStruct(
-		// 		FrameArena, deck_update_packet
-		// 	);
-			
-		// 	packet_header* DeckUpdateHeader = &DeckUpdatePacket->Header;
-		// 	deck_update_payload* DeckUpdatePayload = (
-		// 		&DeckUpdatePacket->Payload
-		// 	);
-
-		// 	uint32_t* InDeckHandles = PushArray(
-		// 		FrameArena, Deck->InDeckCount, uint32_t
-		// 	);
-		// 	DeckUpdatePayload->Owner = (player_id) Owner;
-		// 	DeckUpdatePayload->InDeckCount = Deck->InDeckCount;
-		// 	DeckUpdatePayload->Offset = sizeof(deck_update_payload);
-		// 	memcpy(
-		// 		InDeckHandles,
-		// 		Deck->InDeck,
-		// 		sizeof(uint32_t) * Deck->InDeckCount
-		// 	);
-
-		// 	DeckUpdateHeader->DataSize = (
-		// 		sizeof(deck_update_packet) +
-		// 		Deck->InDeckCount * sizeof(uint32_t)
-		// 	);
-		// 	InitPacketHeader(
-		// 		GameState,
-		// 		DeckUpdateHeader,
-		// 		Packet_DeckUpdate,
-		// 		(uint8_t*) DeckUpdatePayload
-		// 	);
-
-		// 	if(SwitchingLeader)
-		// 	{
-		// 		SocketSendErrorCheck(
-		// 			GameState,
-		// 			&SceneState->ConnectSocket,
-		// 			&SceneState->ListenSocket,
-		// 			&DeckUpdatePacket->Header
-		// 		);
-		// 	}
-		// 	else
-		// 	{
-		// 		ThrottledSocketSendErrorCheck(
-		// 			GameState,
-		// 			&SceneState->ConnectSocket,
-		// 			&SceneState->ListenSocket,
-		// 			&DeckUpdatePacket->Header
-		// 		);
-		// 	}
-		// }
+		for(uint32_t Owner = Player_One; Owner < Player_Count; Owner++)
+		{
+			card_data_set* DataSet = SceneState->DrawSets + Owner;
+			SendCardDataSetUpdates(
+				GameState,
+				SceneState,
+				FrameArena,
+				DataSet,
+				(player_id) Owner,
+				SwitchingLeader
+			);
+			DataSet = SceneState->DiscardSets + Owner;
+			SendCardDataSetUpdates(
+				GameState,
+				SceneState,
+				FrameArena,
+				DataSet,
+				(player_id) Owner,
+				SwitchingLeader
+			);
+		}
 	}
 
 	for(
@@ -2561,25 +2597,59 @@ void UpdateAndRenderCardGame(
 						SafeRemoveCard(GameState, SceneState, CardToRemove);
 						break;
 					}
-					case(Packet_DeckUpdate):
+					case(Packet_CardDataSetUpdate):
 					{
-						// TODO: fix me!
-						// deck_update_payload* DeckUpdatePayload = (
-						// 	(deck_update_payload*) Payload
-						// );
-						// player_id Owner = GetOpponent(
-						// 	DeckUpdatePayload->Owner
-						// );
-						// deck* Deck = SceneState->Decks + Owner;
-						// Deck->InDeckCount = DeckUpdatePayload->InDeckCount;
-						// memcpy(
-						// 	Deck->InDeck,
-						// 	(
-						// 		(uint8_t*) DeckUpdatePayload +
-						// 		DeckUpdatePayload->Offset
-						// 	),
-						// 	sizeof(uint32_t) * Deck->InDeckCount
-						// );
+						card_data_set_update_payload* UpdatePayload = (
+							(card_data_set_update_payload*) Payload
+						);
+						uint8_t* CardsPtr = (
+							(uint8_t*)(UpdatePayload) + sizeof(*UpdatePayload)
+						);
+						card_data_update* CardUpdates = (card_data_update*)(
+							CardsPtr
+						);
+
+						card_data_set* DataSetArray = NULL;
+						if(UpdatePayload->Type == CardDataSet_Draw)
+						{
+							DataSetArray = SceneState->DrawSets;
+						}
+						else if(UpdatePayload->Type == CardDataSet_Discard)
+						{
+							DataSetArray = SceneState->DiscardSets;
+						}
+						else
+						{
+							ASSERT(false);
+						}
+						card_data_set* DataSet = (
+							DataSetArray + GetOpponent(UpdatePayload->Owner)
+						);
+						DataSet->CardCount = UpdatePayload->CardCount;
+
+						ASSERT(DataSet->CardCount <= MAX_CARDS_PER_DATA_SET);
+						for(
+							uint32_t CardIndex = 0;
+							CardIndex < DataSet->CardCount;
+							CardIndex++
+						)
+						{
+							card_data* CardData = DataSet->Cards + CardIndex;
+							card_data_update* Update = CardUpdates + CardIndex;
+
+							CardData->CardId = Update->CardId;
+							CardData->Definition = (
+								SceneState->Definitions->Array + Update->DefId
+							);
+							
+							CardData->TapsAvailable = Update->TapsAvailable;
+							CardData->SelfPlayDelta = Update->SelfPlayDelta;
+							CardData->OppPlayDelta = Update->OppPlayDelta;
+							CardData->Attack = Update->Attack;
+							CardData->Health = Update->Health;
+							CardData->TableauTags = Update->TableauTags;
+							CardData->StackTags = Update->StackTags;
+						}
 						break;
 					}
 					case(Packet_RandSeed):

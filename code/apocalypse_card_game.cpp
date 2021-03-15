@@ -1247,7 +1247,7 @@ void StartCardGame(
 	}
 }
 
-void EndStackBuilding(card_game_state* SceneState)
+void EndStackBuilding(game_state* GameState, card_game_state* SceneState)
 {
 	if(SceneState->StackBuilding)
 	{
@@ -1276,8 +1276,7 @@ void EndStackBuilding(card_game_state* SceneState)
 				}
 			}
 
-			SceneState->StackSize--;
-			Card->Active = false;
+			SafeRemoveCard(GameState, SceneState, Card);
 		}
 		SceneState->StackBuilding = false;
 
@@ -2005,16 +2004,117 @@ void TurnTimerUpdate(card_game_state* SceneState, float DtForFrame)
 			{
 				SceneState->NextTurnTimer[NextTurnPlayer] = 0.0f;
 			}
-
-			if(SceneState->NextTurnTimer[NextTurnPlayer] <= 0.0f)
-			{
-				EndStackBuilding(SceneState);
-			}
 		}
 	}
 	else
 	{
 		SceneState->TurnTimer -= DtForFrame;
+	}
+}
+
+void CheckAndSetCardHoverOver(
+	card* Cards, uint32_t MaxCards, vector2 MouseEventWorldPos
+)
+{
+	card* Card = Cards;
+	for(uint32_t CardIndex = 0; CardIndex < MaxCards; CardIndex++)
+	{
+		if(Card->Active)
+		{
+			if(PointInRectangle(MouseEventWorldPos, Card->Rectangle))
+			{
+				Card->HoveredOver = true;							
+			}
+			else
+			{
+				Card->HoveredOver = false;
+			}
+		}
+		Card++;
+	}
+}
+
+void FollowerCardGameLogic(
+	game_state* GameState,
+	card_game_state* SceneState,
+	game_mouse_events* MouseEvents,
+	game_keyboard_events* KeyboardEvents,
+	float DtForFrame,
+	bool* EndTurn
+)
+{	
+	ui_context* UiContext = &SceneState->UiContext;
+	user_event_index UserEventIndex = 0;
+	int MouseEventIndex = 0;
+	int KeyboardEventIndex = 0;
+	while(
+		(MouseEventIndex < MouseEvents->Length) ||
+		(KeyboardEventIndex < KeyboardEvents->Length)
+	)
+	{
+		for(; MouseEventIndex < MouseEvents->Length; MouseEventIndex++)
+		{
+			game_mouse_event* MouseEvent = (
+				&MouseEvents->Events[MouseEventIndex]
+			);
+
+			if(MouseEvent->UserEventIndex != UserEventIndex)
+			{
+				break;
+			}
+
+			vector2 MouseEventWorldPos = TransformPosFromBasis(
+				&GameState->WorldToCamera,
+				TransformPosFromBasis(
+					&GameState->CameraToScreen, 
+					Vector2(MouseEvent->XPos, MouseEvent->YPos)
+				)
+			);
+			if(MouseEvent->Type == MouseMove)
+			{
+				card* Cards = &SceneState->Cards[0];
+				CheckAndSetCardHoverOver(
+					Cards, SceneState->MaxCards, MouseEventWorldPos
+				);
+			}
+
+			scroll_handle_mouse_code ScrollResult = ScrollHandleMouse(
+				UiContext,
+				&SceneState->StackScrollBar,
+				MouseEvent,
+				MouseEventWorldPos,
+				SceneState->StackScrollBar.Trough.Min.Y,
+				GetTop(SceneState->StackScrollBar.Trough)
+			);
+			if(ScrollResult == ScrollHandleMouse_Moved)
+			{
+				SetStackPositions(SceneState);
+			}
+
+			UserEventIndex++;
+		}
+
+		for(; KeyboardEventIndex < KeyboardEvents->Length; KeyboardEventIndex++)
+		{
+			game_keyboard_event* KeyboardEvent = (
+				&KeyboardEvents->Events[KeyboardEventIndex]
+			);
+			if(KeyboardEvent->UserEventIndex != UserEventIndex)
+			{
+				break;
+			}
+
+			UserEventIndex++;
+		}
+	}
+
+	TurnTimerUpdate(SceneState, DtForFrame);
+	if(SceneState->StackBuilding)
+	{
+		if(SceneState->NextTurnTimer[SceneState->StackTurn] <= 0.0f)
+		{
+			EndStackBuilding(GameState, SceneState);
+		}
 	}
 }
 
@@ -2088,29 +2188,9 @@ void CardGameLogic(
 			else if(MouseEvent->Type == MouseMove)
 			{
 				card* Card = &SceneState->Cards[0];
-				for(
-					uint32_t CardIndex = 0;
-					CardIndex < SceneState->MaxCards;
-					CardIndex++
-				)
-				{
-					if(Card->Active)
-					{
-						if(
-							PointInRectangle(
-								MouseEventWorldPos, Card->Rectangle
-							)
-						)
-						{
-							Card->HoveredOver = true;							
-						}
-						else
-						{
-							Card->HoveredOver = false;
-						}
-					}
-					Card++;
-				}
+				CheckAndSetCardHoverOver(
+					Card, SceneState->MaxCards, MouseEventWorldPos
+				);
 			}
 
 			scroll_handle_mouse_code ScrollResult = ScrollHandleMouse(
@@ -2165,7 +2245,7 @@ void CardGameLogic(
 				);
 				if(TempEndTurn)
 				{
-					EndStackBuilding(SceneState);
+					EndStackBuilding(GameState, SceneState);
 				}
 			}
 
@@ -2201,7 +2281,7 @@ void CardGameLogic(
 	}
 	if(*EndTurn && (!SceneState->NetworkGame || SceneState->IsLeader))
 	{
-		EndStackBuilding(SceneState);
+		EndStackBuilding(GameState, SceneState);
 
 		player_id NextTurnPlayer = GetOpponent(SceneState->CurrentTurn);
 		SetTurnTimer(SceneState, SceneState->NextTurnTimer[NextTurnPlayer]);
@@ -2550,16 +2630,23 @@ void UpdateAndRenderCardGame(
 							CardToChange->SetType != CardUpdate->SetType
 						)
 						{
-							if(!IsNewCard)
+							if(CardUpdate->SetType == CardSet_Stack)
 							{
-								RemoveCardFromSet(SceneState, CardToChange);
+								AddCardToStack(SceneState, CardToChange);
 							}
-							AddCardToSet(
-								SceneState,
-								CardUpdate->SetType,
-								CardOwner,
-								CardToChange
-							);
+							else
+							{
+								if(!IsNewCard)
+								{
+									RemoveCardFromSet(SceneState, CardToChange);
+								}
+								AddCardToSet(
+									SceneState,
+									CardUpdate->SetType,
+									CardOwner,
+									CardToChange
+								);
+							}
 						}
 
 						CardToChange->TapsAvailable = CardUpdate->TapsAvailable;
@@ -2766,6 +2853,7 @@ void UpdateAndRenderCardGame(
 	{
 		// NOTE: storing frame start stack turn has to be done after updating 
 		// CONT: card game state
+		bool FrameStartStackBuilding = SceneState->StackBuilding;
 		player_id FrameStartStackTurn = SceneState->StackTurn;
 
 		if(SceneState->NetworkGame && SceneState->IsLeader)
@@ -2778,14 +2866,45 @@ void UpdateAndRenderCardGame(
 				DtForFrame,
 				&EndTurn
 			);
-			bool SwitchingLeader = (
-				EndTurn || (FrameStartStackTurn != SceneState->StackTurn)
-			);
+
+			bool SwitchingLeader = false;
+			if(EndTurn)
+			{
+				SwitchingLeader = true;
+			}
+			else
+			{
+				if(SceneState->StackBuilding)
+				{
+					SwitchingLeader = (
+						FrameStartStackTurn != SceneState->StackTurn ||
+						!FrameStartStackBuilding
+					);
+				}
+				else
+				{
+					if(FrameStartStackBuilding)
+					{
+						SwitchingLeader = SceneState->CurrentTurn == Player_Two;
+					}
+					else
+					{
+						SwitchingLeader = false;
+					}
+				}
+			}
 			SendGameState(GameState, SceneState, SwitchingLeader, false);
 		}
 		else
 		{
-			TurnTimerUpdate(SceneState, DtForFrame);
+			FollowerCardGameLogic(
+				GameState,
+				SceneState,
+				MouseEvents,
+				KeyboardEvents,
+				DtForFrame,
+				&EndTurn
+			);
 		}
 	}
 	else if(SceneState->SyncState == SyncState_Send)

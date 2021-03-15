@@ -257,6 +257,7 @@ void SafeRemoveCard(
 	// NOTE: a function for removing the card from its card set 
 	// CONT: without any concerns for speed. Card will no longer be active and 
 	// CONT: the card set will be decremented but not aligned
+	ASSERT(Card != NULL);
 	if(Card->SetType == CardSet_Stack)
 	{
 		RemoveCardFromStack(SceneState, Card);
@@ -1988,6 +1989,35 @@ void SendGameState(
 	}
 }
 
+void TurnTimerUpdate(card_game_state* SceneState, float DtForFrame)
+{
+	if(SceneState->StackBuilding)
+	{
+		if(SceneState->StackTurn == SceneState->CurrentTurn)
+		{
+			SceneState->TurnTimer -= DtForFrame;
+		}
+		else
+		{
+			player_id NextTurnPlayer = GetOpponent(SceneState->CurrentTurn);
+			SceneState->NextTurnTimer[NextTurnPlayer] -= DtForFrame;
+			if(SceneState->NextTurnTimer[NextTurnPlayer] <= 0.0f)
+			{
+				SceneState->NextTurnTimer[NextTurnPlayer] = 0.0f;
+			}
+
+			if(SceneState->NextTurnTimer[NextTurnPlayer] <= 0.0f)
+			{
+				EndStackBuilding(SceneState);
+			}
+		}
+	}
+	else
+	{
+		SceneState->TurnTimer -= DtForFrame;
+	}
+}
+
 void CardGameLogic(
 	game_state* GameState,
 	card_game_state* SceneState,
@@ -2151,31 +2181,7 @@ void CardGameLogic(
 	bool WholeSecondPassed = false;
 	if(!(*EndTurn))
 	{
-		if(SceneState->StackBuilding)
-		{
-			if(SceneState->StackTurn == SceneState->CurrentTurn)
-			{
-				SceneState->TurnTimer -= DtForFrame;
-			}
-			else
-			{
-				player_id NextTurnPlayer = GetOpponent(SceneState->CurrentTurn);
-				SceneState->NextTurnTimer[NextTurnPlayer] -= DtForFrame;
-				if(SceneState->NextTurnTimer[NextTurnPlayer] <= 0.0f)
-				{
-					SceneState->NextTurnTimer[NextTurnPlayer] = 0.0f;
-				}
-
-				if(SceneState->NextTurnTimer[NextTurnPlayer] <= 0.0f)
-				{
-					EndStackBuilding(SceneState);
-				}
-			}
-		}
-		else
-		{
-			SceneState->TurnTimer -= DtForFrame;
-		}
+		TurnTimerUpdate(SceneState, DtForFrame);
 		// NOTE: switch turns
 		if(SceneState->TurnTimer <= 0)
 		{
@@ -2762,20 +2768,24 @@ void UpdateAndRenderCardGame(
 		// CONT: card game state
 		player_id FrameStartStackTurn = SceneState->StackTurn;
 
-		CardGameLogic(
-			GameState,
-			SceneState,
-			MouseEvents,
-			KeyboardEvents,
-			DtForFrame,
-			&EndTurn
-		);
 		if(SceneState->NetworkGame && SceneState->IsLeader)
 		{
+			CardGameLogic(
+				GameState,
+				SceneState,
+				MouseEvents,
+				KeyboardEvents,
+				DtForFrame,
+				&EndTurn
+			);
 			bool SwitchingLeader = (
 				EndTurn || (FrameStartStackTurn != SceneState->StackTurn)
 			);
 			SendGameState(GameState, SceneState, SwitchingLeader, false);
+		}
+		else
+		{
+			TurnTimerUpdate(SceneState, DtForFrame);
 		}
 	}
 	else if(SceneState->SyncState == SyncState_Send)

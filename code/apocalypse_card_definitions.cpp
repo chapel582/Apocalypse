@@ -152,7 +152,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	SetTag(&Definition->TableauTags, TableauEffect_OppStrengthen);
 
 	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 10, 60, -10, 10);
+	InitCard(Definition, CardId++, 1, 10, 10, -10, 10);
 	SetName(Definition, "Life Loss", sizeof("Life Loss"));
 	SetTag(&Definition->TableauTags, TableauEffect_SelfLifeLoss);
 

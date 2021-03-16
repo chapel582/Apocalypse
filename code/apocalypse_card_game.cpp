@@ -2856,7 +2856,10 @@ void UpdateAndRenderCardGame(
 		bool FrameStartStackBuilding = SceneState->StackBuilding;
 		player_id FrameStartStackTurn = SceneState->StackTurn;
 
-		if(SceneState->NetworkGame && SceneState->IsLeader)
+		if(
+			(SceneState->NetworkGame && SceneState->IsLeader) || 
+			!SceneState->NetworkGame
+		)
 		{
 			CardGameLogic(
 				GameState,
@@ -2867,33 +2870,36 @@ void UpdateAndRenderCardGame(
 				&EndTurn
 			);
 
-			bool SwitchingLeader = false;
-			if(EndTurn)
+			if(SceneState->NetworkGame)
 			{
-				SwitchingLeader = true;
-			}
-			else
-			{
-				if(SceneState->StackBuilding)
+				bool SwitchingLeader = false;
+				if(EndTurn)
 				{
-					SwitchingLeader = (
-						FrameStartStackTurn != SceneState->StackTurn ||
-						!FrameStartStackBuilding
-					);
+					SwitchingLeader = true;
 				}
 				else
 				{
-					if(FrameStartStackBuilding)
+					if(SceneState->StackBuilding)
 					{
-						SwitchingLeader = SceneState->CurrentTurn == Player_Two;
+						SwitchingLeader = (
+							FrameStartStackTurn != SceneState->StackTurn ||
+							!FrameStartStackBuilding
+						);
 					}
 					else
 					{
-						SwitchingLeader = false;
+						if(FrameStartStackBuilding)
+						{
+							SwitchingLeader = SceneState->CurrentTurn == Player_Two;
+						}
+						else
+						{
+							SwitchingLeader = false;
+						}
 					}
 				}
+				SendGameState(GameState, SceneState, SwitchingLeader, false);
 			}
-			SendGameState(GameState, SceneState, SwitchingLeader, false);
 		}
 		else
 		{

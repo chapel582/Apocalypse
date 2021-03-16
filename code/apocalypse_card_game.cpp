@@ -10,9 +10,6 @@
 #include "apocalypse_alert.h"
 #include "apocalypse_packet_header.h"
 
-#define RESOURCE_TEXT_HEIGHT 15.0f
-#define RESOURCE_LEFT_PADDING 150.0f
-
 #define MAX_RESOURCE_STRING_SIZE 40
 
 inline player_id GetOpponent(player_id Player)
@@ -1011,25 +1008,36 @@ void StartCardGameDataSetup(
 	// NOTE: the padding here is based on the height of the resource text info
 	// CONT: this is all kinda hard-coded until we have a good scheme for UI
 	// CONT: and also resolution scaling
-	// TODO: handle ui scaling here
-	float Padding = 95.0f;
-	vector2 PlayerLifeRectDim = Vector2(145.0f, 30.0f);
+	SceneState->ResourceTextHeight = 0.0166f * ScreenDimInWorld.Y;
+	SceneState->NextTurnTimerHeight = 0.056f * ScreenDimInWorld.Y;
+	float YPaddingLife = 0.065f * ScreenDimInWorld.Y;
+	SceneState->ResourceLeftPadding = 0.11f * ScreenDimInWorld.X;
+	float ResourceLeftPadding = SceneState->ResourceLeftPadding;
+	vector2 PlayerLifeRectDim = Vector2(
+		0.1f * ScreenDimInWorld.X,
+		0.03f * ScreenDimInWorld.Y
+	);
 	SceneState->PlayerLifeRects[Player_One] = MakeRectangle(
 		Vector2(
-			ScreenDimInWorld.X - RESOURCE_LEFT_PADDING,
-			(ScreenDimInWorld.Y / 2.0f) - Padding - 2.0f
+			ScreenDimInWorld.X - ResourceLeftPadding,
+			(ScreenDimInWorld.Y / 2.0f) - YPaddingLife - 2.0f
 		),
 		PlayerLifeRectDim
 	);
 	SceneState->PlayerLifeRects[Player_Two] = MakeRectangle(
 		Vector2(
-			ScreenDimInWorld.X - RESOURCE_LEFT_PADDING,
-			(ScreenDimInWorld.Y / 2.0f) + Padding + RESOURCE_TEXT_HEIGHT + 2.0f
+			ScreenDimInWorld.X - ResourceLeftPadding,
+			(
+				(ScreenDimInWorld.Y / 2.0f) +
+				YPaddingLife +
+				SceneState->ResourceTextHeight +
+				2.0f
+			)
 		),
 		PlayerLifeRectDim
 	);
 
-	float YPadding = 10.0f;
+	float YPadding = 0.011f * ScreenDimInWorld.Y;
 	rectangle* DrawRects = SceneState->DrawRects;
 	DrawRects[Player_One] = MakeRectangle(
 		(
@@ -1057,6 +1065,14 @@ void StartCardGameDataSetup(
 	DiscardRects[Player_Two] = MakeRectangle(
 		GetTopLeft(DrawRects[Player_Two]) + Vector2(0.0f, YPadding),
 		PlayerLifeRectDim
+	);
+
+	SceneState->NextTurnTimerPos[Player_One] = (
+		DiscardRects[Player_One].Min -
+		Vector2(0.0f, YPadding + SceneState->NextTurnTimerHeight)
+	);
+	SceneState->NextTurnTimerPos[Player_Two] = (
+		GetTopLeft(DiscardRects[Player_Two]) + Vector2(0.0f, YPadding)
 	);
 
 	SceneState->PacketReader = {};
@@ -1360,11 +1376,8 @@ void PushNextTurnTimer(
 		FontHandle_TestFont,
 		TurnTimerString,
 		MaxTurnTimerCharacters,
-		50.0f,
-		Vector2(
-			SceneState->ScreenDimInWorld.X - 150.0f,
-			SceneState->Tableaus[Player].YPos
-		),
+		SceneState->NextTurnTimerHeight,
+		SceneState->NextTurnTimerPos[Player],
 		Vector4(1.0f, 1.0f, 1.0f, 1.0f),
 		FrameArena
 	);
@@ -3018,7 +3031,7 @@ void UpdateAndRenderCardGame(
 			MAX_RESOURCE_STRING_SIZE,
 			50.0f,
 			Vector2(
-				ScreenDimInWorld.X - RESOURCE_LEFT_PADDING,
+				ScreenDimInWorld.X - SceneState->ResourceLeftPadding,
 				(ScreenDimInWorld.Y / 2.0f)
 			),
 			Vector4(1.0f, 1.0f, 1.0f, 1.0f),

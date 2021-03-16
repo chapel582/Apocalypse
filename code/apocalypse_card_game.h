@@ -172,6 +172,11 @@ struct card_game_state
 	card_definitions* Definitions;
 	float CardWidth;
 	float CardHeight;
+	float ResourceLeftPadding;
+	float NextTurnTimerHeight;
+	float ResourceTextHeight;
+
+	vector2 NextTurnTimerPos[Player_Count];
 
 	float PlayerLife[Player_Count];
 	rectangle PlayerLifeRects[Player_Count];

@@ -120,6 +120,10 @@ struct card_stack_entry
 		{
 			player_id PlayerTarget;
 		};
+		struct
+		{
+			card* CardTarget;
+		};
 	};
 };
 

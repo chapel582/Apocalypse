@@ -674,7 +674,8 @@ void PlayStackCard(
 {
 	// NOTE: this function plays the stack card without checking HasAnyTag
 	card_stack_entry* StackEntry = AddCardToStack(SceneState, Card);
-	if(HasTag(&Card->StackTags, StackEffect_HurtOpp))
+	stack_effect_tags* StackTags = &Card->StackTags;
+	if(HasTag(StackTags, StackEffect_HurtOpp))
 	{
 		StackEntry->PlayerTarget = GetOpponent(SceneState->CurrentTurn);
 	}
@@ -1289,6 +1290,25 @@ void EndStackBuilding(game_state* GameState, card_game_state* SceneState)
 				else
 				{
 					IsDisabled = false;
+				}
+				if(HasTag(StackTags, StackEffect_IncreaseCurrentTime))
+				{
+					SetTurnTimer(SceneState, SceneState->TurnTimer + 20.0f);
+				}
+				if(HasTag(StackTags, StackEffect_DecreaseCurrentTime))
+				{
+					SetTurnTimer(SceneState, SceneState->TurnTimer - 20.0f);
+					// TODO: make sure we handle turn ending here correctly
+				}
+				if(HasTag(StackTags, StackEffect_SwapDeltas))
+				{
+					card* CardTarget = CardStackEntry->CardTarget;
+					int16_t SelfPlayDelta = CardTarget->SelfPlayDelta;
+					CardTarget->SelfPlayDelta = CardTarget->OppPlayDelta;
+					CardTarget->TurnStartSelfPlayDelta = (
+						CardTarget->SelfPlayDelta
+					); 
+					CardTarget->OppPlayDelta = SelfPlayDelta;
 				}
 			}
 

@@ -171,6 +171,9 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	SetName(Definition, "Give Increase", sizeof("Give Increase"));
 	SetTag(&Definition->TableauTags, TableauEffect_GiveIncrease);
 
+	/*
+	SECTION START: Define stack cards
+	*/
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 0, 0, 10, 10);
 	SetName(Definition, "Hurt Opp", sizeof("Hurt Opp"));
@@ -180,6 +183,55 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitCard(Definition, CardId++, 1, 0, 0, 10, 10);
 	SetName(Definition, "Disable Next", sizeof("Disable Next"));
 	SetTag(&Definition->StackTags, StackEffect_DisableNext);
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 0, 0, 20, 20);
+	SetName(
+		Definition,
+		"Increase Next Turn Times",
+		sizeof("Increase Next Turn Times")
+	);
+	SetTag(&Definition->StackTags, StackEffect_NoEffect);
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 0, 0, -40, 0);
+	SetName(
+		Definition, "Increase Current Time", sizeof("Increase Current Time")
+	);
+	SetDescription(
+		Definition,
+		"Increase current turn time by 20 seconds",
+		sizeof("Increase current turn time by 20 seconds")
+	);
+	SetTag(&Definition->StackTags, StackEffect_IncreaseCurrentTime);
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 0, 0, 40, 0);
+	SetName(
+		Definition,
+		"Invest Time",
+		sizeof("Invest Time")
+	);
+	SetDescription(
+		Definition,
+		"Decrease current turn time by 20 seconds",
+		sizeof("Decrease current turn time by 20 seconds")
+	);
+	SetTag(&Definition->StackTags, StackEffect_DecreaseCurrentTime);
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 0, 0, 40, 0);
+	SetName(
+		Definition,
+		"Swap deltas",
+		sizeof("Swap deltas")
+	);
+	SetDescription(
+		Definition,
+		"Swap the self and opp deltas of any card in either player's hand",
+		sizeof("Swap the self and opp deltas of any card in either player's hand")
+	);
+	SetTag(&Definition->StackTags, StackEffect_SwapDeltas);
 
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;

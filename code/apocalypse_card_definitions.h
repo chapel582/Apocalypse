@@ -44,6 +44,7 @@ typedef enum
 	A tag that gives your opponent time on an attack
 	A tag that causes a card to require your time to attack
 	A tag that has a card switch from attacking to healing over time (like attack loss, but with negative values permitted)
+	Expensive cards that give you time each time you play a stack card
 	*/
 } tableau_effect;
 
@@ -67,6 +68,7 @@ inline bool HasTag(tableau_effect_tags* Tags, tableau_effect Check)
 
 typedef enum
 {
+	StackEffect_NoEffect,
 	/*
 	NOTE: this effect is boring and should probably only be for testing
 	*/
@@ -74,7 +76,20 @@ typedef enum
 	/*
 	NOTE: This is a test effect only
 	*/
-	StackEffect_DisableNext
+	StackEffect_DisableNext,
+	/*
+	NOTE: increases current time for the current player by 20 seconds
+	*/
+	StackEffect_IncreaseCurrentTime,
+	/*
+	NOTE: decrease current time by 20 seconds
+	*/
+	StackEffect_DecreaseCurrentTime,
+	/*
+	NOTE: swaps the self and opp deltas for any card in either player's hand
+	*/
+	StackEffect_SwapDeltas,
+
 	/*
 	TODO: Unimplemented card ideas
 	Card that lets a player draw a card at the cost of their next turn time
@@ -83,6 +98,7 @@ typedef enum
 	Card that lets you view your top few cards
 	Card that lets you draw another card
 	Card that makes you shuffle and draw from the discard pile
+	Card that avoids a turn skip (played automatically from your hand)
 	*/
 } stack_effect;
 

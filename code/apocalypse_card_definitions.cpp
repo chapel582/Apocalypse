@@ -233,6 +233,29 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	);
 	SetTag(&Definition->StackTags, StackEffect_SwapDeltas);
 
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 0, 0, 0, 30);
+	SetName(
+		Definition,
+		"Draw Two",
+		sizeof("Draw Two")
+	);
+	SetTag(&Definition->StackTags, StackEffect_DrawTwo);
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 0, 0, 20, 20);
+	SetName(
+		Definition,
+		"Discard Random",
+		sizeof("Discard Random")
+	);
+	SetDescription(
+		Definition,
+		"Discard a random card from each players hand",
+		sizeof("Discard a random card from each players hand")
+	);
+	SetTag(&Definition->StackTags, StackEffect_RandomDiscard);
+
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;
 	

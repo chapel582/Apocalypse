@@ -147,6 +147,27 @@ void RemoveCardFromStack(card_game_state* SceneState, card* Card)
 	);
 }
 
+void RemoveCardFromSet(card_set* CardSet, uint32_t IndexToRemove)
+{
+	ASSERT(IndexToRemove < CardSet->CardCount);
+	for(int Index = 0; Index < ARRAY_COUNT(CardSet->Cards); Index++)
+	{
+		if(CardSet->Cards[Index] != NULL)
+		{
+			if(IndexToRemove == 0)
+			{
+				CardSet->Cards[Index] = NULL;
+				CardSet->CardCount--;
+				break;
+			}
+			else
+			{
+				IndexToRemove--;
+			}
+		}
+	}
+}
+
 bool RemoveCardFromSet(card_set* CardSet, card* Card)
 {
 	for(int Index = 0; Index < ARRAY_COUNT(CardSet->Cards); Index++)
@@ -1309,6 +1330,26 @@ void EndStackBuilding(game_state* GameState, card_game_state* SceneState)
 						CardTarget->SelfPlayDelta
 					); 
 					CardTarget->OppPlayDelta = SelfPlayDelta;
+				}
+				if(HasTag(StackTags, StackEffect_DrawTwo))
+				{
+					DrawCard(GameState, SceneState, Card->Owner);
+				}
+				if(HasTag(StackTags, StackEffect_RandomDiscard))
+				{
+					card_set* OwnerHand = SceneState->Hands + Card->Owner;
+					if(OwnerHand->CardCount > 0)
+					{
+						uint32_t CardIndex = rand() % OwnerHand->CardCount;
+						RemoveCardFromSet(OwnerHand, CardIndex);
+					}
+					player_id Opp = GetOpponent(Card->Owner);
+					card_set* OppHand = SceneState->Hands + Opp;
+					if(OppHand->CardCount > 0)
+					{
+						uint32_t CardIndex = rand() % OppHand->CardCount;
+						RemoveCardFromSet(OppHand, CardIndex);
+					}
 				}
 			}
 

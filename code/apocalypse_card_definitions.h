@@ -89,6 +89,14 @@ typedef enum
 	NOTE: swaps the self and opp deltas for any card in either player's hand
 	*/
 	StackEffect_SwapDeltas,
+	/*
+	NOTE: draw two cards
+	*/
+	StackEffect_DrawTwo,
+	/*
+	NOTE: Each player discards a card at random
+	*/
+	StackEffect_RandomDiscard,
 
 	/*
 	TODO: Unimplemented card ideas

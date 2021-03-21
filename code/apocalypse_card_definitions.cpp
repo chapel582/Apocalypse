@@ -17,129 +17,44 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	SetName(Definition, "ACard", sizeof("ACard"));
 
 	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "AAard", sizeof("AAard"));
+	InitCard(Definition, CardId++, 1, 10, 10, -10, 10);
+	SetName(Definition, "Basic 1", sizeof("Basic 1"));
 
 	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "BCard", sizeof("BCard"));
+	InitCard(Definition, CardId++, 1, 20, 20, -20, 20);
+	SetName(Definition, "Basic 2", sizeof("Basic 2"));
 
 	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "BBCard", sizeof("BBCard"));
+	InitCard(Definition, CardId++, 1, 30, 30, -30, 30);
+	SetName(Definition, "Basic 3", sizeof("Basic 3"));
 
 	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "AAACard", sizeof("AAACard"));
+	InitCard(Definition, CardId++, 1, 40, 40, -40, 40);
+	SetName(Definition, "Basic 4", sizeof("Basic 4"));
 
 	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "AAACard", sizeof("aCard"));
+	InitCard(Definition, CardId++, 1, 50, 50, -50, 50);
+	SetName(Definition, "Basic 5", sizeof("Basic 5"));
 
 	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "ABard", sizeof("ABard"));
+	InitCard(Definition, CardId++, 1, 5, 10, -5, 10);
+	SetName(Definition, "Basic 6", sizeof("Basic 6"));
 
 	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "aBard", sizeof("aBard"));
+	InitCard(Definition, CardId++, 1, 15, 20, -15, 20);
+	SetName(Definition, "Basic 7", sizeof("Basic 7"));
 
 	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "qukcooo", sizeof("qukcooo"));
+	InitCard(Definition, CardId++, 1, 25, 30, -25, 30);
+	SetName(Definition, "Basic 8", sizeof("Basic 8"));
 
 	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "wom wom", sizeof("wom wom"));
+	InitCard(Definition, CardId++, 1, 35, 40, -35, 40);
+	SetName(Definition, "Basic 9", sizeof("Basic 9"));
 
 	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "Long", sizeof("Long"));
-
-	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "Longer", sizeof("Longer"));
-
-	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "TestAgain2", sizeof("TestAgain2"));
-
-	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "TestAgain3", sizeof("TestAgain3"));
-
-	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "TestAgain4", sizeof("TestAgain4"));
-
-	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "TestAgain5", sizeof("TestAgain5"));
-
-	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "TestAgain6", sizeof("TestAgain6"));
-
-	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "Break up", sizeof("Break up"));
-
-	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "TestAgain7", sizeof("TestAgain7"));
-
-	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "TestAgain8", sizeof("TestAgain8"));
-
-	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "TestAgain9", sizeof("TestAgain9"));
-
-	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "Test10", sizeof("Test10"));
-
-	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "Test11", sizeof("Test11"));
-
-	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "TestWee", sizeof("TestWee"));
-
-	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "Test12", sizeof("Test12"));
-
-	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "Test13", sizeof("Test13"));
-
-	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "TestSlimSlam", sizeof("TestSlimSlam"));
-
-	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "Test14", sizeof("Test14"));
-
-	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "Test15", sizeof("Test15"));
-
-	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "Test16", sizeof("Test16"));
-
-	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "Test17", sizeof("Test17"));
-
-	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 1, -1, 1);
-	SetName(Definition, "Description Test", sizeof("Description Test"));
-	SetDescription(Definition, "Hit 'em hard", sizeof("Hit 'em hard"));
+	InitCard(Definition, CardId++, 1, 45, 50, -45, 50);
+	SetName(Definition, "Basic 10", sizeof("Basic 10"));
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 10, 10, -10, 10);
@@ -177,7 +92,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	SetTag(&Definition->TableauTags, TableauEffect_CurrentBoost);
 
 	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 10, 40, -20, 20);
+	InitCard(Definition, CardId++, 1, 20, 40, 40, 30);
 	SetName(Definition, "Taunt 1", sizeof("Taunt 1"));
 	SetTag(&Definition->TableauTags, TableauEffect_Taunt);
 

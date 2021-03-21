@@ -257,7 +257,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	SetTag(&Definition->StackTags, StackEffect_RandomDiscard);
 
 	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 0, 0, 20, 20);
+	InitCard(Definition, CardId++, 1, 0, 0, -10, 20);
 	SetName(
 		Definition,
 		"Pass Remaining",
@@ -271,6 +271,22 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		)
 	);
 	SetTag(&Definition->StackTags, StackEffect_PassRemaining);
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 0, 0, -10, 20);
+	SetName(
+		Definition,
+		"Get Remaining",
+		sizeof("Get Remaining")
+	);
+	SetDescription(
+		Definition,
+		"Any time in your next turn is now in the current turn.",
+		sizeof(
+			"Any time in your next turn is now in the current turn."
+		)
+	);
+	SetTag(&Definition->StackTags, StackEffect_GetRemaining);
 
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;

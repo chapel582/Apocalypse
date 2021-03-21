@@ -98,9 +98,13 @@ typedef enum
 	*/
 	StackEffect_RandomDiscard,
 	/*
-	NOTE: End turn. Any time unused from the current turn goes to the next turn.
+	NOTE: Any time unused from the current turn goes to the next turn.
 	*/
 	StackEffect_PassRemaining,
+	/*
+	NOTE: Any time unused from the next turn goes to the current turn.
+	*/
+	StackEffect_GetRemaining,
 
 	/*
 	TODO: Unimplemented card ideas

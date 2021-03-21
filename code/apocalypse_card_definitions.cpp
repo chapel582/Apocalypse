@@ -171,6 +171,11 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	SetName(Definition, "Give Increase", sizeof("Give Increase"));
 	SetTag(&Definition->TableauTags, TableauEffect_GiveIncrease);
 
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 10, 40, -20, 20);
+	SetName(Definition, "Current Boost", sizeof("Current Boost"));
+	SetTag(&Definition->TableauTags, TableauEffect_CurrentBoost);
+
 	/*
 	SECTION START: Define stack cards
 	*/

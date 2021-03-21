@@ -2380,7 +2380,7 @@ void CardGameLogic(
 		DrawFullHand(SceneState, SceneState->CurrentTurn);
 
 		SwitchTurns(GameState, SceneState);
-		// NOTE: reset values to turn start values here (when appropriate)
+		// NOTE: turn start effects and resets
 		for(
 			uint32_t CardIndex = 0;
 			CardIndex < SceneState->MaxCards;
@@ -2419,6 +2419,13 @@ void CardGameLogic(
 					if(Card->SetType == CardSet_Tableau)
 					{
 						Card->Health = Card->TurnStartHealth;
+					}
+				}
+				if(HasTag(EffectTags, TableauEffect_CurrentBoost))
+				{
+					if(Card->SetType == CardSet_Tableau)
+					{
+						SceneState->TurnTimer += 10.0f;
 					}
 				}
 				if(HasTag(EffectTags, TableauEffect_CostIncrease))

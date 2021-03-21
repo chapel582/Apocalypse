@@ -37,7 +37,11 @@ typedef enum
 	NOTE: time given to opponent increases during owner's turn, resets at end of
 	owner's turn
 	*/
-	TableauEffect_GiveIncrease
+	TableauEffect_GiveIncrease,
+	/*
+	NOTE: while this card is in the tableau, give turn timer a 10 second boost
+	*/
+	TableauEffect_CurrentBoost
 
 	/*
 	TODO: Unimplemented card ideas

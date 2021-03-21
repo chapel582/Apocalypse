@@ -1285,8 +1285,9 @@ void StartCardGame(
 	}
 }
 
-void EndStackBuilding(game_state* GameState, card_game_state* SceneState)
+bool EndStackBuilding(game_state* GameState, card_game_state* SceneState)
 {
+	bool EndTurn = false;
 	if(SceneState->StackBuilding)
 	{
 		bool IsDisabled = false;
@@ -1351,6 +1352,13 @@ void EndStackBuilding(game_state* GameState, card_game_state* SceneState)
 						RemoveCardFromSet(OppHand, CardIndex);
 					}
 				}
+				if(HasTag(StackTags, StackEffect_PassRemaining))
+				{
+					SceneState->NextTurnTimer[Card->Owner] += (
+						SceneState->TurnTimer
+					);
+					EndTurn = true;
+				}
 			}
 
 			SafeRemoveCard(GameState, SceneState, Card);
@@ -1360,6 +1368,7 @@ void EndStackBuilding(game_state* GameState, card_game_state* SceneState)
 		scroll_bar* StackScrollBar = &SceneState->StackScrollBar;
 		StackScrollBar->Rect.Dim.Y = StackScrollBar->Trough.Dim.Y + 1.0f;
 	}
+	return EndTurn;
 }
 
 bool AddCardToSet(
@@ -2319,7 +2328,7 @@ void CardGameLogic(
 				);
 				if(TempEndTurn)
 				{
-					EndStackBuilding(GameState, SceneState);
+					*EndTurn = EndStackBuilding(GameState, SceneState);
 				}
 			}
 

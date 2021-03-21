@@ -256,6 +256,22 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	);
 	SetTag(&Definition->StackTags, StackEffect_RandomDiscard);
 
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 0, 0, 20, 20);
+	SetName(
+		Definition,
+		"Pass Remaining",
+		sizeof("Pass Remaining")
+	);
+	SetDescription(
+		Definition,
+		"End turn. Any unused time from this turn is passed to your next turn.",
+		sizeof(
+			"End turn. Any unused time from this turn is passed to your next turn."
+		)
+	);
+	SetTag(&Definition->StackTags, StackEffect_PassRemaining);
+
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;
 	

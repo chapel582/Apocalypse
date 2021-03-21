@@ -97,6 +97,10 @@ typedef enum
 	NOTE: Each player discards a card at random
 	*/
 	StackEffect_RandomDiscard,
+	/*
+	NOTE: End turn. Any time unused from the current turn goes to the next turn.
+	*/
+	StackEffect_PassRemaining,
 
 	/*
 	TODO: Unimplemented card ideas

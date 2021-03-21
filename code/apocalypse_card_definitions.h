@@ -41,7 +41,11 @@ typedef enum
 	/*
 	NOTE: while this card is in the tableau, give turn timer a 10 second boost
 	*/
-	TableauEffect_CurrentBoost
+	TableauEffect_CurrentBoost,
+	/*
+	NOTE: When a taunt card is in play, only taunt cards can be attacked
+	*/
+	TableauEffect_Taunt,
 
 	/*
 	TODO: Unimplemented card ideas

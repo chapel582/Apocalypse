@@ -431,6 +431,23 @@ void RemoveCardsFromDataSet(
 	DataSet->CardCount -= RemoveCount;
 }
 
+bool AnyHasTaunt(card_set* CardSet)
+{
+	for(int Index = 0; Index < ARRAY_COUNT(CardSet->Cards); Index++)
+	{
+		card* Card = CardSet->Cards[Index];
+		if(Card != NULL)
+		{
+			if(HasTag(&Card->TableauTags, TableauEffect_Taunt))
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
 void ShuffleDrawSet(
 	card_game_state* SceneState, player_id Player
 )
@@ -1501,12 +1518,43 @@ inline void StandardPrimaryUpHandler(
 						bool Tapped = CheckAndTap(SceneState, SelectedCard);
 						if(Tapped)
 						{
-							DeselectCard(SceneState);
-							attack_card_result Result = AttackCard(
-								GameState, SceneState, SelectedCard, Card
+							card_set* OppTableau = (
+								SceneState->Tableaus + Card->Owner
 							);
-							// NOTE: can add effects that happen after an attack
-							// CONT: here 
+							if(AnyHasTaunt(OppTableau))
+							{
+								if(
+									HasTag(
+										&Card->TableauTags, TableauEffect_Taunt
+									)
+								)
+								{
+									DeselectCard(SceneState);
+									attack_card_result Result = AttackCard(
+										GameState,
+										SceneState,
+										SelectedCard,
+										Card
+									);
+								}
+								else
+								{
+									DisplayMessageFor(
+										GameState,
+										&SceneState->Alert,
+										"Cannot attack this card (taunt active)",
+										1.0f
+									);
+								}
+							}
+							else
+							{
+								// TODO: should this be moved into AttackCard?
+								DeselectCard(SceneState);
+								attack_card_result Result = AttackCard(
+									GameState, SceneState, SelectedCard, Card
+								);
+							}
 						}
 					}
 				}

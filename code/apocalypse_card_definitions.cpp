@@ -113,8 +113,8 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitCard(Definition, CardId++, 1, 0, 0, 20, 20);
 	SetName(
 		Definition,
-		"Increase Next Turn Times",
-		sizeof("Increase Next Turn Times")
+		"Increase Next",
+		sizeof("Increase Next")
 	);
 	SetTag(&Definition->StackTags, StackEffect_NoEffect);
 
@@ -122,15 +122,15 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitCard(Definition, CardId++, 1, 0, 0, -20, -20);
 	SetName(
 		Definition,
-		"Decrease Next Turn Times",
-		sizeof("Decrease Next Turn Times")
+		"Decrease Next",
+		sizeof("Decrease Next")
 	);
 	SetTag(&Definition->StackTags, StackEffect_NoEffect);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 0, 0, -40, 0);
 	SetName(
-		Definition, "Increase Current Time", sizeof("Increase Current Time")
+		Definition, "Increase Current", sizeof("Increase Current")
 	);
 	SetDescription(
 		Definition,

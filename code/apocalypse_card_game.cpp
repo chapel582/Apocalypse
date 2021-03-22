@@ -735,8 +735,16 @@ void NormalPlayCard(
 	// NOTE: handle cards that go in the tableau
 	else
 	{
-		RemoveCardAndAlign(SceneState, Card);
-		AddCardAndAlign(&SceneState->Tableaus[Card->Owner], Card);
+		bool WasPlayed = CheckAndPlay(SceneState, Card);
+		if(WasPlayed)
+		{
+			RemoveCardAndAlign(SceneState, Card);
+			AddCardAndAlign(&SceneState->Tableaus[Card->Owner], Card);
+		}
+		else
+		{
+			CannotActivateCardMessage(GameState, &SceneState->Alert);
+		}
 	}
 }
 
@@ -1313,9 +1321,12 @@ void EndStackBuilding(game_state* GameState, card_game_state* SceneState)
 				SceneState->Stack + (SceneState->StackSize - 1)
 			);
 			card* Card = CardStackEntry->Card;
-			stack_effect_tags* StackTags = &Card->StackTags; 
-			if(!IsDisabled)
+			stack_effect_tags* StackTags = &Card->StackTags;
+			bool CanPlay = CanChangeTimers(SceneState, Card);
+			if(CanPlay && !IsDisabled)
 			{
+				ChangeTimers(SceneState, Card);
+				
 				if(HasTag(StackTags, StackEffect_HurtOpp))
 				{
 					player_id ToHurt = CardStackEntry->PlayerTarget;
@@ -1382,6 +1393,10 @@ void EndStackBuilding(game_state* GameState, card_game_state* SceneState)
 					);
 					SceneState->NextTurnTimer[Card->Owner] = 0.0f;
 				}
+			}
+			else
+			{
+				IsDisabled = false;
 			}
 
 			SafeRemoveCard(GameState, SceneState, Card);
@@ -1500,19 +1515,8 @@ inline void StandardPrimaryUpHandler(
 				{
 					if(SelectedCard == NULL)
 					{
-						bool WasPlayed = CheckAndPlay(SceneState, Card);
-						if(WasPlayed)
-						{
-							NormalPlayCard(GameState, SceneState, Card);
-						}
-						else
-						{
-							CannotActivateCardMessage(
-								GameState, &SceneState->Alert
-							);
-						}
+						NormalPlayCard(GameState, SceneState, Card);
 					}
-
 					else
 					{
 						bool Tapped = CheckAndTap(SceneState, SelectedCard);

@@ -576,6 +576,11 @@ bool CheckAndTap(card_game_state* SceneState, card* Card)
 	return Tapped;
 }
 
+void UntapCard(card* Card)
+{
+	Card->TimesTapped--;
+}
+
 bool CheckAndPlay(card_game_state* SceneState, card* Card)
 {
 	// NOTE: only activate card if you have the resources for it
@@ -717,8 +722,16 @@ void PlayStackCard(
 	{
 		StackEntry->PlayerTarget = GetOpponent(SceneState->CurrentTurn);
 	}
-	
-	SwitchStackTurns(GameState, SceneState);
+
+	if(HasTag(StackTags, StackEffect_SwapDeltas))
+	{
+		SceneState->SelectedCard = Card;
+		SceneState->TargetsNeeded++;
+	}
+	else
+	{
+		SwitchStackTurns(GameState, SceneState);
+	}
 }
 
 void NormalPlayCard(
@@ -766,6 +779,8 @@ void SelectCard(card_game_state* SceneState, card* Card)
 {
 	Card->Color = Vector4(1.0f, 0.0f, 0.0f, 1.0f);
 	SceneState->SelectedCard = Card;
+	SceneState->TargetsSet = 0;
+	SceneState->TargetsNeeded = 0;
 }
 
 void DeselectCard(card_game_state* SceneState)
@@ -777,6 +792,8 @@ void DeselectCard(card_game_state* SceneState)
 	card* Card = SceneState->SelectedCard;
 	Card->Color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 	SceneState->SelectedCard = NULL;
+	SceneState->TargetsSet = 0;
+	SceneState->TargetsNeeded = 0;
 }
 
 struct attack_card_result 
@@ -1326,7 +1343,7 @@ void EndStackBuilding(game_state* GameState, card_game_state* SceneState)
 			if(CanPlay && !IsDisabled)
 			{
 				ChangeTimers(SceneState, Card);
-				
+
 				if(HasTag(StackTags, StackEffect_HurtOpp))
 				{
 					player_id ToHurt = CardStackEntry->PlayerTarget;
@@ -1507,29 +1524,57 @@ inline void StandardPrimaryUpHandler(
 		)
 		{
 			card* SelectedCard = SceneState->SelectedCard;
-
-			// NOTE: player clicked their own card on their turn 
-			if(Card->Owner == SceneState->CurrentTurn)
+			if(SelectedCard != NULL)
 			{
-				if(Card->SetType == CardSet_Hand)
+				// TODO: maybe formalize the targeting and reuse memory for 
+				// CONT: different phases
+				// NOTE: targeting phase
+				if(SelectedCard == Card)
 				{
-					if(SelectedCard == NULL)
+					DeselectCard(SceneState);
+					if(Card->SetType == CardSet_Tableau)
 					{
-						NormalPlayCard(GameState, SceneState, Card);
+						UntapCard(Card);
 					}
-					else
+				}
+				else
+				{
+					ASSERT(SceneState->TargetsNeeded > 0);
+					SceneState->Targets[SceneState->TargetsSet++] = Card;
+
+					if(SceneState->TargetsSet == SceneState->TargetsNeeded)
 					{
-						bool Tapped = CheckAndTap(SceneState, SelectedCard);
-						if(Tapped)
+						// NOTE: resolution of targets
+						if(SelectedCard->SetType == CardSet_Stack)
 						{
+							// NOTE: assumes the stack entry you care about is on
+							// CONT: the top
+							card_stack_entry* StackEntry = (
+								SceneState->Stack + SceneState->StackSize - 1
+							);
+							if(
+								HasTag(
+									&SelectedCard->StackTags,
+									StackEffect_SwapDeltas
+								)
+							)
+							{
+								StackEntry->CardTarget = SceneState->Targets[0];
+							}
+							SwitchStackTurns(GameState, SceneState);
+						}
+						else
+						{
+							card* TargetCard = SceneState->Targets[0];
 							card_set* OppTableau = (
-								SceneState->Tableaus + Card->Owner
+								SceneState->Tableaus + TargetCard->Owner
 							);
 							if(AnyHasTaunt(OppTableau))
 							{
 								if(
 									HasTag(
-										&Card->TableauTags, TableauEffect_Taunt
+										&TargetCard->TableauTags,
+										TableauEffect_Taunt
 									)
 								)
 								{
@@ -1538,7 +1583,7 @@ inline void StandardPrimaryUpHandler(
 										GameState,
 										SceneState,
 										SelectedCard,
-										Card
+										TargetCard
 									);
 								}
 								else
@@ -1556,67 +1601,33 @@ inline void StandardPrimaryUpHandler(
 								// TODO: should this be moved into AttackCard?
 								DeselectCard(SceneState);
 								attack_card_result Result = AttackCard(
-									GameState, SceneState, SelectedCard, Card
+									GameState,
+									SceneState,
+									SelectedCard,
+									TargetCard
 								);
 							}
 						}
 					}
 				}
-				else if(Card->SetType == CardSet_Tableau)
-				{
-					if(SelectedCard == NULL)
-					{
-						if(Card->TimesTapped < Card->TapsAvailable)
-						{
-							bool CanActivate = CanChangeTimers(
-								SceneState, Card
-							);
-							if(CanActivate)
-							{
-								SelectCard(SceneState, Card);
-							}
-							else
-							{
-								CannotActivateCardMessage(
-									GameState, &SceneState->Alert
-								);
-							}
-						}
-					}
-					else
-					{
-						if(SelectedCard != Card)
-						{
-							DeselectCard(SceneState);
-							SelectCard(SceneState, Card);
-						}
-						else
-						{
-							DeselectCard(SceneState);
-						}
-					}
-				}
-				else
-				{
-					ASSERT(false);
-				}
-				break;
 			}
-			// NOTE: player clicked on opponent's card on their turn
 			else
 			{
-				if(SelectedCard != NULL)
+				// NOTE: selecting phase
+				if(Card->Owner == SceneState->CurrentTurn)
 				{
-					if(Card->SetType == CardSet_Tableau)
+					if(Card->SetType == CardSet_Hand)
 					{
-						player_id Owner = SelectedCard->Owner;
-						bool Tapped = CheckAndTap(SceneState, SelectedCard);
+						NormalPlayCard(GameState, SceneState, Card);
+					}
+					else if(Card->SetType == CardSet_Tableau)
+					{
+						bool Tapped = CheckAndTap(SceneState, Card);
 						if(Tapped)
 						{
-							DeselectCard(SceneState);
-							AttackCard(
-								GameState, SceneState, SelectedCard, Card
-							);
+							SelectCard(SceneState, Card);
+							SceneState->TargetsNeeded = 1;  
+							// TODO: is this ok being hard-coded?
 						}
 					}
 				}
@@ -1636,18 +1647,20 @@ inline void StandardPrimaryUpHandler(
 			card* SelectedCard = SceneState->SelectedCard;
 			if(SelectedCard != NULL)
 			{
-				// TODO: give a confirmation option for attacking yourself
-				player_id Owner = SelectedCard->Owner;
-				bool Tapped = CheckAndTap(SceneState, SelectedCard);
-				if(Tapped)
+				if(SelectedCard->SetType == CardSet_Tableau)
 				{
-					DeselectCard(SceneState);
+					// TODO: give a confirmation option for attacking yourself
+					player_id Owner = SelectedCard->Owner;
 					SceneState->PlayerLife[Player] -= SelectedCard->Attack;
 
 					if(SceneState->PlayerLife[Player] <= 0.0f)
 					{
 						// TODO: give a small amount of fanfare for the winner
 						GameState->Scene = SceneType_MainMenu;
+					}
+					else
+					{
+						DeselectCard(SceneState);
 					}
 				}
 			}
@@ -2433,6 +2446,9 @@ void CardGameLogic(
 
 		SwitchTurns(GameState, SceneState);
 		// NOTE: turn start effects and resets
+		SceneState->SelectedCard = NULL;
+		SceneState->TargetsNeeded = 0;
+		SceneState->TargetsSet = 0;
 		for(
 			uint32_t CardIndex = 0;
 			CardIndex < SceneState->MaxCards;

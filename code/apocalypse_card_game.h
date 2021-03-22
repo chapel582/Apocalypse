@@ -162,6 +162,9 @@ struct card_game_state
 	bool ShouldUpdateBaseline;
 	card* Cards;
 	card* SelectedCard;
+	card* Targets[64];
+	uint8_t TargetsSet;
+	uint8_t TargetsNeeded; // NOTE: when a card needs targets, set this 
 	uint32_t MaxCards;
 	deck* Decks;
 	card_data_set DrawSets[Player_Count];

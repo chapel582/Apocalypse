@@ -119,6 +119,15 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	SetTag(&Definition->StackTags, StackEffect_NoEffect);
 
 	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 0, 0, -20, -20);
+	SetName(
+		Definition,
+		"Decrease Next Turn Times",
+		sizeof("Decrease Next Turn Times")
+	);
+	SetTag(&Definition->StackTags, StackEffect_NoEffect);
+
+	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 0, 0, -40, 0);
 	SetName(
 		Definition, "Increase Current Time", sizeof("Increase Current Time")
@@ -159,16 +168,25 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	SetTag(&Definition->StackTags, StackEffect_SwapDeltas);
 
 	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 0, 0, 0, 30);
+	InitCard(Definition, CardId++, 1, 0, 0, 0, 40);
 	SetName(
 		Definition,
-		"Draw Two",
-		sizeof("Draw Two")
+		"Draw Two and Give",
+		sizeof("Draw Two and Give")
 	);
 	SetTag(&Definition->StackTags, StackEffect_DrawTwo);
 
 	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 0, 0, 20, 20);
+	InitCard(Definition, CardId++, 1, 0, 0, -40, 0);
+	SetName(
+		Definition,
+		"Draw Two and Cost",
+		sizeof("Draw Two and Cost")
+	);
+	SetTag(&Definition->StackTags, StackEffect_DrawTwo);
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 0, 0, 30, 30);
 	SetName(
 		Definition,
 		"Discard Random",
@@ -180,6 +198,34 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		sizeof("Discard a random card from each players hand")
 	);
 	SetTag(&Definition->StackTags, StackEffect_RandomDiscard);
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 0, 0, -20, 0);
+	SetName(
+		Definition,
+		"Discard and Give",
+		sizeof("Discard and Give")
+	);
+	SetDescription(
+		Definition,
+		"Choose a player to discard a card and trigger the opp delta for the owner instead.",
+		sizeof("Choose a player to discard a card and trigger the opp delta for the owner instead.")
+	);
+	SetTag(&Definition->StackTags, StackEffect_DiscardAndGive);
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 0, 0, -20, 0);
+	SetName(
+		Definition,
+		"Draw and Cost",
+		sizeof("Draw and Cost")
+	);
+	SetDescription(
+		Definition,
+		"Choose a player to draw a card. Trigger the self delta of the drawn card.",
+		sizeof("Choose a player to draw a card. Trigger the self delta of the drawn card")
+	);
+	SetTag(&Definition->StackTags, StackEffect_DrawAndCost);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 0, 0, -10, 20);

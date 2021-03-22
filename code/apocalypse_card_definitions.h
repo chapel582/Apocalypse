@@ -106,6 +106,10 @@ typedef enum
 	*/
 	StackEffect_RandomDiscard,
 	/*
+	NOTE: Each player draws a card
+	*/
+	StackEffect_BothDraw,
+	/*
 	NOTE: Any time unused from the current turn goes to the next turn.
 	*/
 	StackEffect_PassRemaining,
@@ -113,6 +117,17 @@ typedef enum
 	NOTE: Any time unused from the next turn goes to the current turn.
 	*/
 	StackEffect_GetRemaining,
+	/*
+	NOTE: Discard a card. Trigger the opp delta for the owner instead of the
+	opp
+	*/
+	StackEffect_DiscardAndGive,
+	/*
+	NOTE: Draw a card. Trigger the cost delta for the owner instead of the
+	opponent
+	*/
+	StackEffect_DrawAndCost
+
 
 	/*
 	TODO: Unimplemented card ideas

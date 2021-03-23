@@ -728,6 +728,13 @@ void PlayStackCard(
 	{
 		SelectCard(SceneState, Card);
 		SceneState->TargetsNeeded++;
+		SetTag(&SceneState->ValidTargets, TargetType_Card);
+	}
+	else if(HasTag(StackTags, StackEffect_OppDeltaConfuse))
+	{
+		SelectCard(SceneState, Card);
+		SceneState->TargetsNeeded++;
+		SetTag(&SceneState->ValidTargets, TargetType_Player);	
 	}
 	else
 	{
@@ -782,19 +789,20 @@ void SelectCard(card_game_state* SceneState, card* Card)
 	SceneState->SelectedCard = Card;
 	SceneState->TargetsSet = 0;
 	SceneState->TargetsNeeded = 0;
+	SceneState->ValidTargets.Tags = 0;
 }
 
 void DeselectCard(card_game_state* SceneState)
 {
-	if(SceneState->SelectedCard == NULL)
-	{
-		return;
-	}
 	card* Card = SceneState->SelectedCard;
-	Card->Color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	if(Card != NULL)
+	{
+		Card->Color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	}
 	SceneState->SelectedCard = NULL;
 	SceneState->TargetsSet = 0;
 	SceneState->TargetsNeeded = 0;
+	SceneState->ValidTargets.Tags = 0;
 }
 
 struct attack_card_result 
@@ -1350,24 +1358,20 @@ void EndStackBuilding(game_state* GameState, card_game_state* SceneState)
 					player_id ToHurt = CardStackEntry->PlayerTarget;
 					SceneState->PlayerLife[ToHurt] -= 5.0f;
 				}
-				if(HasTag(StackTags, StackEffect_DisableNext))
+				else if(HasTag(StackTags, StackEffect_DisableNext))
 				{
 					IsDisabled = true;
 				}
-				else
-				{
-					IsDisabled = false;
-				}
-				if(HasTag(StackTags, StackEffect_IncreaseCurrentTime))
+				else if(HasTag(StackTags, StackEffect_IncreaseCurrentTime))
 				{
 					SetTurnTimer(SceneState, SceneState->TurnTimer + 20.0f);
 				}
-				if(HasTag(StackTags, StackEffect_DecreaseCurrentTime))
+				else if(HasTag(StackTags, StackEffect_DecreaseCurrentTime))
 				{
 					SetTurnTimer(SceneState, SceneState->TurnTimer - 20.0f);
 					// TODO: make sure we handle turn ending here correctly
 				}
-				if(HasTag(StackTags, StackEffect_SwapDeltas))
+				else if(HasTag(StackTags, StackEffect_SwapDeltas))
 				{
 					card* CardTarget = CardStackEntry->CardTarget;
 					int16_t SelfPlayDelta = CardTarget->SelfPlayDelta;
@@ -1377,11 +1381,11 @@ void EndStackBuilding(game_state* GameState, card_game_state* SceneState)
 					); 
 					CardTarget->OppPlayDelta = SelfPlayDelta;
 				}
-				if(HasTag(StackTags, StackEffect_DrawTwo))
+				else if(HasTag(StackTags, StackEffect_DrawTwo))
 				{
 					DrawCard(GameState, SceneState, Card->Owner);
 				}
-				if(HasTag(StackTags, StackEffect_RandomDiscard))
+				else if(HasTag(StackTags, StackEffect_RandomDiscard))
 				{
 					card_set* OwnerHand = SceneState->Hands + Card->Owner;
 					if(OwnerHand->CardCount > 0)
@@ -1397,19 +1401,62 @@ void EndStackBuilding(game_state* GameState, card_game_state* SceneState)
 						RemoveCardFromSet(OppHand, CardIndex);
 					}
 				}
-				if(HasTag(StackTags, StackEffect_PassRemaining))
+				else if(HasTag(StackTags, StackEffect_PassRemaining))
 				{
 					SceneState->NextTurnTimer[Card->Owner] += (
 						SceneState->TurnTimer
 					);
 					SceneState->TurnTimer = 0.0f;
 				}
-				if(HasTag(StackTags, StackEffect_GetRemaining))
+				else if(HasTag(StackTags, StackEffect_GetRemaining))
 				{
 					SceneState->TurnTimer += (
 						SceneState->NextTurnTimer[Card->Owner]
 					);
 					SceneState->NextTurnTimer[Card->Owner] = 0.0f;
+				}
+				else if(HasTag(StackTags, StackEffect_OppDeltaConfuse))
+				{
+					player_id PlayerTarget = CardStackEntry->PlayerTarget;
+					card_set* Hand = SceneState->Hands + PlayerTarget;
+					
+					int32_t Min = 1 << 17;
+					int32_t Max = -1 * (1 << 17);
+					for(
+						int Index = 0;
+						Index < ARRAY_COUNT(Hand->Cards);
+						Index++
+					)
+					{
+						card* HandCard = Hand->Cards[Index];	
+						if(HandCard != NULL)
+						{
+							if(HandCard->OppPlayDelta < Min)
+							{
+								Min = HandCard->OppPlayDelta;
+							}
+							if(HandCard->OppPlayDelta > Max)
+							{
+								Max = HandCard->OppPlayDelta;
+							}
+						}
+					}
+
+					for(
+						int Index = 0;
+						Index < ARRAY_COUNT(Hand->Cards);
+						Index++
+					)
+					{
+						card* HandCard = Hand->Cards[Index];	
+						if(HandCard != NULL)
+						{
+							HandCard->OppPlayDelta = (
+								(rand() % ((int16_t) Max - (int16_t) Min)) + 
+								((int16_t) Min)
+							);
+						}
+					}
 				}
 			}
 			else
@@ -1508,6 +1555,123 @@ void PushNextTurnTimer(
 	);
 }
 
+void ResolveTargeting(game_state* GameState, card_game_state* SceneState)
+{
+	if(SceneState->TargetsSet == SceneState->TargetsNeeded)
+	{
+		card* SelectedCard = SceneState->SelectedCard;
+		// NOTE: resolution of targets
+		if(SelectedCard->SetType == CardSet_Stack)
+		{
+			// NOTE: assumes the stack entry you care about is on
+			// CONT: the top
+			card_stack_entry* StackEntry = (
+				SceneState->Stack + SceneState->StackSize - 1
+			);
+			if(
+				HasTag(&SelectedCard->StackTags, StackEffect_SwapDeltas)
+			)
+			{
+				StackEntry->CardTarget = SceneState->Targets[0].CardTarget;
+			}
+			if(HasTag(&SelectedCard->StackTags, StackEffect_OppDeltaConfuse))
+			{
+				StackEntry->PlayerTarget = SceneState->Targets[0].PlayerTarget;
+			}
+
+			DeselectCard(SceneState);
+			SwitchStackTurns(GameState, SceneState);
+		}
+		else if(SelectedCard->SetType == CardSet_Tableau)
+		{
+			// NOTE: currently assumes tableau cards can only target one target
+			target* Target = SceneState->Targets;
+			card* CardTarget = NULL;
+			player_id PlayerTarget = Player_Count;
+			if(Target->Type == TargetType_Card)
+			{
+				CardTarget = Target->CardTarget;
+			}
+			else if(Target->Type == TargetType_Player)
+			{
+				PlayerTarget = Target->PlayerTarget;
+			}
+
+			player_id OppId = Player_Count;
+			if(!SceneState->StackBuilding)
+			{
+				OppId = GetOpponent(SceneState->CurrentTurn);
+			}
+			else
+			{
+				OppId = GetOpponent(SceneState->StackTurn);
+			}
+			card_set* OppTableau = (SceneState->Tableaus + OppId);
+			if(AnyHasTaunt(OppTableau))
+			{
+				if(Target->Type != TargetType_Card)
+				{
+					DisplayMessageFor(
+						GameState,
+						&SceneState->Alert,
+						"Cannot attack this target (taunt active)",
+						1.0f
+					);
+				}
+				else if(HasTag(&CardTarget->TableauTags, TableauEffect_Taunt))
+				{
+					DeselectCard(SceneState);
+					attack_card_result Result = AttackCard(
+						GameState, SceneState, SelectedCard, CardTarget
+					);
+				}
+				else
+				{
+					DisplayMessageFor(
+						GameState,
+						&SceneState->Alert,
+						"Cannot attack this target (taunt active)",
+						1.0f
+					);
+				}
+			}
+			else
+			{
+				if(Target->Type == TargetType_Card)
+				{
+					// TODO: should this be moved into AttackCard?
+					DeselectCard(SceneState);
+					attack_card_result Result = AttackCard(
+						GameState, SceneState, SelectedCard, CardTarget
+					);
+				}
+				else if(Target->Type == TargetType_Player)
+				{
+					// TODO: give a confirmation option for attacking yourself
+					player_id Owner = SelectedCard->Owner;
+					SceneState->PlayerLife[PlayerTarget] -= (
+						SelectedCard->Attack
+					);
+
+					if(SceneState->PlayerLife[PlayerTarget] <= 0.0f)
+					{
+						// TODO: give a small amount of fanfare for the winner
+						GameState->Scene = SceneType_MainMenu;
+					}
+					else
+					{
+						DeselectCard(SceneState);
+					}
+				}
+			}
+		}
+		else
+		{
+			ASSERT(false);
+		}
+	}
+}
+
 void CardPrimaryUpHandler(
 	game_state* GameState,
 	card_game_state* SceneState,
@@ -1516,8 +1680,7 @@ void CardPrimaryUpHandler(
 )
 {
 	if(
-		Card->Active &&
-		PointInRectangle(MouseEventWorldPos, Card->Rectangle)
+		Card->Active && PointInRectangle(MouseEventWorldPos, Card->Rectangle)
 	)
 	{
 		card* SelectedCard = SceneState->SelectedCard;
@@ -1528,84 +1691,22 @@ void CardPrimaryUpHandler(
 			// NOTE: targeting phase
 			if(SelectedCard == Card)
 			{
+				// TODO: this means that no card can target itself
 				DeselectCard(SceneState);
 				if(Card->SetType == CardSet_Tableau)
 				{
 					UntapCard(Card);
 				}
 			}
-			else
+			else if(HasTag(&SceneState->ValidTargets, TargetType_Card))
 			{
 				ASSERT(SceneState->TargetsNeeded > 0);
-				SceneState->Targets[SceneState->TargetsSet++] = Card;
-
-				if(SceneState->TargetsSet == SceneState->TargetsNeeded)
-				{
-					// NOTE: resolution of targets
-					if(SelectedCard->SetType == CardSet_Stack)
-					{
-						// NOTE: assumes the stack entry you care about is on
-						// CONT: the top
-						card_stack_entry* StackEntry = (
-							SceneState->Stack + SceneState->StackSize - 1
-						);
-						if(
-							HasTag(
-								&SelectedCard->StackTags, StackEffect_SwapDeltas
-							)
-						)
-						{
-							StackEntry->CardTarget = SceneState->Targets[0];
-						}
-						DeselectCard(SceneState);
-						SwitchStackTurns(GameState, SceneState);
-					}
-					else
-					{
-						card* TargetCard = SceneState->Targets[0];
-						card_set* OppTableau = (
-							SceneState->Tableaus + TargetCard->Owner
-						);
-						if(AnyHasTaunt(OppTableau))
-						{
-							if(
-								HasTag(
-									&TargetCard->TableauTags,
-									TableauEffect_Taunt
-								)
-							)
-							{
-								DeselectCard(SceneState);
-								attack_card_result Result = AttackCard(
-									GameState,
-									SceneState,
-									SelectedCard,
-									TargetCard
-								);
-							}
-							else
-							{
-								DisplayMessageFor(
-									GameState,
-									&SceneState->Alert,
-									"Cannot attack this card (taunt active)",
-									1.0f
-								);
-							}
-						}
-						else
-						{
-							// TODO: should this be moved into AttackCard?
-							DeselectCard(SceneState);
-							attack_card_result Result = AttackCard(
-								GameState,
-								SceneState,
-								SelectedCard,
-								TargetCard
-							);
-						}
-					}
-				}
+				target* Target = SceneState->Targets + SceneState->TargetsSet;
+				*Target = {};
+				Target->CardTarget = Card;
+				Target->Type = TargetType_Card;
+				SceneState->TargetsSet++;
+				ResolveTargeting(GameState, SceneState);
 			}
 		}
 		else
@@ -1623,12 +1724,65 @@ void CardPrimaryUpHandler(
 					if(Tapped)
 					{
 						SelectCard(SceneState, Card);
-						SceneState->TargetsNeeded = 1;  
+						SceneState->TargetsNeeded = 1;
+						SetTag(&SceneState->ValidTargets, TargetType_Card);
+						SetTag(&SceneState->ValidTargets, TargetType_Player);
 						// TODO: is this ok being hard-coded?
 					}
 				}
 			}
 		}
+	}
+}
+
+void PlayerPrimaryUpHandler(
+	game_state* GameState,
+	card_game_state* SceneState,
+	player_id Player,
+	vector2 MouseEventWorldPos
+)
+{
+	if(
+		PointInRectangle(
+			MouseEventWorldPos, SceneState->PlayerLifeRects[Player]
+		)
+	)
+	{
+		card* SelectedCard = SceneState->SelectedCard;
+		if(SelectedCard != NULL)
+		{
+			if(HasTag(&SceneState->ValidTargets, TargetType_Player))
+			{
+				ASSERT(SceneState->TargetsNeeded > 0);
+				target* Target = SceneState->Targets + SceneState->TargetsSet;
+				*Target = {};
+				Target->PlayerTarget = Player;
+				Target->Type = TargetType_Player;
+				SceneState->TargetsSet++;
+				ResolveTargeting(GameState, SceneState);
+			}
+			else
+			{
+				DisplayMessageFor(
+					GameState,
+					&SceneState->Alert,
+					"Cannot target players with this effect",
+					1.0f
+				);
+			}
+		}
+	}
+	else if(
+		PointInRectangle(MouseEventWorldPos, SceneState->DrawRects[Player])
+	)
+	{
+		SceneState->ViewingCardDataSet = SceneState->DrawSets + Player;
+	}
+	else if(
+		PointInRectangle(MouseEventWorldPos, SceneState->DiscardRects[Player])
+	)
+	{
+		SceneState->ViewingCardDataSet = SceneState->DiscardSets + Player;
 	}
 }
 
@@ -1648,49 +1802,9 @@ inline void StandardPrimaryUpHandler(
 
 	for(int Player = Player_One; Player < Player_Count; Player++)
 	{
-		if(
-			PointInRectangle(
-				MouseEventWorldPos, SceneState->PlayerLifeRects[Player]
-			)
-		)
-		{
-			card* SelectedCard = SceneState->SelectedCard;
-			if(SelectedCard != NULL)
-			{
-				if(SelectedCard->SetType == CardSet_Tableau)
-				{
-					// TODO: give a confirmation option for attacking yourself
-					player_id Owner = SelectedCard->Owner;
-					SceneState->PlayerLife[Player] -= SelectedCard->Attack;
-
-					if(SceneState->PlayerLife[Player] <= 0.0f)
-					{
-						// TODO: give a small amount of fanfare for the winner
-						GameState->Scene = SceneType_MainMenu;
-					}
-					else
-					{
-						DeselectCard(SceneState);
-					}
-				}
-			}
-		}
-		else if(
-			PointInRectangle(
-				MouseEventWorldPos, SceneState->DrawRects[Player]
-			)
-		)
-		{
-			SceneState->ViewingCardDataSet = SceneState->DrawSets + Player;
-		}
-		else if(
-			PointInRectangle(
-				MouseEventWorldPos, SceneState->DiscardRects[Player]
-			)
-		)
-		{
-			SceneState->ViewingCardDataSet = SceneState->DiscardSets + Player;
-		}
+		PlayerPrimaryUpHandler(
+			GameState, SceneState, (player_id) Player, MouseEventWorldPos
+		);
 	}
 }
 
@@ -1705,6 +1819,13 @@ inline void StackBuildingPrimaryUpHandler(
 	{
 		CardPrimaryUpHandler(GameState, SceneState, Card, MouseEventWorldPos);
 		Card++;
+	}
+
+	for(int Player = Player_One; Player < Player_Count; Player++)
+	{
+		PlayerPrimaryUpHandler(
+			GameState, SceneState, (player_id) Player, MouseEventWorldPos
+		);
 	}
 }
 
@@ -2414,9 +2535,7 @@ void CardGameLogic(
 
 		SwitchTurns(GameState, SceneState);
 		// NOTE: turn start effects and resets
-		SceneState->SelectedCard = NULL;
-		SceneState->TargetsNeeded = 0;
-		SceneState->TargetsSet = 0;
+		DeselectCard(SceneState);
 		for(
 			uint32_t CardIndex = 0;
 			CardIndex < SceneState->MaxCards;

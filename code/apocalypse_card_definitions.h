@@ -98,6 +98,11 @@ typedef enum
 	*/
 	StackEffect_SwapDeltas,
 	/*
+	NOTE: randomize the opp deltas for all of your opponent's cards in a range
+	from min to max. uniform distribution, integers only
+	*/
+	StackEffect_OppDeltaConfuse,
+	/*
 	NOTE: draw two cards
 	*/
 	StackEffect_DrawTwo,
@@ -164,7 +169,7 @@ inline bool HasAnyTag(stack_effect_tags* Tags)
 }
 
 #define CARD_NAME_SIZE 64
-#define CARD_DESCRIPTION_SIZE 128
+#define CARD_DESCRIPTION_SIZE 256
 struct card_definition
 {
 	uint32_t Id;

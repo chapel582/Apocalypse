@@ -148,6 +148,47 @@ typedef enum
 	SyncState_Read
 } sync_state;
 
+typedef enum
+{
+	TargetType_Card,
+	TargetType_Player
+	// NOTE: if this gets too large or inflexible, use a tag system
+} target_type;
+
+struct target_type_tags
+{
+	// NOTE: wrapped in a struct for easy transtion to having even more tags
+	uint32_t Tags;
+};
+
+inline void SetTag(target_type_tags* Tags, target_type ToAdd)
+{
+	ASSERT(ToAdd < ((8 * sizeof(target_type_tags)) - 1));
+	Tags->Tags |= (1 << ToAdd);
+}
+
+inline bool HasTag(target_type_tags* Tags, target_type Check)
+{
+	ASSERT(Check < ((8 * sizeof(target_type_tags)) - 1));
+	return (Tags->Tags & (1 << Check)) > 0;
+}
+
+struct target
+{
+	target_type Type;
+	union
+	{
+		struct
+		{
+			card* CardTarget;
+		};
+		struct
+		{
+			player_id PlayerTarget;
+		};
+	};
+};
+
 struct card_game_state
 {
 	ui_context UiContext;
@@ -162,9 +203,11 @@ struct card_game_state
 	bool ShouldUpdateBaseline;
 	card* Cards;
 	card* SelectedCard;
-	card* Targets[64];
+	target Targets[64];
+	target_type_tags ValidTargets;
 	uint8_t TargetsSet;
 	uint8_t TargetsNeeded; // NOTE: when a card needs targets, set this 
+
 	uint32_t MaxCards;
 	deck* Decks;
 	card_data_set DrawSets[Player_Count];

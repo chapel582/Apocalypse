@@ -711,6 +711,7 @@ void SwitchStackTurns(game_state* GameState, card_game_state* SceneState)
 	DisplayMessageFor(GameState, &SceneState->Alert, Buffer, 1.0f);
 }
 
+void SelectCard(card_game_state* SceneState, card* Card);
 void PlayStackCard(
 	game_state* GameState, card_game_state* SceneState, card* Card
 )
@@ -725,7 +726,7 @@ void PlayStackCard(
 
 	if(HasTag(StackTags, StackEffect_SwapDeltas))
 	{
-		SceneState->SelectedCard = Card;
+		SelectCard(SceneState, Card);
 		SceneState->TargetsNeeded++;
 	}
 	else
@@ -1507,98 +1508,73 @@ void PushNextTurnTimer(
 	);
 }
 
-inline void StandardPrimaryUpHandler(
+void CardPrimaryUpHandler(
 	game_state* GameState,
 	card_game_state* SceneState,
+	card* Card,
 	vector2 MouseEventWorldPos
 )
 {
-	// NOTE: inlined function b/c this is only called once
-	card* Card = &SceneState->Cards[0];
-
-	for(uint32_t CardIndex = 0; CardIndex < SceneState->MaxCards; CardIndex++)
+	if(
+		Card->Active &&
+		PointInRectangle(MouseEventWorldPos, Card->Rectangle)
+	)
 	{
-		if(
-			Card->Active &&
-			PointInRectangle(MouseEventWorldPos, Card->Rectangle)
-		)
+		card* SelectedCard = SceneState->SelectedCard;
+		if(SelectedCard != NULL)
 		{
-			card* SelectedCard = SceneState->SelectedCard;
-			if(SelectedCard != NULL)
+			// TODO: maybe formalize the targeting and reuse memory for 
+			// CONT: different phases
+			// NOTE: targeting phase
+			if(SelectedCard == Card)
 			{
-				// TODO: maybe formalize the targeting and reuse memory for 
-				// CONT: different phases
-				// NOTE: targeting phase
-				if(SelectedCard == Card)
+				DeselectCard(SceneState);
+				if(Card->SetType == CardSet_Tableau)
 				{
-					DeselectCard(SceneState);
-					if(Card->SetType == CardSet_Tableau)
-					{
-						UntapCard(Card);
-					}
+					UntapCard(Card);
 				}
-				else
-				{
-					ASSERT(SceneState->TargetsNeeded > 0);
-					SceneState->Targets[SceneState->TargetsSet++] = Card;
+			}
+			else
+			{
+				ASSERT(SceneState->TargetsNeeded > 0);
+				SceneState->Targets[SceneState->TargetsSet++] = Card;
 
-					if(SceneState->TargetsSet == SceneState->TargetsNeeded)
+				if(SceneState->TargetsSet == SceneState->TargetsNeeded)
+				{
+					// NOTE: resolution of targets
+					if(SelectedCard->SetType == CardSet_Stack)
 					{
-						// NOTE: resolution of targets
-						if(SelectedCard->SetType == CardSet_Stack)
+						// NOTE: assumes the stack entry you care about is on
+						// CONT: the top
+						card_stack_entry* StackEntry = (
+							SceneState->Stack + SceneState->StackSize - 1
+						);
+						if(
+							HasTag(
+								&SelectedCard->StackTags, StackEffect_SwapDeltas
+							)
+						)
 						{
-							// NOTE: assumes the stack entry you care about is on
-							// CONT: the top
-							card_stack_entry* StackEntry = (
-								SceneState->Stack + SceneState->StackSize - 1
-							);
+							StackEntry->CardTarget = SceneState->Targets[0];
+						}
+						DeselectCard(SceneState);
+						SwitchStackTurns(GameState, SceneState);
+					}
+					else
+					{
+						card* TargetCard = SceneState->Targets[0];
+						card_set* OppTableau = (
+							SceneState->Tableaus + TargetCard->Owner
+						);
+						if(AnyHasTaunt(OppTableau))
+						{
 							if(
 								HasTag(
-									&SelectedCard->StackTags,
-									StackEffect_SwapDeltas
+									&TargetCard->TableauTags,
+									TableauEffect_Taunt
 								)
 							)
 							{
-								StackEntry->CardTarget = SceneState->Targets[0];
-							}
-							SwitchStackTurns(GameState, SceneState);
-						}
-						else
-						{
-							card* TargetCard = SceneState->Targets[0];
-							card_set* OppTableau = (
-								SceneState->Tableaus + TargetCard->Owner
-							);
-							if(AnyHasTaunt(OppTableau))
-							{
-								if(
-									HasTag(
-										&TargetCard->TableauTags,
-										TableauEffect_Taunt
-									)
-								)
-								{
-									DeselectCard(SceneState);
-									attack_card_result Result = AttackCard(
-										GameState,
-										SceneState,
-										SelectedCard,
-										TargetCard
-									);
-								}
-								else
-								{
-									DisplayMessageFor(
-										GameState,
-										&SceneState->Alert,
-										"Cannot attack this card (taunt active)",
-										1.0f
-									);
-								}
-							}
-							else
-							{
-								// TODO: should this be moved into AttackCard?
 								DeselectCard(SceneState);
 								attack_card_result Result = AttackCard(
 									GameState,
@@ -1607,32 +1583,66 @@ inline void StandardPrimaryUpHandler(
 									TargetCard
 								);
 							}
+							else
+							{
+								DisplayMessageFor(
+									GameState,
+									&SceneState->Alert,
+									"Cannot attack this card (taunt active)",
+									1.0f
+								);
+							}
 						}
-					}
-				}
-			}
-			else
-			{
-				// NOTE: selecting phase
-				if(Card->Owner == SceneState->CurrentTurn)
-				{
-					if(Card->SetType == CardSet_Hand)
-					{
-						NormalPlayCard(GameState, SceneState, Card);
-					}
-					else if(Card->SetType == CardSet_Tableau)
-					{
-						bool Tapped = CheckAndTap(SceneState, Card);
-						if(Tapped)
+						else
 						{
-							SelectCard(SceneState, Card);
-							SceneState->TargetsNeeded = 1;  
-							// TODO: is this ok being hard-coded?
+							// TODO: should this be moved into AttackCard?
+							DeselectCard(SceneState);
+							attack_card_result Result = AttackCard(
+								GameState,
+								SceneState,
+								SelectedCard,
+								TargetCard
+							);
 						}
 					}
 				}
 			}
 		}
+		else
+		{
+			// NOTE: selecting phase
+			if(Card->Owner == SceneState->CurrentTurn)
+			{
+				if(Card->SetType == CardSet_Hand)
+				{
+					NormalPlayCard(GameState, SceneState, Card);
+				}
+				else if(Card->SetType == CardSet_Tableau)
+				{
+					bool Tapped = CheckAndTap(SceneState, Card);
+					if(Tapped)
+					{
+						SelectCard(SceneState, Card);
+						SceneState->TargetsNeeded = 1;  
+						// TODO: is this ok being hard-coded?
+					}
+				}
+			}
+		}
+	}
+}
+
+inline void StandardPrimaryUpHandler(
+	game_state* GameState,
+	card_game_state* SceneState,
+	vector2 MouseEventWorldPos
+)
+{
+	// NOTE: inlined function b/c this is only called once
+	card* Card = &SceneState->Cards[0];
+	for(uint32_t CardIndex = 0; CardIndex < SceneState->MaxCards; CardIndex++)
+	{
+		CardPrimaryUpHandler(GameState, SceneState, Card, MouseEventWorldPos);
 		Card++;
 	}
 
@@ -1691,51 +1701,9 @@ inline void StackBuildingPrimaryUpHandler(
 )
 {
 	card* Card = &SceneState->Cards[0];
-
 	for(uint32_t CardIndex = 0; CardIndex < SceneState->MaxCards; CardIndex++)
 	{
-		if(
-			Card->Active &&
-			PointInRectangle(MouseEventWorldPos, Card->Rectangle)
-		)
-		{
-			card* SelectedCard = SceneState->SelectedCard;
-
-			// NOTE: player clicked their own card on their turn 
-			if(Card->Owner == SceneState->StackTurn)
-			{
-				if(Card->SetType == CardSet_Hand)
-				{
-					bool WasPlayed = CheckAndPlay(SceneState, Card);
-					if(WasPlayed)
-					{
-						WasPlayed = StackBuildingPlayCard(
-							GameState, SceneState, Card
-						);
-						if(!WasPlayed)
-						{
-							DisplayMessageFor(
-								GameState,
-								&SceneState->Alert,
-								"Card is not a stack card",
-								1.0f
-							);
-						}
-					}
-					else
-					{
-						CannotActivateCardMessage(
-							GameState, &SceneState->Alert
-						);
-					}
-				}
-				break;
-			}
-			// NOTE: player clicked on opponent's card on their turn
-			else
-			{
-			}
-		}
+		CardPrimaryUpHandler(GameState, SceneState, Card, MouseEventWorldPos);
 		Card++;
 	}
 }

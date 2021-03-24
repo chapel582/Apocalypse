@@ -496,6 +496,7 @@ push_text_result PushText(
 
 	Result.Code = PushText_Success;
 	Result.Offset = Offset;
+	Result.NextLineY = LeftBaselinePoint.Y + Offset.Y;
 	goto end;
 
 end:
@@ -556,6 +557,22 @@ push_text_result PushText(
 	);
 }
 
+float GetFontScaling(
+	render_group* Group, stbtt_fontinfo* Font, float FontHeight
+)
+{
+	vector2 CameraHeight = TransformVectorFromBasis(
+		Group->WorldToCamera, Vector2(0.0f, FontHeight)
+	);
+	vector2 PixelHeightV2 = TransformVectorFromBasis(
+		Group->CameraToScreen, CameraHeight
+	);
+	float PixelHeight = PixelHeightV2.Y;
+
+	// TODO: Get LPad programatically using stbtt?
+	return stbtt_ScaleForPixelHeight(Font, PixelHeight);
+}
+
 push_text_result PushTextTopLeft(
 	render_group* Group,
 	assets* Assets,
@@ -584,20 +601,12 @@ push_text_result PushTextTopLeft(
 		goto end;
 	}
 
-	vector2 CameraHeight = TransformVectorFromBasis(
-		Group->WorldToCamera, Vector2(0.0f, FontHeight)
-	);
-	vector2 PixelHeightV2 = TransformVectorFromBasis(
-		Group->CameraToScreen, CameraHeight
-	);
-	float PixelHeight = PixelHeightV2.Y;
-
 	// NOTE: everything after this point is in pixel space
 	stbtt_fontinfo* Font = &LoadedFont->StbFont;
 	// TODO: Get LPad programatically using stbtt?
 	float LPad = 2.0f; 
 	int Ascent = 0;
-	float Scale = stbtt_ScaleForPixelHeight(Font, PixelHeight);
+	float Scale = GetFontScaling(Group, Font, FontHeight);
 	stbtt_GetFontVMetrics(Font, &Ascent, NULL, NULL);
 	float ScaledAscent = Scale * Ascent;
 	vector2 AscentWorldHeight = TransformVectorToBasis(
@@ -621,6 +630,148 @@ push_text_result PushTextTopLeft(
 		Layer,
 		ClipRectIndex
 	);
+	goto end;
+
+end:
+	return Result;
+}
+
+push_text_result PushTextTopLeftAutoWrap(
+	render_group* Group,
+	assets* Assets,
+	font_handle FontHandle,
+	char* CodePoints,
+	uint32_t MaxCodePointCount,
+	float FontHeight, // NOTE: font height in world units
+	vector2 TopLeft,
+	vector4 Color,
+	memory_arena* FrameArena, // NOTE: this function will leak if you don't
+	// CONT: regularly clear the arena. Hence, FrameArena
+	float MaxWidth,
+	uint32_t Layer,
+	uint32_t ClipRectIndex
+)
+{
+	// NOTE: this is probably not the fastest way to push auto-wrapping text but
+	// CONT: it probably is fine for now 
+	push_text_result Result = {};
+
+	loaded_font* LoadedFont = GetFont(Assets, FontHandle);
+	if(LoadedFont == NULL)
+	{
+		goto end;
+	}
+
+	vector2 CameraWidth = TransformVectorFromBasis(
+		Group->WorldToCamera, Vector2(0.0f, MaxWidth)
+	);
+	vector2 PixelWidthV2 = TransformVectorFromBasis(
+		Group->CameraToScreen, CameraWidth
+	);
+	float MaxPixelWidth = PixelWidthV2.Y;
+
+	char* InsertString = PushArray(FrameArena, MaxCodePointCount, char);
+	string_appender StringAppender = MakeStringAppender(
+		InsertString, MaxCodePointCount
+	);
+	string_appender* StringAppenderPtr = &StringAppender;
+
+	stbtt_fontinfo* Font = &LoadedFont->StbFont;
+
+	float Scale = GetFontScaling(Group, Font, FontHeight);
+
+	// TODO: is there a way to get LPad programatically using stbtt?
+	float LPad = 2.0f; 
+
+	char* CodePointPtr = CodePoints;
+	char* WordStart = CodePointPtr;
+	uint32_t WordLen = 0;
+
+	float PixelWidth = LPad;
+	float WordWidth = 0.0f;
+	uint32_t CodePointIndex;
+	for(
+		CodePointIndex = 0;
+		CodePointIndex < MaxCodePointCount;
+		CodePointIndex++
+	)
+	{
+		uint32_t CodePoint = (uint32_t) *CodePointPtr;
+		if(CodePoint == 0)
+		{
+			if(PixelWidth > MaxPixelWidth)
+			{
+				LenAppendToString(StringAppenderPtr, "\n", 1);
+			}
+			LenAppendToString(StringAppenderPtr, WordStart, WordLen);
+			break;
+		}
+		else if(CodePoint == '\n')
+		{
+			PixelWidth = LPad;
+			LenAppendToString(StringAppenderPtr, WordStart, WordLen + 1);
+			WordStart = CodePointPtr + 1;
+			WordLen = 0;
+			WordWidth = 0.0f;
+		}
+		else if(
+			PixelWidth > MaxPixelWidth &&
+			(*(StringAppenderPtr->CopyTo - 1) != '\n')
+		)
+		{
+			// NOTE: the word which was not the starting word has gone over the 
+			// CONT: max width
+			PixelWidth = LPad + WordWidth;
+			LenAppendToString(StringAppenderPtr, "\n", 1);
+			WordLen++;
+		}
+		else if(CodePoint == ' ')
+		{
+			LenAppendToString(StringAppenderPtr, WordStart, WordLen + 1);
+			WordStart = CodePointPtr + 1;
+			WordLen = 0;
+			WordWidth = 0.0f;
+
+			int Advance, Lsb;
+			stbtt_GetCodepointHMetrics(Font, CodePoint, &Advance, &Lsb);
+			int Kern = stbtt_GetCodepointKernAdvance(
+				Font, CodePoint, (uint32_t) *(CodePointPtr + 1)
+			);
+			float XAdvance = Scale * (Advance + Kern);
+			PixelWidth += XAdvance;
+		}
+		else
+		{
+			int Advance, Lsb;
+			stbtt_GetCodepointHMetrics(Font, CodePoint, &Advance, &Lsb);
+			int Kern = stbtt_GetCodepointKernAdvance(
+				Font, CodePoint, (uint32_t) *(CodePointPtr + 1)
+			);
+
+			float XAdvance = Scale * (Advance + Kern);
+			PixelWidth += XAdvance;
+			WordWidth += XAdvance;
+			WordLen++;
+		}
+		
+		CodePointPtr++;
+	}
+
+	TerminateString(StringAppenderPtr);
+	Result = PushTextTopLeft(
+		Group,
+		Assets,
+		FontHandle,
+		InsertString,
+		MaxCodePointCount,
+		FontHeight,
+		TopLeft,
+		Color,
+		FrameArena, 
+		Layer,
+		ClipRectIndex
+	);
+
 	goto end;
 
 end:
@@ -655,17 +806,10 @@ push_text_result PushTextCentered(
 	}
 
 	stbtt_fontinfo* Font = &LoadedFont->StbFont;
-	vector2 CameraHeight = TransformVectorFromBasis(
-		Group->WorldToCamera, Vector2(0.0f, FontHeight)
-	);
-	vector2 PixelHeightV2 = TransformVectorFromBasis(
-		Group->CameraToScreen, CameraHeight
-	);
-	float PixelHeight = PixelHeightV2.Y;
 
 	// TODO: is there a way to get LPad programatically using stbtt?
 	float LPad = 2.0f; 
-	float Scale = stbtt_ScaleForPixelHeight(Font, PixelHeight);
+	float Scale = GetFontScaling(Group, Font, FontHeight);
 	
 	char* CodePointPtr = CodePoints;
 	float PixelWidth = LPad;

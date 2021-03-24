@@ -73,7 +73,7 @@ struct string_appender
 	char* CopyTo;
 };
 
-inline string_appender MakeStringAppender(char* String, uint32_t MaxStringSize)
+string_appender MakeStringAppender(char* String, uint32_t MaxStringSize)
 {
 	string_appender Result = {};
 	Result.String = String;
@@ -97,6 +97,16 @@ void AppendToString(string_appender* StringAppender, char* FormatString, ...)
 	
 	StringAppender->CopyTo += WrittenBytes;
 	StringAppender->CharactersRemaining -= WrittenBytes;
+}
+
+void LenAppendToString(
+	string_appender* StringAppender, char* String, uint32_t Len
+)
+{
+	memcpy(StringAppender->CopyTo, String, Len);
+	
+	StringAppender->CopyTo += Len;
+	StringAppender->CharactersRemaining -= Len;
 }
 
 inline void TerminateString(string_appender* StringAppender)

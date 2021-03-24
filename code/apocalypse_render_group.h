@@ -130,10 +130,12 @@ typedef enum
 struct push_text_result
 {
 	push_text_result_code Code;
-	vector2 Offset; 
-	// NOTE: a vector to the screen offset just past the last character
-	// CONT: this could be used for something like the blinking cursor for text
-	// CONT: editors
+	/*
+	NOTE: a vector to the screen offset just past the last character this could
+	be used for something like the blinking cursor for text editors
+	*/
+	vector2 Offset;
+	float NextLineY;
 };
 
 push_text_result PushText(
@@ -159,6 +161,21 @@ push_text_result PushText(
 	vector4 Color,
 	memory_arena* FrameArena, // NOTE: this function will leak if you don't
 	// CONT: regularly clear the arena. Hence, FrameArena
+	uint32_t Layer = 1,
+	uint32_t ClipRectIndex = 0
+);
+push_text_result PushTextTopLeftAutoWrap(
+	render_group* Group,
+	assets* Assets,
+	font_handle FontHandle,
+	char* CodePoints,
+	uint32_t MaxCodePointCount,
+	float FontHeight, // NOTE: font height in world units
+	vector2 TopLeft,
+	vector4 Color,
+	memory_arena* FrameArena, // NOTE: this function will leak if you don't
+	// CONT: regularly clear the arena. Hence, FrameArena
+	float MaxWidth,
 	uint32_t Layer = 1,
 	uint32_t ClipRectIndex = 0
 );

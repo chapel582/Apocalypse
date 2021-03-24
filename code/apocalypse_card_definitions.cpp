@@ -171,8 +171,8 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitCard(Definition, CardId++, 1, 0, 0, 40, 0);
 	SetName(
 		Definition,
-		"Confuse Opp Delta",
-		sizeof("Confuse Opp Delta")
+		"Rand OppDelta",
+		sizeof("Rand OppDelta")
 	);
 	SetDescription(
 		Definition,

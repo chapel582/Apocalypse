@@ -50,26 +50,46 @@ void PushInfoCard(
 
 	if(TapsRemaining >= 0)
 	{
-		AppendToString(&StringAppender, "TapsLeft: %d\n", TapsRemaining);
+		AppendToString(&StringAppender, "TapsLeft: %d", TapsRemaining);
 	}
 
-	AppendToString(&StringAppender, "%s\n", Description);
 
 	vector2 TopLeft = (
 		InfoCardCenter - 0.5f * InfoCardXBound + 0.5f * InfoCardYBound
 	);
-	PushTextTopLeft(
+	push_text_result PushTextResult = PushTextTopLeft(
 		RenderGroup,
 		Assets,
 		FontHandle_TestFont,
 		ResourceString,
 		MaxCharacters,
-		20.0f,
+		18.0f,
 		TopLeft,
 		Vector4(0.0f, 0.0f, 0.0f, 1.0f),
 		FrameArena,
 		Layer
 	);
+
+	if(Description != NULL)
+	{
+		if(Description[0] != '\0')
+		{
+			TopLeft.Y = PushTextResult.NextLineY;
+			PushTextTopLeftAutoWrap(
+				RenderGroup,
+				Assets,
+				FontHandle_TestFont,
+				Description,
+				MaxCharacters,
+				18.0f,
+				TopLeft,
+				Vector4(0.0f, 0.0f, 0.0f, 1.0f),
+				FrameArena,
+				InfoCardXBound.X,
+				Layer
+			);
+		}
+	}
 }
 
 inline void PushInfoCard(

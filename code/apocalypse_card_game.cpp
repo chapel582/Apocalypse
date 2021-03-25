@@ -3375,7 +3375,7 @@ void UpdateAndRenderCardGame(
 						Card->Health,
 						Card->SelfPlayDelta,
 						Card->OppPlayDelta,
-						Card->Definition->Name,
+						Card->Definition->Description,
 						Card->TapsAvailable - Card->TimesTapped
 					);
 				}

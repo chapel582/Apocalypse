@@ -103,6 +103,11 @@ typedef enum
 	*/
 	StackEffect_OppDeltaConfuse,
 	/*
+	NOTE: randomize the self deltas for all of your opponent's cards in a range
+	from min to max. uniform distribution, integers only
+	*/
+	StackEffect_SelfDeltaConfuse,
+	/*
 	NOTE: draw two cards
 	*/
 	StackEffect_DrawTwo,

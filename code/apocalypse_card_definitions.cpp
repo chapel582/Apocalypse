@@ -183,6 +183,21 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	SetTag(&Definition->StackTags, StackEffect_OppDeltaConfuse);
 
 	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 0, 0, 40, 0);
+	SetName(
+		Definition,
+		"Rand SelfDelta",
+		sizeof("Rand SelfDelta")
+	);
+	SetDescription(
+		Definition,
+		"Select a player. Randomize the self delta of hand cards with a uniform distribution ranging from the lowest value to the highest.",
+		sizeof("Select a player. Randomize the self delta of hand cards with a uniform distribution ranging from the lowest value to the highest."
+		)
+	);
+	SetTag(&Definition->StackTags, StackEffect_SelfDeltaConfuse);
+
+	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 0, 0, 0, 40);
 	SetName(
 		Definition,

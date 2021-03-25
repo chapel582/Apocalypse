@@ -730,7 +730,10 @@ void PlayStackCard(
 		SceneState->TargetsNeeded++;
 		SetTag(&SceneState->ValidTargets, TargetType_Card);
 	}
-	else if(HasTag(StackTags, StackEffect_OppDeltaConfuse))
+	else if(
+		HasTag(StackTags, StackEffect_OppDeltaConfuse) ||
+		HasTag(StackTags, StackEffect_SelfDeltaConfuse)
+	)
 	{
 		SelectCard(SceneState, Card);
 		SceneState->TargetsNeeded++;
@@ -1478,6 +1481,49 @@ void EndStackBuilding(game_state* GameState, card_game_state* SceneState)
 						}
 					}
 				}
+				else if(HasTag(StackTags, StackEffect_SelfDeltaConfuse))
+				{
+					player_id PlayerTarget = CardStackEntry->PlayerTarget;
+					card_set* Hand = SceneState->Hands + PlayerTarget;
+					
+					int32_t Min = 1 << 17;
+					int32_t Max = -1 * (1 << 17);
+					for(
+						int Index = 0;
+						Index < ARRAY_COUNT(Hand->Cards);
+						Index++
+					)
+					{
+						card* HandCard = Hand->Cards[Index];	
+						if(HandCard != NULL)
+						{
+							if(HandCard->SelfPlayDelta < Min)
+							{
+								Min = HandCard->SelfPlayDelta;
+							}
+							if(HandCard->SelfPlayDelta > Max)
+							{
+								Max = HandCard->SelfPlayDelta;
+							}
+						}
+					}
+
+					for(
+						int Index = 0;
+						Index < ARRAY_COUNT(Hand->Cards);
+						Index++
+					)
+					{
+						card* HandCard = Hand->Cards[Index];	
+						if(HandCard != NULL)
+						{
+							HandCard->SelfPlayDelta = (
+								(rand() % ((int16_t) Max - (int16_t) Min)) + 
+								((int16_t) Min)
+							);
+						}
+					}
+				}
 			}
 			else
 			{
@@ -1594,7 +1640,10 @@ void ResolveTargeting(game_state* GameState, card_game_state* SceneState)
 			{
 				StackEntry->CardTarget = SceneState->Targets[0].CardTarget;
 			}
-			if(HasTag(&SelectedCard->StackTags, StackEffect_OppDeltaConfuse))
+			else if(
+				HasTag(&SelectedCard->StackTags, StackEffect_OppDeltaConfuse) ||
+				HasTag(&SelectedCard->StackTags, StackEffect_SelfDeltaConfuse)
+			)
 			{
 				StackEntry->PlayerTarget = SceneState->Targets[0].PlayerTarget;
 			}

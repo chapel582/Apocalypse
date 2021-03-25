@@ -443,13 +443,20 @@ void StartDeckEditor(
 	InitUiContext(&SceneState->UiContext);
 	ui_context* UiContext = &SceneState->UiContext;
 
-	float DeckScrollBarWidth = 30.0f;
+	vector2 ScreenDimInWorld = TransformVectorToBasis(
+		&GameState->WorldToCamera,
+		Vector2(WindowWidth, WindowHeight)
+	);
+
+	float DeckScrollBarWidth = 0.02f * ScreenDimInWorld.X;
 	float DeckScrollBarMinX = WindowWidth - DeckScrollBarWidth;
 
 	deck_editor_cards* DeckCards = &SceneState->DeckCards;
 	*DeckCards = {};
 	DeckCards->ActiveButtons = 0;
-	DeckCards->Dim = Vector2(160.0f, 30.0f);
+	DeckCards->Dim = {};
+	DeckCards->Dim.X = 0.111f * ScreenDimInWorld.X;
+	DeckCards->Dim.Y = 0.1875f * DeckCards->Dim.X;
 	DeckCards->XPos = DeckScrollBarMinX - DeckCards->Dim.X;
 	DeckCards->YStart = (float) WindowHeight;
 	DeckCards->YMargin = 0.1f * DeckCards->Dim.Y;
@@ -461,7 +468,7 @@ void StartDeckEditor(
 
 	rectangle DeckScrollBox = MakeRectangle(
 		Vector2(DeckCards->XPos, 0.0f), 
-		Vector2(DeckCards->Dim.X, (float) WindowHeight)
+		Vector2(DeckCards->Dim.X, (float) ScreenDimInWorld.Y)
 	);
 	scroll_bar* DeckScrollBar = &SceneState->DeckScrollBar;
 	InitScrollBar(
@@ -473,7 +480,9 @@ void StartDeckEditor(
 
 	SceneState->Definitions = DefineCards(&GameState->TransientArena);
 	card_definitions* Definitions = SceneState->Definitions;
-	SceneState->CollectionCardDim = Vector2(60.0f, 90.0f);
+	SceneState->CollectionCardDim = {};
+	SceneState->CollectionCardDim.X = 0.06f * ScreenDimInWorld.X;
+	SceneState->CollectionCardDim.Y = 1.5f * SceneState->CollectionCardDim.X;
 	vector2 Dim = SceneState->CollectionCardDim;
 	SceneState->NumRows = 2;
 	SceneState->NumCols = 4;
@@ -524,16 +533,16 @@ void StartDeckEditor(
 	InitTextInput(
 		UiContext,
 		&SceneState->SearchCollection,
-		20.0f,
+		0.03f * ScreenDimInWorld.Y,
 		SceneState->SearchingFor,
 		CARD_NAME_SIZE
 	);
 	vector2 TempDim = Vector2(
-		WindowWidth / 5.0f, SceneState->SearchCollection.FontHeight
+		ScreenDimInWorld.X / 5.0f, SceneState->SearchCollection.FontHeight
 	);
 	SceneState->SearchCollectionRectangle = MakeRectangleCentered(
-		Vector2(TempDim.X / 2.0f, WindowHeight / 2.0f),
-		TempDim	
+		Vector2(TempDim.X / 2.0f, ScreenDimInWorld.Y / 2.0f),
+		TempDim
 	);
 	SceneState->CollectionSorted = false;
 
@@ -594,17 +603,19 @@ void StartDeckEditor(
 	InitButton(UiContext, &SceneState->DeleteButton, DeleteButtonRect);
 
 	SceneState->CardCountPos = Vector2(
-		GetCenter(*SaveButtonRect).X, (float) WindowHeight - 30.0f
+		GetCenter(*SaveButtonRect).X, 0.97f * ScreenDimInWorld.Y
 	);
 
 	SceneState->DeckNamePos = (
-		GetTopLeft(*SaveButtonRect) + Vector2(0.0f, 3.0f)
+		GetTopLeft(*SaveButtonRect) + Vector2(0.0f, 0.033f * ScreenDimInWorld.Y)
 	); 
 
 	SceneState->InfoCardCenter = Vector2(
-		WindowWidth / 2.0f, WindowHeight / 2.0f
+		ScreenDimInWorld.X / 2.0f, ScreenDimInWorld.Y / 2.0f
 	);
-	vector2 ScaledInfoCardDim = 0.33f * Vector2(600.0f, 900.0f);
+	vector2 ScaledInfoCardDim = {};
+	ScaledInfoCardDim.X = 0.14f * ScreenDimInWorld.X;
+	ScaledInfoCardDim.Y = 1.5f * ScaledInfoCardDim.X;
 	SceneState->InfoCardXBound = Vector2(ScaledInfoCardDim.X, 0.0f);
 	SceneState->InfoCardYBound = Vector2(0.0f, ScaledInfoCardDim.Y);
 

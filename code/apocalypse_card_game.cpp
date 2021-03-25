@@ -1006,11 +1006,6 @@ void StartCardGameDataSetup(
 		&GameState->TransientArena, Player_Count, card_set
 	);
 
-	float CardWidth = 60.0f;
-	float CardHeight = 90.0f;
-	SceneState->CardWidth = CardWidth;
-	SceneState->CardHeight = CardHeight;
-
 	float HandTableauMargin = 5.0f;
 	// NOTE: transform assumes screen and camera are 1:1
 	SceneState->ScreenDimInWorld = TransformVectorToBasis(
@@ -1019,6 +1014,21 @@ void StartCardGameDataSetup(
 	);
 	vector2 ScreenDimInWorld = SceneState->ScreenDimInWorld;
 	float ScreenWidthInWorld = ScreenDimInWorld.X;
+
+	float CardWidth = 0.0f;
+	float CardHeight = 0.0f;
+	if(ScreenDimInWorld.X > ScreenDimInWorld.Y)
+	{
+		CardWidth = 0.06f * ScreenDimInWorld.X;
+		CardHeight = 1.5f * CardWidth;
+	}
+	else
+	{
+		CardHeight = 0.1f * ScreenDimInWorld.Y;
+		CardWidth = 0.66f * CardHeight;
+	}
+	SceneState->CardWidth = CardWidth;
+	SceneState->CardHeight = CardHeight;
 	
 	card_set* CardSet = &SceneState->Hands[Player_One];
 	CardSet->Type = CardSet_Hand;
@@ -1052,7 +1062,17 @@ void StartCardGameDataSetup(
 	
 	SceneState->InfoCardCenter = ScreenDimInWorld / 2.0f;
 
-	vector2 ScaledInfoCardDim = 0.33f * Vector2(600.0f, 900.0f);
+	vector2 ScaledInfoCardDim = {};
+	if(ScreenDimInWorld.X > ScreenDimInWorld.Y)
+	{
+		ScaledInfoCardDim.X = 0.14f * ScreenDimInWorld.X;
+		ScaledInfoCardDim.Y = 1.5f * ScaledInfoCardDim.X;
+	}
+	else
+	{
+		ScaledInfoCardDim.Y = 0.33f * ScreenDimInWorld.Y;
+		ScaledInfoCardDim.X = 0.66f * ScaledInfoCardDim.Y;
+	}
 	SceneState->InfoCardXBound = Vector2(ScaledInfoCardDim.X, 0.0f);
 	SceneState->InfoCardYBound = Vector2(0.0f, ScaledInfoCardDim.Y);
 

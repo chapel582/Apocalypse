@@ -22,6 +22,7 @@ void PushInfoCard(
 	uint32_t Layer
 )
 {
+	float FontHeight = 0.08f * InfoCardYBound.Y;
 	PushSizedBitmap(
 		RenderGroup,
 		Assets,
@@ -63,7 +64,7 @@ void PushInfoCard(
 		FontHandle_TestFont,
 		ResourceString,
 		MaxCharacters,
-		18.0f,
+		FontHeight,
 		TopLeft,
 		Vector4(0.0f, 0.0f, 0.0f, 1.0f),
 		FrameArena,
@@ -81,7 +82,7 @@ void PushInfoCard(
 				FontHandle_TestFont,
 				Description,
 				MaxCharacters,
-				18.0f,
+				FontHeight,
 				TopLeft,
 				Vector4(0.0f, 0.0f, 0.0f, 1.0f),
 				FrameArena,

@@ -121,6 +121,39 @@ struct render_group
 	vector4 ColorMultiply;
 };
 
+void PushSizedBitmap(
+	render_group* Group,
+	assets* Assets,
+	bitmap_handle BitmapHandle,
+	vector2 Center,
+	vector2 SizedXAxis,
+	vector2 SizedYAxis,
+	vector4 Color,
+	uint32_t Layer = 1,
+	uint32_t ClipRectIndex = 0
+);
+void PushSizedBitmap(
+	render_group* Group,
+	loaded_bitmap* Bitmap,
+	vector2 Center,
+	vector2 SizedXAxis,
+	vector2 SizedYAxis,
+	vector4 Color,
+	uint32_t Layer = 1,
+	uint32_t ClipRectIndex = 0
+);
+void PushCenteredBitmap(
+	render_group* Group,
+	assets* Assets,
+	bitmap_handle BitmapHandle,
+	vector2 Center,
+	vector2 XAxis,
+	vector2 YAxis,
+	vector4 Color,
+	uint32_t Layer = 1,
+	uint32_t ClipRectIndex = 0
+);
+
 typedef enum 
 {
 	PushText_Fail,

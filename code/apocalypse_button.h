@@ -49,7 +49,8 @@ void PushButtonToRenderGroup(
 	font_handle Font,
 	float FontSize,
 	vector4 TextColor,
-	memory_arena* FrameArena
+	memory_arena* FrameArena,
+	uint32_t Layer = 1
 );
 void PushButtonToRenderGroup(
 	rectangle Rectangle,
@@ -60,7 +61,8 @@ void PushButtonToRenderGroup(
 	uint32_t TextBufferSize,
 	font_handle Font,
 	vector4 TextColor,
-	memory_arena* FrameArena
+	memory_arena* FrameArena,
+	uint32_t Layer = 1
 );
 
 #define APOCALYPSE_BUTTON_H

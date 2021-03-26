@@ -64,6 +64,13 @@ float GetDeckScrollBoxLeft(rectangle DeckNameInputRectangle)
 	return GetRight(DeckNameInputRectangle) + 10.0f;
 }
 
+rectangle MakeDeleteRect(rectangle ButtonRect, vector2 DeleteButtonDim)
+{
+	return MakeRectangle(
+		GetTopRight(ButtonRect) - 0.5f * DeleteButtonDim, DeleteButtonDim
+	);
+}
+
 void StartWaiting(
 	game_state* GameState, deck_selector_state* SceneState
 )
@@ -180,6 +187,8 @@ void StartDeckSelector(
 	*SceneState = {};
 	SceneState->ToStart = ToStart;
 
+	SceneState->CanDelete = SceneState->ToStart == SceneType_DeckEditor;
+
 	SceneState->ScreenDimInWorld = TransformVectorToBasis(
 		&GameState->WorldToCamera,
 		Vector2(WindowWidth, WindowHeight)
@@ -231,6 +240,9 @@ void StartDeckSelector(
 		load_deck_button* Button = LoadDeckButtons + ButtonIndex;
 		Button->UiId = GetId(UiContext);
 	}
+
+	float DeleteButtonDim = 0.4f * SceneState->LoadDeckButtonDim.Y;
+	SceneState->DeleteButtonDim = Vector2(DeleteButtonDim, DeleteButtonDim);
 
 	SceneState->Alert = MakeAlert();
 
@@ -401,25 +413,62 @@ void UpdateAndRenderDeckSelector(
 					);
 					if(Result == ButtonHandleEvent_TakeAction)
 					{
-						uint32_t DotIndex = FindIndex(
-							CurrentDeckName, '.', FlatArrayReader.BytesRemaining
+						rectangle DeleteButtonRect = MakeDeleteRect(
+							Rectangle, SceneState->DeleteButtonDim
 						);
-						strcpy_s(
-							SceneState->DeckName,
-							SceneState->DeckNameBufferSize,
-							CurrentDeckName
-						);
-						SceneState->DeckName[DotIndex] = 0;
-
-						if(SceneState->NetworkGame)
+						if(
+							SceneState->CanDelete &&
+							PointInRectangle(
+								MouseEventWorldPos, DeleteButtonRect
+							)
+						)
 						{
-							StartWaiting(GameState, SceneState);
+							// TODO: start delete confirmation process
+							char* PathToDeck = PushArray(
+								FrameArena, PLATFORM_MAX_PATH, char
+							);
+							snprintf(
+								PathToDeck,
+								PLATFORM_MAX_PATH,
+								"%s%s",
+								DECKS_PATH,
+								CurrentDeckName
+							);
+							DeleteDeck(PathToDeck);
+							memset(
+								SceneState->DeckNames,
+								0,
+								SceneState->DeckNamesSize
+							);
+							GetAllDeckPaths(
+								SceneState->DeckNames,
+								SceneState->DeckNamesSize
+							);
 						}
 						else
 						{
-							DeckSelectorPrepNextScene(
-								GameState, SceneState, true
+							uint32_t DotIndex = FindIndex(
+								CurrentDeckName,
+								'.',
+								FlatArrayReader.BytesRemaining
 							);
+							strcpy_s(
+								SceneState->DeckName,
+								SceneState->DeckNameBufferSize,
+								CurrentDeckName
+							);
+							SceneState->DeckName[DotIndex] = 0;
+
+							if(SceneState->NetworkGame)
+							{
+								StartWaiting(GameState, SceneState);
+							}
+							else
+							{
+								DeckSelectorPrepNextScene(
+									GameState, SceneState, true
+								);
+							}
 						}
 						break;
 					}
@@ -654,6 +703,7 @@ void UpdateAndRenderDeckSelector(
 		InitFlatStringArrayReader(
 			&FlatArrayReader, CurrentDeckName, SceneState->DeckNamesSize
 		);
+		uint32_t ButtonLayer = 1;
 		for(
 			uint32_t ButtonIndex = 0;
 			ButtonIndex < ARRAY_COUNT(SceneState->LoadDeckButtons);
@@ -687,10 +737,29 @@ void UpdateAndRenderDeckSelector(
 				StopAt,
 				FontHandle_TestFont,
 				Black,
-				&GameState->FrameArena
+				&GameState->FrameArena,
+				ButtonLayer
 			);
 
 			CurrentDeckName = GetNextString(&FlatArrayReader);
+
+			if(IsHot(UiContext, LoadDeckButton->UiId) && SceneState->CanDelete)
+			{
+				rectangle DeleteButtonRect = MakeDeleteRect(
+					Rectangle, SceneState->DeleteButtonDim
+				);
+
+				PushSizedBitmap(
+					DefaultRenderGroup,
+					Assets,
+					BitmapHandle_X,
+					GetBottomLeft(DeleteButtonRect),
+					Vector2(DeleteButtonRect.Dim.X, 0.0f),
+					Vector2(0.0f, DeleteButtonRect.Dim.Y),
+					Vector4(1.0f, 0.0f, 0.0f, 1.0f),
+					ButtonLayer + 1
+				);
+			}
 		}
 
 		PushCenteredAlert(&SceneState->Alert, GameState, ScreenDimInWorld);

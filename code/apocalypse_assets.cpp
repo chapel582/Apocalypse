@@ -151,6 +151,15 @@ loaded_bitmap* GetBitmap(assets* Assets, bitmap_handle BitmapHandle)
 					);
 					break;
 				}
+				case(BitmapHandle_X):
+				{
+					strcpy_s(
+						Job->FileName,
+						sizeof(Job->FileName),
+						"../data/x.bmp"
+					);
+					break;
+				}
 				default:
 				{
 					ASSERT(false);

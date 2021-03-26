@@ -3,6 +3,8 @@
 #define MAX_CARDS_IN_DECK 60
 #define MAX_DECKS_SAVED 1024
 
+#define DECKS_PATH "./decks/"
+
 #pragma pack(push, 1)
 struct loaded_deck_header
 {

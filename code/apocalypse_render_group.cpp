@@ -170,8 +170,8 @@ void PushCenteredBitmap(
 	vector2 XAxis,
 	vector2 YAxis,
 	vector4 Color,
-	uint32_t Layer = 1,
-	uint32_t ClipRectIndex = 0
+	uint32_t Layer,
+	uint32_t ClipRectIndex
 )
 {
 	loaded_bitmap* Bitmap = GetBitmap(Assets, BitmapHandle);
@@ -190,8 +190,8 @@ void PushSizedBitmap(
 	vector2 SizedXAxis,
 	vector2 SizedYAxis,
 	vector4 Color,
-	uint32_t Layer = 1,
-	uint32_t ClipRectIndex = 0
+	uint32_t Layer,
+	uint32_t ClipRectIndex
 )
 {
 	// NOTE: this is for when you know the dimensions that you want the bitmap
@@ -244,8 +244,8 @@ void PushSizedBitmap(
 	vector2 SizedXAxis,
 	vector2 SizedYAxis,
 	vector4 Color,
-	uint32_t Layer = 1,
-	uint32_t ClipRectIndex = 0
+	uint32_t Layer,
+	uint32_t ClipRectIndex
 )
 {
 	loaded_bitmap* Bitmap = GetBitmap(Assets, BitmapHandle);

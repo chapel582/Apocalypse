@@ -39,6 +39,7 @@ struct deck_selector_state
 	vector2 LoadDeckButtonDim;
 	float LoadDeckButtonsYStart;
 	float LoadDeckButtonsYMargin;
+	vector2 DeleteButtonDim;
 
 	scroll_bar DeckScrollBar;
 
@@ -50,6 +51,7 @@ struct deck_selector_state
 	loaded_deck P1Deck;
 	loaded_deck P2Deck;
 
+	bool CanDelete;
 	bool WaitingForOpponent;
 	bool IsLeader;
 	bool NetworkGame;

@@ -79,7 +79,8 @@ void PushButtonToRenderGroup(
 	font_handle Font,
 	float FontSize,
 	vector4 TextColor,
-	memory_arena* FrameArena
+	memory_arena* FrameArena,
+	uint32_t Layer
 )
 {
 	vector2 ButtonCenter = GetCenter(Rectangle);
@@ -90,7 +91,8 @@ void PushButtonToRenderGroup(
 		ButtonCenter,
 		Vector2(Rectangle.Dim.X, 0.0f),
 		Vector2(0.0f, Rectangle.Dim.Y),
-		Vector4(1.0f, 1.0f, 1.0f, 1.0f)
+		Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+		Layer
 	);
 	if(Text)
 	{
@@ -106,7 +108,8 @@ void PushButtonToRenderGroup(
 				FontSize, 
 				ButtonCenter,
 				TextColor,
-				FrameArena 
+				FrameArena,
+				Layer
 			);
 		}
 	}
@@ -121,7 +124,8 @@ inline void PushButtonToRenderGroup(
 	uint32_t TextBufferSize,
 	font_handle Font,
 	vector4 TextColor,
-	memory_arena* FrameArena
+	memory_arena* FrameArena,
+	uint32_t Layer
 )
 {
 	PushButtonToRenderGroup(
@@ -134,6 +138,7 @@ inline void PushButtonToRenderGroup(
 		Font,
 		0.9f * Rectangle.Dim.Y,
 		TextColor,
-		FrameArena
+		FrameArena,
+		Layer
 	);
 }

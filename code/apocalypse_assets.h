@@ -31,6 +31,7 @@ typedef enum
 	BitmapHandle_TestBackground,
 	BitmapHandle_TestCard,
 	BitmapHandle_TestCard2,
+	BitmapHandle_X,
 	BitmapHandle_Count
 } bitmap_handle;
 

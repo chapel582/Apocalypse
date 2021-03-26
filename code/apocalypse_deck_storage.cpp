@@ -9,8 +9,6 @@
 	things up
 */
 
-#define DECKS_PATH "./decks/"
-
 loaded_deck LoadDeck(char* PathToDeck)
 {
 	loaded_deck Result;

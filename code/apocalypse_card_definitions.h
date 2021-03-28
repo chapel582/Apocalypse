@@ -46,6 +46,14 @@ typedef enum
 	NOTE: When a taunt card is in play, only taunt cards can be attacked
 	*/
 	TableauEffect_Taunt,
+	/*
+	NOTE: Trigger the self delta on each attack
+	*/
+	TableauEffect_SelfDeltaOnAttack,
+	/*
+	NOTE: Trigger the opp delta on each attack
+	*/
+	TableauEffect_OppDeltaOnAttack
 
 	/*
 	TODO: Unimplemented card ideas

@@ -92,9 +92,19 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	SetTag(&Definition->TableauTags, TableauEffect_CurrentBoost);
 
 	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 20, 40, 40, 30);
+	InitCard(Definition, CardId++, 1, 20, 40, -40, 30);
 	SetName(Definition, "Taunt 1", sizeof("Taunt 1"));
 	SetTag(&Definition->TableauTags, TableauEffect_Taunt);
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 20, 40, -10, 0);
+	SetName(Definition, "Self Delta on Attack", sizeof("Self Delta on Attack"));
+	SetTag(&Definition->TableauTags, TableauEffect_SelfDeltaOnAttack);
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 20, 40, 0, 10);
+	SetName(Definition, "Opp Delta on Attack", sizeof("Opp Delta on Attack"));
+	SetTag(&Definition->TableauTags, TableauEffect_OppDeltaOnAttack);
 
 	/*
 	SECTION START: Define stack cards

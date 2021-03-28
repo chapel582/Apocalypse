@@ -808,6 +808,25 @@ void DeselectCard(card_game_state* SceneState)
 	SceneState->ValidTargets.Tags = 0;
 }
 
+void TriggerCommonAttackEffects(
+	card_game_state* SceneState, card* AttackingCard
+)
+{
+	// NOTE: these effects happen regardless of whether you're attacking player
+	// CONT: or the card
+	if(HasTag(&AttackingCard->TableauTags, TableauEffect_SelfDeltaOnAttack))
+	{
+		player_id Owner = AttackingCard->Owner;
+		SceneState->NextTurnTimer[Owner] += AttackingCard->SelfPlayDelta;
+	}
+	if(HasTag(&AttackingCard->TableauTags, TableauEffect_OppDeltaOnAttack))
+	{
+		player_id Owner = AttackingCard->Owner;
+		player_id Opponent = GetOpponent(Owner);
+		SceneState->NextTurnTimer[Opponent] += AttackingCard->OppPlayDelta;
+	}
+}
+
 struct attack_card_result 
 {
 	bool AttackerDied;
@@ -821,6 +840,7 @@ attack_card_result AttackCard(
 	card* AttackedCard
 )
 {
+	TriggerCommonAttackEffects(SceneState, AttackingCard);
 	// NOTE: this currently assumes cards must attack from the tableau
 	attack_card_result Result = {};
 
@@ -1716,6 +1736,7 @@ void ResolveTargeting(game_state* GameState, card_game_state* SceneState)
 				}
 				else if(Target->Type == TargetType_Player)
 				{
+					TriggerCommonAttackEffects(SceneState, SelectedCard);
 					// TODO: give a confirmation option for attacking yourself
 					player_id Owner = SelectedCard->Owner;
 					SceneState->PlayerLife[PlayerTarget] -= (

@@ -29,30 +29,74 @@ inline player_id GetOpponent(player_id Player)
 	}
 }
 
+bool CheckSelfPlayDelta(card_game_state* SceneState, card* Card)
+{
+	if(HasTag(&Card->TableauTags, TableauEffect_SelfDeltaFromCurrent))
+	{
+		return (SceneState->TurnTimer + Card->SelfPlayDelta) > 0;
+	}
+	else
+	{
+		player_id Owner = Card->Owner;
+		return (SceneState->NextTurnTimer[Owner] + Card->SelfPlayDelta) > 0;
+	}
+}
+
+bool CheckOppPlayDelta(card_game_state* SceneState, card* Card)
+{
+	if(HasTag(&Card->TableauTags, TableauEffect_OppDeltaFromCurrent))
+	{
+		return (SceneState->TurnTimer + Card->OppPlayDelta) > 0;
+	}
+	else
+	{
+		player_id Owner = Card->Owner;
+		player_id Opponent = GetOpponent(Owner);
+		return (SceneState->NextTurnTimer[Opponent] + Card->OppPlayDelta) > 0;
+	}
+}
+
 bool CanChangeTimers(card_game_state* SceneState, card* Card)
 {
 	player_id Owner = Card->Owner;
 	player_id Opponent = GetOpponent(Owner);
-	if((SceneState->NextTurnTimer[Owner] + Card->SelfPlayDelta) < 0)
+
+	return(
+		CheckSelfPlayDelta(SceneState, Card) && CheckOppPlayDelta(SceneState, Card)
+	);
+}
+
+void ChangeSelfPlayTimer(card_game_state* SceneState, card* Card)
+{
+	if(HasTag(&Card->TableauTags, TableauEffect_SelfDeltaFromCurrent))
 	{
-		return false;
-	}
-	else if((SceneState->NextTurnTimer[Opponent] + Card->OppPlayDelta) < 0)
-	{
-		return false;
+		SceneState->TurnTimer += Card->SelfPlayDelta;
 	}
 	else
 	{
-		return true;
+		player_id Owner = Card->Owner;
+		SceneState->NextTurnTimer[Owner] += Card->SelfPlayDelta;
+	}
+}
+
+void ChangeOppPlayTimer(card_game_state* SceneState, card* Card)
+{
+	if(HasTag(&Card->TableauTags, TableauEffect_OppDeltaFromCurrent))
+	{
+		SceneState->TurnTimer += Card->OppPlayDelta;
+	}
+	else
+	{
+		player_id Owner = Card->Owner;
+		player_id Opponent = GetOpponent(Owner);
+		SceneState->NextTurnTimer[Opponent] += Card->OppPlayDelta;
 	}
 }
 
 void ChangeTimers(card_game_state* SceneState, card* Card)
 {
-	player_id Owner = Card->Owner;
-	player_id Opponent = GetOpponent(Owner);
-	SceneState->NextTurnTimer[Owner] += Card->SelfPlayDelta;
-	SceneState->NextTurnTimer[Opponent] += Card->OppPlayDelta;
+	ChangeSelfPlayTimer(SceneState, Card);
+	ChangeOppPlayTimer(SceneState, Card);
 }
 
 void CannotActivateCardMessage(
@@ -564,16 +608,41 @@ void InitDeckCard(
 	*DeckCard = Definitions->Array + CardId;
 }
 
-bool CheckAndTap(card_game_state* SceneState, card* Card)
+bool CheckAndTap(game_state* GameState, card_game_state* SceneState, card* Card)
 {
 	// NOTE: only activate card if you have the resources for it
-	bool Tapped = Card->TimesTapped < Card->TapsAvailable;
-	if(Tapped)
+	if(Card->TimesTapped < Card->TapsAvailable)
 	{
-		// NOTE: card effects on tap can be added here
-		Card->TimesTapped++;
+		if(HasTag(&Card->TableauTags, TableauEffect_SelfDeltaOnAttack))
+		{
+			if(!CheckSelfPlayDelta(SceneState, Card))
+			{
+				goto not_tapped;
+			}
+		}
+		if(HasTag(&Card->TableauTags, TableauEffect_OppDeltaOnAttack))
+		{
+			if(!CheckOppPlayDelta(SceneState, Card))
+			{
+				goto not_tapped;
+			}
+		}
 	}
-	return Tapped;
+	else
+	{
+		goto not_tapped;
+	}
+
+	goto tapped;
+
+not_tapped:
+	DisplayMessageFor(GameState, &SceneState->Alert, "Cannot tap card.", 1.0f);
+	return false;
+
+tapped:
+	Card->TimesTapped++;
+	// NOTE: card effects on tap can be added here
+	return true;
 }
 
 void UntapCard(card* Card)
@@ -808,29 +877,44 @@ void DeselectCard(card_game_state* SceneState)
 	SceneState->ValidTargets.Tags = 0;
 }
 
-void TriggerCommonAttackEffects(
+bool TriggerCommonAttackEffects(
 	card_game_state* SceneState, card* AttackingCard
 )
 {
+	// NOTE: return false
 	// NOTE: these effects happen regardless of whether you're attacking player
 	// CONT: or the card
 	if(HasTag(&AttackingCard->TableauTags, TableauEffect_SelfDeltaOnAttack))
 	{
-		player_id Owner = AttackingCard->Owner;
-		SceneState->NextTurnTimer[Owner] += AttackingCard->SelfPlayDelta;
+		if(CheckSelfPlayDelta(SceneState, AttackingCard))
+		{
+			ChangeSelfPlayTimer(SceneState, AttackingCard);
+		}
+		else
+		{
+			return false;
+		}
 	}
 	if(HasTag(&AttackingCard->TableauTags, TableauEffect_OppDeltaOnAttack))
 	{
-		player_id Owner = AttackingCard->Owner;
-		player_id Opponent = GetOpponent(Owner);
-		SceneState->NextTurnTimer[Opponent] += AttackingCard->OppPlayDelta;
+		if(CheckSelfPlayDelta(SceneState, AttackingCard))
+		{
+			ChangeOppPlayTimer(SceneState, AttackingCard);
+		}
+		else
+		{
+			return false;
+		}
 	}
+
+	return true;
 }
 
 struct attack_card_result 
 {
 	bool AttackerDied;
 	bool AttackedDied;
+	bool CouldntAttack;
 };
 
 attack_card_result AttackCard(
@@ -840,9 +924,22 @@ attack_card_result AttackCard(
 	card* AttackedCard
 )
 {
-	TriggerCommonAttackEffects(SceneState, AttackingCard);
 	// NOTE: this currently assumes cards must attack from the tableau
 	attack_card_result Result = {};
+
+	bool CanAttack = TriggerCommonAttackEffects(SceneState, AttackingCard);
+	if(!CanAttack)
+	{
+		DisplayMessageFor(
+			GameState,
+			&SceneState->Alert,
+			"Cannot attack this target",
+			1.0f
+		);
+		DeselectCard(SceneState);
+		Result.CouldntAttack = true;
+		return Result;
+	}
 
 	int16_t AttackingCardHealthDelta = AttackedCard->Attack;
 	int16_t AttackedCardHealthDelta = AttackingCard->Attack;
@@ -1736,22 +1833,35 @@ void ResolveTargeting(game_state* GameState, card_game_state* SceneState)
 				}
 				else if(Target->Type == TargetType_Player)
 				{
-					TriggerCommonAttackEffects(SceneState, SelectedCard);
-					// TODO: give a confirmation option for attacking yourself
-					player_id Owner = SelectedCard->Owner;
-					SceneState->PlayerLife[PlayerTarget] -= (
-						SelectedCard->Attack
+					bool CanAttack = TriggerCommonAttackEffects(
+						SceneState, SelectedCard
 					);
 
-					if(SceneState->PlayerLife[PlayerTarget] <= 0.0f)
+					if(CanAttack)
 					{
-						// TODO: give a small amount of fanfare for the winner
-						GameState->Scene = SceneType_MainMenu;
+						// TODO: give a confirmation option for attacking yourself
+						player_id Owner = SelectedCard->Owner;
+						SceneState->PlayerLife[PlayerTarget] -= (
+							SelectedCard->Attack
+						);
+
+						if(SceneState->PlayerLife[PlayerTarget] <= 0.0f)
+						{
+							// TODO: give a small amount of fanfare for the winner
+							GameState->Scene = SceneType_MainMenu;
+						}
 					}
 					else
 					{
-						DeselectCard(SceneState);
+						UntapCard(SceneState->SelectedCard);
+						DisplayMessageFor(
+							GameState,
+							&SceneState->Alert,
+							"Cannot attack",
+							1.0f
+						);
 					}
+					DeselectCard(SceneState);
 				}
 			}
 		}
@@ -1810,7 +1920,7 @@ void CardPrimaryUpHandler(
 				}
 				else if(Card->SetType == CardSet_Tableau)
 				{
-					bool Tapped = CheckAndTap(SceneState, Card);
+					bool Tapped = CheckAndTap(GameState, SceneState, Card);
 					if(Tapped)
 					{
 						SelectCard(SceneState, Card);

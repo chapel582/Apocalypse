@@ -106,6 +106,26 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	SetName(Definition, "Opp Delta on Attack", sizeof("Opp Delta on Attack"));
 	SetTag(&Definition->TableauTags, TableauEffect_OppDeltaOnAttack);
 
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 20, 20, -20, 0);
+	SetName(Definition, "SelfDeltaFromCurrent", sizeof("SelfDeltaFromCurrent"));
+	SetTag(&Definition->TableauTags, TableauEffect_SelfDeltaFromCurrent);
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 20, 20, -10, 0);
+	SetName(
+		Definition,
+		"SelfDeltaFromCurrentOnAttack",
+		sizeof("SelfDeltaFromCurrentOnAttack")
+	);
+	SetTag(&Definition->TableauTags, TableauEffect_SelfDeltaFromCurrent);
+	SetTag(&Definition->TableauTags, TableauEffect_SelfDeltaOnAttack);
+	SetDescription(
+		Definition,
+		"Take from self play from current. Trigger self play delta on attack.",
+		sizeof("Take from self play from current. Trigger self play delta on attack.")
+	);
+
 	/*
 	SECTION START: Define stack cards
 	*/

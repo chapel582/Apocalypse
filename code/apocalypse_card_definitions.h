@@ -53,7 +53,21 @@ typedef enum
 	/*
 	NOTE: Trigger the opp delta on each attack
 	*/
-	TableauEffect_OppDeltaOnAttack
+	TableauEffect_OppDeltaOnAttack,
+	/*
+	NOTE: SelfDelta acts on current instead of next turn
+	if this would cause the current timer to go below 0, it cannot be played
+
+	TODO: should we have some way to tag stack cards with this as well?
+	*/
+	TableauEffect_SelfDeltaFromCurrent,
+	/*
+	NOTE: OppDelta acts on current instead of next turn
+	if this would cause current timer to go below 0, it cannot be played
+
+	TODO: should we have some way to tag stack cards with this as well?
+	*/
+	TableauEffect_OppDeltaFromCurrent
 
 	/*
 	TODO: Unimplemented card ideas

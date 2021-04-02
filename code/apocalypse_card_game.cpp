@@ -1542,8 +1542,11 @@ void EndStackBuilding(game_state* GameState, card_game_state* SceneState)
 
 				if(HasTag(StackTags, StackEffect_HurtOpp))
 				{
-					player_id ToHurt = CardStackEntry->PlayerTarget;
-					SceneState->PlayerLife[ToHurt] -= 5.0f;
+					if(CardStackEntry->PlayerTargetSet)
+					{
+						player_id ToHurt = CardStackEntry->PlayerTarget;
+						SceneState->PlayerLife[ToHurt] -= 5.0f;
+					}
 				}
 				else if(HasTag(StackTags, StackEffect_DisableNext))
 				{
@@ -1616,43 +1619,46 @@ void EndStackBuilding(game_state* GameState, card_game_state* SceneState)
 				else if(HasTag(StackTags, StackEffect_OppDeltaConfuse))
 				{
 					player_id PlayerTarget = CardStackEntry->PlayerTarget;
-					card_set* Hand = SceneState->Hands + PlayerTarget;
-					
-					int32_t Min = 1 << 17;
-					int32_t Max = -1 * (1 << 17);
-					for(
-						int Index = 0;
-						Index < ARRAY_COUNT(Hand->Cards);
-						Index++
-					)
+					if(CardStackEntry->PlayerTargetSet)
 					{
-						card* HandCard = Hand->Cards[Index];	
-						if(HandCard != NULL)
+						card_set* Hand = SceneState->Hands + PlayerTarget;
+					
+						int32_t Min = 1 << 17;
+						int32_t Max = -1 * (1 << 17);
+						for(
+							int Index = 0;
+							Index < ARRAY_COUNT(Hand->Cards);
+							Index++
+						)
 						{
-							if(HandCard->OppPlayDelta < Min)
+							card* HandCard = Hand->Cards[Index];	
+							if(HandCard != NULL)
 							{
-								Min = HandCard->OppPlayDelta;
-							}
-							if(HandCard->OppPlayDelta > Max)
-							{
-								Max = HandCard->OppPlayDelta;
+								if(HandCard->OppPlayDelta < Min)
+								{
+									Min = HandCard->OppPlayDelta;
+								}
+								if(HandCard->OppPlayDelta > Max)
+								{
+									Max = HandCard->OppPlayDelta;
+								}
 							}
 						}
-					}
 
-					for(
-						int Index = 0;
-						Index < ARRAY_COUNT(Hand->Cards);
-						Index++
-					)
-					{
-						card* HandCard = Hand->Cards[Index];	
-						if(HandCard != NULL)
+						for(
+							int Index = 0;
+							Index < ARRAY_COUNT(Hand->Cards);
+							Index++
+						)
 						{
-							HandCard->OppPlayDelta = (
-								(rand() % ((int16_t) Max - (int16_t) Min)) + 
-								((int16_t) Min)
-							);
+							card* HandCard = Hand->Cards[Index];	
+							if(HandCard != NULL)
+							{
+								HandCard->OppPlayDelta = (
+									(rand() % ((int16_t) Max - (int16_t) Min)) + 
+									((int16_t) Min)
+								);
+							}
 						}
 					}
 				}
@@ -1835,6 +1841,7 @@ void ResolveTargeting(game_state* GameState, card_game_state* SceneState)
 			)
 			{
 				StackEntry->PlayerTarget = SceneState->Targets[0].PlayerTarget;
+				StackEntry->PlayerTargetSet = true;
 			}
 
 			DeselectCard(SceneState);

@@ -118,6 +118,7 @@ struct card_stack_entry
 	{
 		struct
 		{
+			bool PlayerTargetSet;
 			player_id PlayerTarget;
 		};
 		struct

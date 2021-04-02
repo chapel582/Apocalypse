@@ -611,7 +611,11 @@ void DrawFullHand(card_game_state* SceneState, player_id Player)
 	else
 	{
 		card_data_set* DiscardSet = SceneState->DiscardSets + Player;
-		memcpy(DrawSet->Cards, DiscardSet->Cards, DiscardSet->CardCount);
+		memcpy(
+			DrawSet->Cards,
+			DiscardSet->Cards,
+			DiscardSet->CardCount * sizeof(card_data)
+		);
 		DrawSet->CardCount = DiscardSet->CardCount;
 		DiscardSet->CardCount = 0;
 		ShuffleDrawSet(SceneState, Player);

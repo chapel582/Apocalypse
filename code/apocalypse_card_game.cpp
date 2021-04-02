@@ -38,7 +38,7 @@ bool CheckSelfPlayDelta(card_game_state* SceneState, card* Card)
 	else
 	{
 		player_id Owner = Card->Owner;
-		return (SceneState->NextTurnTimer[Owner] + Card->SelfPlayDelta) > 0;
+		return (SceneState->NextTurnTimer[Owner] + Card->SelfPlayDelta) >= 0;
 	}
 }
 
@@ -52,7 +52,7 @@ bool CheckOppPlayDelta(card_game_state* SceneState, card* Card)
 	{
 		player_id Owner = Card->Owner;
 		player_id Opponent = GetOpponent(Owner);
-		return (SceneState->NextTurnTimer[Opponent] + Card->OppPlayDelta) > 0;
+		return (SceneState->NextTurnTimer[Opponent] + Card->OppPlayDelta) >= 0;
 	}
 }
 

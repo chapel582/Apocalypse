@@ -43,6 +43,16 @@ typedef enum
 	*/
 	TableauEffect_CurrentBoost,
 	/*
+	NOTE: while this card is in the tableau, lose 10 seconds from the turn timer
+	at the start of your turn
+	*/
+	TableauEffect_CurrentLoss,
+	/*
+	NOTE: while this card is in the tableau, when you end your turn, your card's
+	attack is increased by half of the remaining turn time
+	*/
+	TableauEffect_GainRemainingAsAttack,
+	/*
 	NOTE: When a taunt card is in play, only taunt cards can be attacked
 	*/
 	TableauEffect_Taunt,
@@ -67,7 +77,7 @@ typedef enum
 
 	TODO: should we have some way to tag stack cards with this as well?
 	*/
-	TableauEffect_OppDeltaFromCurrent
+	TableauEffect_OppDeltaFromCurrent,
 
 	/*
 	TODO: Unimplemented card ideas

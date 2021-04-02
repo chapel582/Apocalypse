@@ -1524,6 +1524,12 @@ void EndStackBuilding(game_state* GameState, card_game_state* SceneState)
 				else if(HasTag(StackTags, StackEffect_DrawTwo))
 				{
 					DrawCard(GameState, SceneState, Card->Owner);
+					DrawCard(GameState, SceneState, Card->Owner);
+				}
+				else if(HasTag(StackTags, StackEffect_BothDraw))
+				{
+					DrawCard(GameState, SceneState, Player_One);
+					DrawCard(GameState, SceneState, Player_Two);
 				}
 				else if(HasTag(StackTags, StackEffect_RandomDiscard))
 				{
@@ -2725,6 +2731,8 @@ void CardGameLogic(
 	{
 		EndStackBuilding(GameState, SceneState);
 
+		float TimeRemaining = SceneState->TurnTimer;
+		player_id EndingTurnPlayer = SceneState->CurrentTurn;
 		player_id NextTurnPlayer = GetOpponent(SceneState->CurrentTurn);
 		SetTurnTimer(SceneState, SceneState->NextTurnTimer[NextTurnPlayer]);
 
@@ -2748,6 +2756,16 @@ void CardGameLogic(
 				Card->TimesTapped = 0;
 
 				tableau_effect_tags* EffectTags = &Card->TableauTags;
+				if(HasTag(EffectTags, TableauEffect_GainRemainingAsAttack))
+				{
+					if(Card->Owner == EndingTurnPlayer)
+					{
+						Card->TurnStartAttack += (int16_t)(
+							RoundFloat32ToInt32(0.5f * TimeRemaining)
+						);
+						Card->Attack = Card->TurnStartAttack;
+					}
+				}
 				if(HasTag(EffectTags, TableauEffect_SelfWeaken))
 				{
 					if(Card->SetType == CardSet_Tableau)
@@ -2781,6 +2799,13 @@ void CardGameLogic(
 					if(Card->SetType == CardSet_Tableau)
 					{
 						SceneState->TurnTimer += 10.0f;
+					}
+				}
+				if(HasTag(EffectTags, TableauEffect_CurrentLoss))
+				{
+					if(Card->SetType == CardSet_Tableau)
+					{
+						SceneState->TurnTimer -= 10.0f;
 					}
 				}
 				if(HasTag(EffectTags, TableauEffect_CostIncrease))
@@ -2889,7 +2914,7 @@ void CardGameLogic(
 					{
 						if(WholeSecondPassed)
 						{
-							Card->SelfPlayDelta += 1;
+							Card->OppPlayDelta += 1;
 						}
 					}
 				}

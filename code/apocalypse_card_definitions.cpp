@@ -85,11 +85,21 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	InitCard(Definition, CardId++, 1, 10, 10, -10, 10);
 	SetName(Definition, "Give Increase", sizeof("Give Increase"));
 	SetTag(&Definition->TableauTags, TableauEffect_GiveIncrease);
+	SetDescription(
+		Definition,
+		"Opp delta increases each second",
+		sizeof("Opp delta increases each second")
+	);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 10, 40, -20, 20);
 	SetName(Definition, "Current Boost", sizeof("Current Boost"));
 	SetTag(&Definition->TableauTags, TableauEffect_CurrentBoost);
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 40, 40, -20, 0);
+	SetName(Definition, "Current Loss", sizeof("Current Loss"));
+	SetTag(&Definition->TableauTags, TableauEffect_CurrentLoss);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 20, 40, -40, 30);
@@ -124,6 +134,20 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		Definition,
 		"Take from self play from current. Trigger self play delta on attack.",
 		sizeof("Take from self play from current. Trigger self play delta on attack.")
+	);
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 0, 40, -40, 20);
+	SetName(
+		Definition,
+		"GainRemainingAsAttack",
+		sizeof("GainRemainingAsAttack")
+	);
+	SetTag(&Definition->TableauTags, TableauEffect_GainRemainingAsAttack);
+	SetDescription(
+		Definition,
+		"At the end of your turn, gain half of the time remaining as attack",
+		sizeof("At the end of your turn, gain half of the time remaining as attack")
 	);
 
 	/*
@@ -318,6 +342,20 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		)
 	);
 	SetTag(&Definition->StackTags, StackEffect_GetRemaining);
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 0, 0, -10, 20);
+	SetName(
+		Definition,
+		"Both Draw",
+		sizeof("Both Draw")
+	);
+	SetDescription(
+		Definition,
+		"Both players draw a card",
+		sizeof("Both players draw a card")
+	);
+	SetTag(&Definition->StackTags, StackEffect_BothDraw);
 
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;

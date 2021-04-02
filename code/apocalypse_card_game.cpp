@@ -1918,7 +1918,17 @@ void CardPrimaryUpHandler(
 		else
 		{
 			// NOTE: selecting phase
-			if(Card->Owner == SceneState->CurrentTurn)
+			if(
+				SceneState->StackBuilding &&
+				SceneState->StackTurn == Card->Owner
+			)
+			{
+				if(HasAnyTag(&Card->StackTags))
+				{
+					NormalPlayCard(GameState, SceneState, Card);
+				}
+			}
+			else if(Card->Owner == SceneState->CurrentTurn)
 			{
 				if(Card->SetType == CardSet_Hand)
 				{

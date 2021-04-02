@@ -745,6 +745,7 @@ card_stack_entry* AddCardToStack(card_game_state* SceneState, card* Card)
 	RemoveCardAndAlign(SceneState, Card);
 	
 	card_stack_entry* StackEntry = SceneState->Stack + SceneState->StackSize;
+	*StackEntry = {};
 	StackEntry->Card = Card;
 	SceneState->StackSize++;
 
@@ -1560,12 +1561,15 @@ void EndStackBuilding(game_state* GameState, card_game_state* SceneState)
 				else if(HasTag(StackTags, StackEffect_SwapDeltas))
 				{
 					card* CardTarget = CardStackEntry->CardTarget;
-					int16_t SelfPlayDelta = CardTarget->SelfPlayDelta;
-					CardTarget->SelfPlayDelta = CardTarget->OppPlayDelta;
-					CardTarget->TurnStartSelfPlayDelta = (
-						CardTarget->SelfPlayDelta
-					); 
-					CardTarget->OppPlayDelta = SelfPlayDelta;
+					if(CardTarget != NULL)
+					{
+						int16_t SelfPlayDelta = CardTarget->SelfPlayDelta;
+						CardTarget->SelfPlayDelta = CardTarget->OppPlayDelta;
+						CardTarget->TurnStartSelfPlayDelta = (
+							CardTarget->SelfPlayDelta
+						); 
+						CardTarget->OppPlayDelta = SelfPlayDelta;
+					}
 				}
 				else if(HasTag(StackTags, StackEffect_DrawTwo))
 				{
@@ -1698,10 +1702,13 @@ void EndStackBuilding(game_state* GameState, card_game_state* SceneState)
 				else if(HasTag(StackTags, StackEffect_DiscardAndGive))
 				{
 					card* CardTarget = CardStackEntry->CardTarget;
-					SceneState->NextTurnTimer[CardTarget->Owner] += (
-						CardTarget->OppPlayDelta
-					); 
-					DiscardCard(GameState, SceneState, CardTarget);
+					if(CardTarget != NULL)
+					{
+						SceneState->NextTurnTimer[CardTarget->Owner] += (
+							CardTarget->OppPlayDelta
+						); 
+						DiscardCard(GameState, SceneState, CardTarget);
+					}
 				}
 			}
 			else
@@ -1715,6 +1722,8 @@ void EndStackBuilding(game_state* GameState, card_game_state* SceneState)
 
 		scroll_bar* StackScrollBar = &SceneState->StackScrollBar;
 		StackScrollBar->Rect.Dim.Y = StackScrollBar->Trough.Dim.Y + 1.0f;
+
+		SceneState->SelectedCard = NULL;
 	}
 }
 

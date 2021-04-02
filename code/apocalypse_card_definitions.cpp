@@ -292,8 +292,8 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	);
 	SetDescription(
 		Definition,
-		"Choose a player to discard a card and trigger the opp delta for the owner instead.",
-		sizeof("Choose a player to discard a card and trigger the opp delta for the owner instead.")
+		"Discard a card and trigger the opp delta for the owner instead.",
+		sizeof("Discard a card and trigger the opp delta for the owner instead.")
 	);
 	SetTag(&Definition->StackTags, StackEffect_DiscardAndGive);
 

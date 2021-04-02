@@ -508,6 +508,45 @@ void ShuffleDrawSet(
 	}
 }
 
+void DiscardCard(game_state* GameState, card_game_state* SceneState, card* Card)
+{
+	card_set* Hand = SceneState->Hands + Card->Owner;
+	AddCardToCardDataSet(Card, SceneState->DiscardSets + Card->Owner);
+	SafeRemoveCard(GameState, SceneState, Card);
+	AlignCardSet(Hand);
+}
+
+void DiscardByIndex(
+	game_state* GameState,
+	card_game_state* SceneState,
+	player_id Player,
+	uint32_t Index
+)
+{
+	card_set* Hand = SceneState->Hands + Player;
+	card_data_set* DiscardSet = SceneState->DiscardSets + Player;
+	ASSERT(Index < Hand->CardCount);
+
+	uint16_t CurrentIndex = 0;
+	for(uint32_t CardIndex = 0; CardIndex < MAX_CARDS_PER_SET; CardIndex++)
+	{
+		card* Card = Hand->Cards[CardIndex];
+		if(Card == NULL)
+		{
+			continue;
+		}
+		else if(CurrentIndex == Index)
+		{
+			DiscardCard(GameState, SceneState, Card);
+			break;
+		}
+		else
+		{
+			CurrentIndex++;
+		}
+	}
+}
+
 void DiscardFullHand(
 	game_state* GameState, card_game_state* SceneState, player_id Player
 )
@@ -793,7 +832,10 @@ void PlayStackCard(
 		StackEntry->PlayerTarget = GetOpponent(SceneState->CurrentTurn);
 	}
 
-	if(HasTag(StackTags, StackEffect_SwapDeltas))
+	if(
+		HasTag(StackTags, StackEffect_SwapDeltas) ||
+		HasTag(StackTags, StackEffect_DiscardAndGive)
+	)
 	{
 		SelectCard(SceneState, Card);
 		SceneState->TargetsNeeded++;
@@ -1537,14 +1579,16 @@ void EndStackBuilding(game_state* GameState, card_game_state* SceneState)
 					if(OwnerHand->CardCount > 0)
 					{
 						uint32_t CardIndex = rand() % OwnerHand->CardCount;
-						RemoveCardFromSet(OwnerHand, CardIndex);
+						DiscardByIndex(
+							GameState, SceneState, Card->Owner, CardIndex
+						);
 					}
 					player_id Opp = GetOpponent(Card->Owner);
 					card_set* OppHand = SceneState->Hands + Opp;
 					if(OppHand->CardCount > 0)
 					{
 						uint32_t CardIndex = rand() % OppHand->CardCount;
-						RemoveCardFromSet(OppHand, CardIndex);
+						DiscardByIndex(GameState, SceneState, Opp, CardIndex);
 					}
 				}
 				else if(HasTag(StackTags, StackEffect_PassRemaining))
@@ -1646,6 +1690,14 @@ void EndStackBuilding(game_state* GameState, card_game_state* SceneState)
 							);
 						}
 					}
+				}
+				else if(HasTag(StackTags, StackEffect_DiscardAndGive))
+				{
+					card* CardTarget = CardStackEntry->CardTarget;
+					SceneState->NextTurnTimer[CardTarget->Owner] += (
+						CardTarget->OppPlayDelta
+					); 
+					DiscardCard(GameState, SceneState, CardTarget);
 				}
 			}
 			else
@@ -1758,7 +1810,8 @@ void ResolveTargeting(game_state* GameState, card_game_state* SceneState)
 				SceneState->Stack + SceneState->StackSize - 1
 			);
 			if(
-				HasTag(&SelectedCard->StackTags, StackEffect_SwapDeltas)
+				HasTag(&SelectedCard->StackTags, StackEffect_SwapDeltas) ||
+				HasTag(&SelectedCard->StackTags, StackEffect_DiscardAndGive)
 			)
 			{
 				StackEntry->CardTarget = SceneState->Targets[0].CardTarget;

@@ -3268,8 +3268,12 @@ void UpdateAndRenderCardGame(
 						{
 							ASSERT(false);
 						}
+
+						player_id DataSetOwner = GetOpponent(
+							UpdatePayload->Owner
+						);
 						card_data_set* DataSet = (
-							DataSetArray + GetOpponent(UpdatePayload->Owner)
+							DataSetArray + DataSetOwner
 						);
 						DataSet->CardCount = UpdatePayload->CardCount;
 
@@ -3287,6 +3291,7 @@ void UpdateAndRenderCardGame(
 							CardData->Definition = (
 								SceneState->Definitions->Array + Update->DefId
 							);
+							CardData->Owner = DataSetOwner;
 							
 							CardData->TapsAvailable = Update->TapsAvailable;
 							CardData->SelfPlayDelta = Update->SelfPlayDelta;
@@ -3431,7 +3436,7 @@ void UpdateAndRenderCardGame(
 			if(SceneState->NetworkGame)
 			{
 				bool SwitchingLeader = false;
-				if(EndTurn)
+				if(EndTurn && (SceneState->CurrentTurn != Player_One))
 				{
 					SwitchingLeader = true;
 				}
@@ -3448,7 +3453,9 @@ void UpdateAndRenderCardGame(
 					{
 						if(FrameStartStackBuilding)
 						{
-							SwitchingLeader = SceneState->CurrentTurn == Player_Two;
+							SwitchingLeader = (
+								SceneState->CurrentTurn == Player_Two
+							);
 						}
 						else
 						{

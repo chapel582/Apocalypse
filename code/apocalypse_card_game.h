@@ -350,7 +350,7 @@ struct card_data_set_update_payload
 	player_id Owner;
 	card_data_set_type Type;
 	uint32_t CardCount;
-	// NOTE: followed by CardCount card_data_set_update structures
+	// NOTE: followed by CardCount card_data_update structures
 };
 struct card_data_set_update_packet
 {

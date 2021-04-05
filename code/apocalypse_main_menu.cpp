@@ -98,7 +98,7 @@ void UpdateAndRenderMainMenu(
 			button_handle_event_result Result = ButtonHandleEvent(
 				&SceneState->UiContext,
 				&SceneState->CardGameButton,
-				MouseEvent,
+				MouseEvent->Type,
 				MouseEventWorldPos
 			);
 			if(Result == ButtonHandleEvent_TakeAction)
@@ -115,7 +115,7 @@ void UpdateAndRenderMainMenu(
 			Result = ButtonHandleEvent(
 				&SceneState->UiContext,
 				&SceneState->HostGameButton,
-				MouseEvent,
+				MouseEvent->Type,
 				MouseEventWorldPos
 			);
 			if(Result == ButtonHandleEvent_TakeAction)
@@ -125,7 +125,7 @@ void UpdateAndRenderMainMenu(
 			Result = ButtonHandleEvent(
 				&SceneState->UiContext,
 				&SceneState->JoinGameButton,
-				MouseEvent,
+				MouseEvent->Type,
 				MouseEventWorldPos
 			);
 			if(Result == ButtonHandleEvent_TakeAction)
@@ -135,7 +135,7 @@ void UpdateAndRenderMainMenu(
 			Result = ButtonHandleEvent(
 				&SceneState->UiContext,
 				&SceneState->DeckEditorButton,
-				MouseEvent,
+				MouseEvent->Type,
 				MouseEventWorldPos
 			);
 			if(Result == ButtonHandleEvent_TakeAction)
@@ -152,7 +152,7 @@ void UpdateAndRenderMainMenu(
 			Result = ButtonHandleEvent(
 				&SceneState->UiContext,
 				&SceneState->OptionsButton,
-				MouseEvent,
+				MouseEvent->Type,
 				MouseEventWorldPos
 			);
 			if(Result == ButtonHandleEvent_TakeAction)

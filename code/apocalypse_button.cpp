@@ -10,7 +10,7 @@ button_handle_event_result ButtonHandleEvent(
 	ui_context* UiContext,
 	ui_id Id,
 	rectangle Rectangle,
-	game_mouse_event* MouseEvent,
+	mouse_event_type MouseEventType,
 	vector2 MouseEventWorldPos
 )
 {
@@ -18,7 +18,7 @@ button_handle_event_result ButtonHandleEvent(
 	button_handle_event_result Result = ButtonHandleEvent_NoAction;
 	if(IsActive(UiContext, Id))
 	{
-		if(MouseEvent->Type == PrimaryUp)
+		if(MouseEventType == PrimaryUp)
 		{
 			if(IsHot(UiContext, Id) && Inside)
 			{
@@ -32,7 +32,7 @@ button_handle_event_result ButtonHandleEvent(
 	}
 	else if(IsHot(UiContext, Id))
 	{
-		if(MouseEvent->Type == PrimaryDown)
+		if(MouseEventType == PrimaryDown)
 		{
 			if(Inside)
 			{
@@ -56,7 +56,7 @@ button_handle_event_result ButtonHandleEvent(
 inline button_handle_event_result ButtonHandleEvent(
 	ui_context* UiContext,
 	ui_button* Button,
-	game_mouse_event* MouseEvent,
+	mouse_event_type MouseEventType,
 	vector2 MouseEventWorldPos
 )
 {
@@ -64,7 +64,7 @@ inline button_handle_event_result ButtonHandleEvent(
 		UiContext,
 		Button->Id,
 		*Button->Rectangle,
-		MouseEvent,
+		MouseEventType,
 		MouseEventWorldPos
 	);
 }

@@ -95,7 +95,7 @@ void UpdateAndRenderOptionsMenu(
 			button_handle_event_result DropdownResult = ButtonHandleEvent(
 				&SceneState->UiContext,
 				&Dropdown->DropButton,
-				MouseEvent,
+				MouseEvent->Type,
 				MouseEventWorldPos
 			);
 			if(DropdownResult == ButtonHandleEvent_TakeAction)
@@ -117,7 +117,7 @@ void UpdateAndRenderOptionsMenu(
 					button_handle_event_result ButtonResult = ButtonHandleEvent(
 						&SceneState->UiContext,
 						DropdownButton,
-						MouseEvent,
+						MouseEvent->Type,
 						MouseEventWorldPos
 					);
 					if(ButtonResult == ButtonHandleEvent_TakeAction)

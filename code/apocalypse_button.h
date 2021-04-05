@@ -29,14 +29,14 @@ typedef enum
 button_handle_event_result ButtonHandleEvent(
 	ui_context* UiContext,
 	ui_button* Button,
-	game_mouse_event* MouseEvent,
+	mouse_event_type MouseEventType,
 	vector2 MouseEventWorldPos
 );
 button_handle_event_result ButtonHandleEvent(
 	ui_context* UiContext,
 	ui_id Id,
 	rectangle Rectangle,
-	game_mouse_event* MouseEvent,
+	mouse_event_type MouseEventType,
 	vector2 MouseEventWorldPos
 );
 void PushButtonToRenderGroup(

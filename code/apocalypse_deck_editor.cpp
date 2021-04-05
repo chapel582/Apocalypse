@@ -164,18 +164,46 @@ void UpdateDeckScrollBar(
 void RemoveCardFromDeck(
 	deck_editor_cards* DeckCards,
 	deck_editor_card* DeckCard,
-	deck_editor_state* SceneState
+	deck_editor_state* SceneState,
+	ui_context* UiContext,
+	vector2 MouseEventWorldPos
 )
 {
 	DeckCard->Count--;
 
+	// NOTE: need to recheck if buttons should be hot or active
 	if(DeckCard->Count <= 0)
 	{
 		DeckCard->Definition = NULL;
 		DeckCards->ActiveButtons--;
+
+		SortDeckCards(DeckCards);
+		UpdateDeckScrollBar(DeckCards, SceneState);
+		vector2 Dim = DeckCards->Dim;
+		for(
+			uint32_t ButtonIndex = 0;
+			ButtonIndex < ARRAY_COUNT(DeckCards->Cards);
+			ButtonIndex++
+		)
+		{
+			deck_editor_card* CheckCard = DeckCards->Cards + ButtonIndex;
+			if(!IsActive(CheckCard))
+			{
+				break;
+			}
+			rectangle Rectangle = MakeDeckCardRectangle(
+				DeckCards, Dim, ButtonIndex
+			);
+
+			ButtonHandleEvent(
+				UiContext,
+				CheckCard->UiId,
+				Rectangle,
+				MouseMove,
+				MouseEventWorldPos
+			);
+		}
 	}
-	SortDeckCards(DeckCards);
-	UpdateDeckScrollBar(DeckCards, SceneState);
 }
 
 void AddCardToDeck(
@@ -692,7 +720,7 @@ void UpdateAndRenderDeckEditor(
 					Result = ButtonHandleEvent(
 						UiContext,
 						&CollectionCard->Button,
-						MouseEvent,
+						MouseEvent->Type,
 						MouseEventWorldPos
 					);
 					if(Result == ButtonHandleEvent_TakeAction)
@@ -742,12 +770,18 @@ void UpdateAndRenderDeckEditor(
 					UiContext,
 					DeckCard->UiId,
 					Rectangle,
-					MouseEvent,
+					MouseEvent->Type,
 					MouseEventWorldPos
 				);
 				if(Result == ButtonHandleEvent_TakeAction)
 				{
-					RemoveCardFromDeck(DeckCards, DeckCard, SceneState);
+					RemoveCardFromDeck(
+						DeckCards,
+						DeckCard,
+						SceneState,
+						UiContext,
+						MouseEventWorldPos
+					);
 					break;
 				}
 			}
@@ -755,7 +789,7 @@ void UpdateAndRenderDeckEditor(
 			Result = ButtonHandleEvent(
 				UiContext,
 				&SceneState->SaveButton,
-				MouseEvent,
+				MouseEvent->Type,
 				MouseEventWorldPos
 			);
 			if(Result == ButtonHandleEvent_TakeAction)
@@ -771,7 +805,7 @@ void UpdateAndRenderDeckEditor(
 			Result = ButtonHandleEvent(
 				UiContext,
 				&SceneState->DeleteButton,
-				MouseEvent,
+				MouseEvent->Type,
 				MouseEventWorldPos
 			);
 			if(Result == ButtonHandleEvent_TakeAction)
@@ -782,7 +816,7 @@ void UpdateAndRenderDeckEditor(
 			Result = ButtonHandleEvent(
 				UiContext,
 				&SceneState->CollectionPrev,
-				MouseEvent,
+				MouseEvent->Type,
 				MouseEventWorldPos
 			);
 			if(Result == ButtonHandleEvent_TakeAction)
@@ -793,7 +827,7 @@ void UpdateAndRenderDeckEditor(
 			Result = ButtonHandleEvent(
 				UiContext,
 				&SceneState->CollectionNext,
-				MouseEvent,
+				MouseEvent->Type,
 				MouseEventWorldPos
 			);
 			if(Result == ButtonHandleEvent_TakeAction)

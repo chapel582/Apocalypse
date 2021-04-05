@@ -408,7 +408,7 @@ void UpdateAndRenderDeckSelector(
 						UiContext,
 						LoadDeckButton->UiId,
 						Rectangle,
-						MouseEvent,
+						MouseEvent->Type,
 						MouseEventWorldPos
 					);
 					if(Result == ButtonHandleEvent_TakeAction)

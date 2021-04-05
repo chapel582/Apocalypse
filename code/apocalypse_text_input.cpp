@@ -15,7 +15,7 @@ void InitTextInput(
 	TextInput->FontHeight = FontHeight;
 	TextInput->BufferSize = BufferSize;
 	TextInput->Buffer = Buffer;
-	TextInput->RepeatDelay = 1.0f;
+	TextInput->RepeatDelay = 0.5f;
 	TextInput->RepeatPeriod = 0.05f;
 	TextInput->CursorColor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 	TextInput->CursorAlphaState = CursorAlphaState_Decreasing;

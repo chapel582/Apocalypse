@@ -36,7 +36,7 @@ inline float Ceil(float Value)
 
 inline int32_t Int32Ceil(float Value)
 {
-	return Int32Floor(Value) + 1;
+	return (int32_t) (ceil((double) Value));
 }
 
 inline uint64_t AtomicAddUint64(uint64_t volatile* Addend, uint64_t Value)

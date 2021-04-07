@@ -31,6 +31,7 @@ inline player_id GetOpponent(player_id Player)
 
 bool CheckSelfPlayDelta(card_game_state* SceneState, card* Card)
 {
+	AppendToFrameLog("CheckSelfPlayDelta called");
 	if(HasTag(&Card->TableauTags, TableauEffect_SelfDeltaFromCurrent))
 	{
 		return (SceneState->TurnTimer + Card->SelfPlayDelta) > 0;
@@ -3019,6 +3020,8 @@ void UpdateAndRenderCardGame(
 	float DtForFrame
 )
 {
+	AppendToFrameLog("UpdateAndRenderCardGame called");
+	
 	ui_context* UiContext = &SceneState->UiContext;
 	memory_arena* FrameArena = &GameState->FrameArena;
 	assets* Assets = &GameState->Assets;

@@ -9,6 +9,7 @@
 #include "apocalypse_assets.h"
 #include "apocalypse_audio.h"
 #include "apocalypse_particles.h"
+#include "apocalypse_logging.h"
 
 typedef enum
 {
@@ -62,6 +63,8 @@ struct game_state
 	// NOTE: number of frames that have passed in this scene
 	uint64_t FrameCount;
 
+	uint8_t LogInUse;
+
 	// NOTE: the state data needed in order to get the next packet id in 
 	// CONT: networked environments
 	uint64_t PacketIdTracker;
@@ -99,6 +102,10 @@ struct game_state
 	// CONT: their positions after a change in window size
 	rectangle* TrackedRectangles;
 	uint32_t TrackedRectanglesCount;
+
+	uint32_t FrameLogSize;
+	char* FrameLog;
+	// TODO: if the frame logging writes are too slow, consider maintaining file handles
 };
 
 rectangle* MakeTrackedRectangle(game_state* GameState, vector2 Min, vector2 Dim)

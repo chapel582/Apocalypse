@@ -42,9 +42,6 @@
 #include <ws2tcpip.h>
 #endif
 
-#define LOGS_PATH "./logs"
-#define ASSERT_LOG_PATH (LOGS_PATH "/assert.log")
-
 // NOTE: grabbed this stringize stuff from here:
 // CONT: https://stackoverflow.com/questions/2670816/how-can-i-use-the-compile-time-constant-line-in-a-string
 #define STRINGIZE(x) STRINGIZE2(x)
@@ -99,16 +96,22 @@ platform_read_file_result PlatformGetFileSize(
 platform_read_file_result PlatformReadFile(
 	char* FileName, void* Contents, uint32_t BytesToRead
 );
+
 bool PlatformAppendToFile(
 	char* FileName, void* Memory, uint32_t MemorySize
 );
+// NOTE: MemorySize should be the amount of memory to write (not the size)
+// CONT: of the buffer
+
 bool PlatformWriteEntireFile(
 	char* FileName, void* Memory, uint32_t MemorySize
 );
+
 // TODO: PlatformFindAllFiles needs error handling
 void PlatformFindAllFiles(
 	char* FilePattern, char* FileNames, uint32_t FileNamesSize 
 );
+
 // TODO: error handling
 void PlatformDeleteFile(char* FileName);
 

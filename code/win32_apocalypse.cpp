@@ -162,6 +162,11 @@ bool PlatformWriteEntireFile(
 		goto error;
 	}
 
+	if(Memory == NULL || MemorySize == 0)
+	{
+		goto end;
+	}
+	
 	DWORD BytesWritten = 0;
 	if(!WriteFile(FileHandle, Memory, MemorySize, &BytesWritten, 0))
 	{
@@ -189,6 +194,8 @@ bool PlatformAppendToFile(
 	char* FileName, void* Memory, uint32_t MemorySize
 )
 {
+	// NOTE: MemorySize should be the amount of memory to write (not the size)
+	// CONT: of the buffer
 	bool Result = false;
 	HANDLE FileHandle = INVALID_HANDLE_VALUE;
 	FileHandle = CreateFileA(

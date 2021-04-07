@@ -10,8 +10,10 @@
 #include "apocalypse_audio.h"
 #include "apocalypse_particles.h"
 #include "apocalypse_opengl.h"
+#include "apocalypse_logging.h"
 
 // TODO: move the source includes above the headers
+#include "apocalypse_logging.cpp"
 #include "apocalypse_lost_connection.cpp"
 #include "apocalypse_options_menu.cpp"
 #include "apocalypse_socket.cpp"
@@ -283,6 +285,10 @@ void GameInitMemory(
 		GameState->FullSceneSwitch = true;
 		GameState->PopScene = false;
 		GameState->SceneStackMaxLen = sizeof(GameState->SceneStack);
+
+		GameState->FrameLog = PushArray(&GameState->Arena, MAX_LOG_SIZE, char);
+		GameState->FrameLogSize = 0; 
+		GlobalLoggingGameState = GameState;
 	}
 }
 
@@ -542,6 +548,8 @@ void GameUpdateAndRender(
 
 	ResetMemArena(&GameState->FrameArena);
 
+	WriteFrameLogToDisk();
+	
 	GameState->FrameCount++;
 }
 

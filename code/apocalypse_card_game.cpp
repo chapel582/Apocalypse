@@ -45,6 +45,7 @@ bool CheckSelfPlayDelta(card_game_state* SceneState, card* Card)
 
 bool CheckOppPlayDelta(card_game_state* SceneState, card* Card)
 {
+	AppendToFrameLog("CheckOppPlayDelta called");
 	if(HasTag(&Card->TableauTags, TableauEffect_OppDeltaFromCurrent))
 	{
 		return (SceneState->TurnTimer + Card->OppPlayDelta) > 0;
@@ -59,6 +60,7 @@ bool CheckOppPlayDelta(card_game_state* SceneState, card* Card)
 
 bool CanChangeTimers(card_game_state* SceneState, card* Card)
 {
+	AppendToFrameLog("CanChangeTimers called");
 	player_id Owner = Card->Owner;
 	player_id Opponent = GetOpponent(Owner);
 
@@ -69,6 +71,8 @@ bool CanChangeTimers(card_game_state* SceneState, card* Card)
 
 void ChangeSelfPlayTimer(card_game_state* SceneState, card* Card)
 {
+	AppendToFrameLog("ChangeSelfPlayTimer called");
+
 	if(HasTag(&Card->TableauTags, TableauEffect_SelfDeltaFromCurrent))
 	{
 		SceneState->TurnTimer += Card->SelfPlayDelta;
@@ -82,6 +86,8 @@ void ChangeSelfPlayTimer(card_game_state* SceneState, card* Card)
 
 void ChangeOppPlayTimer(card_game_state* SceneState, card* Card)
 {
+	AppendToFrameLog("ChangeOppPlayTimer called");
+
 	if(HasTag(&Card->TableauTags, TableauEffect_OppDeltaFromCurrent))
 	{
 		SceneState->TurnTimer += Card->OppPlayDelta;
@@ -96,6 +102,8 @@ void ChangeOppPlayTimer(card_game_state* SceneState, card* Card)
 
 void ChangeTimers(card_game_state* SceneState, card* Card)
 {
+	AppendToFrameLog("ChangeTimers called");
+
 	ChangeSelfPlayTimer(SceneState, Card);
 	ChangeOppPlayTimer(SceneState, Card);
 }
@@ -111,6 +119,8 @@ void CannotActivateCardMessage(
 
 bool AddCardToSet(card_set* CardSet, card* Card)
 {
+	AppendToFrameLog("AddCardToSet called");
+
 	bool Result = false;
 	for(int Index = 0; Index < ARRAY_COUNT(CardSet->Cards); Index++)
 	{
@@ -133,6 +143,8 @@ bool AddCardToSet(card_set* CardSet, card* Card)
 
 void AlignCardSet(card_set* CardSet)
 {
+	AppendToFrameLog("AlignCardSet called");
+
 	// NOTE: Basically, this is the amount of space not taken up by the 
 	// CONT: cards divided by the number of spaces between and around the 
 	// CONT: cards
@@ -157,6 +169,8 @@ void AlignCardSet(card_set* CardSet)
 
 void AddCardAndAlign(card_set* CardSet, card* Card)
 {
+	AppendToFrameLog("AddCardAndAlign called");
+
 	if(AddCardToSet(CardSet, Card))
 	{
 		AlignCardSet(CardSet);		
@@ -165,6 +179,8 @@ void AddCardAndAlign(card_set* CardSet, card* Card)
 
 void RemoveCardFromStack(card_game_state* SceneState, card* Card)
 {
+	AppendToFrameLog("RemoveCardFromStack called");
+
 	card_stack_entry* FoundAt = NULL;
 	for(
 		uint32_t StackIndex = 0;
@@ -194,6 +210,8 @@ void RemoveCardFromStack(card_game_state* SceneState, card* Card)
 
 void RemoveCardFromSet(card_set* CardSet, uint32_t IndexToRemove)
 {
+	AppendToFrameLog("RemoveCardFromSet called");
+
 	ASSERT(IndexToRemove < CardSet->CardCount);
 	for(int Index = 0; Index < ARRAY_COUNT(CardSet->Cards); Index++)
 	{
@@ -215,6 +233,8 @@ void RemoveCardFromSet(card_set* CardSet, uint32_t IndexToRemove)
 
 bool RemoveCardFromSet(card_set* CardSet, card* Card)
 {
+	AppendToFrameLog("RemoveCardFromSet called");
+
 	for(int Index = 0; Index < ARRAY_COUNT(CardSet->Cards); Index++)
 	{
 		if(CardSet->Cards[Index] == Card)
@@ -228,7 +248,9 @@ bool RemoveCardFromSet(card_set* CardSet, card* Card)
 }
 
 bool RemoveCardFromSet(card_game_state* SceneState, card* Card)
-{	
+{
+	AppendToFrameLog("RemoveCardFromSet called");
+
 	card_set* CardSet = NULL;	
 	switch(Card->SetType)
 	{
@@ -259,6 +281,8 @@ bool RemoveCardFromSet(card_game_state* SceneState, card* Card)
 
 void RemoveCardAndAlign(card_set* CardSet, card* Card)
 {
+	AppendToFrameLog("RemoveCardAndAlign called");
+
 	if(RemoveCardFromSet(CardSet, Card))
 	{
 		AlignCardSet(CardSet);
@@ -267,6 +291,8 @@ void RemoveCardAndAlign(card_set* CardSet, card* Card)
 
 void RemoveCardAndAlign(card_game_state* SceneState, card* Card)
 {
+	AppendToFrameLog("RemoveCardAndAlign called");
+
 	card_set* CardSet = NULL;
 	if(Card->SetType == CardSet_Hand)
 	{
@@ -288,6 +314,8 @@ void SafeRemoveCardCommon(
 	game_state* GameState, card_game_state* SceneState, card* Card
 )
 {
+	AppendToFrameLog("SafeRemoveCard called");
+
 	Card->Active = false;
 	if(SceneState->NetworkGame && SceneState->IsLeader)
 	{
@@ -317,6 +345,8 @@ void SafeRemoveCard(
 	game_state* GameState, card_game_state* SceneState, card* Card
 )
 {
+	AppendToFrameLog("SafeRemoveCard called");
+
 	// NOTE: a function for removing the card from its card set 
 	// CONT: without any concerns for speed. Card will no longer be active and 
 	// CONT: the card set will be decremented but not aligned
@@ -336,6 +366,8 @@ void SafeRemoveCardAndAlign(
 	game_state* GameState, card_game_state* SceneState, card* Card
 )
 {
+	AppendToFrameLog("SafeRemoveCardAndAlign called");
+
 	// NOTE: a function for removing the card from its card set 
 	// CONT: without any concerns for speed. Card will no longer be active and 
 	// CONT: the card set will be decremented and aligned
@@ -352,6 +384,8 @@ void SafeRemoveCardAndAlign(
 
 card* GetInactiveCard(card_game_state* SceneState, int32_t CardId = -1)
 {
+	AppendToFrameLog("GetInactiveCard called");
+
 	card* Card = NULL;
 	for(
 		uint32_t SearchIndex = 0;
@@ -393,6 +427,8 @@ void InitCardWithDef(
 	card_game_state* SceneState, card* Card, card_definition* Definition
 )
 {
+	AppendToFrameLog("InitCardWithDef called");
+
 	Card->LastFrame = 0;
 	Card->Definition = Definition;
 
@@ -423,6 +459,8 @@ void InitCardWithDef(
 
 void InitCardWithCardData(card* Card, card_data* CardData)
 {
+	AppendToFrameLog("InitCardWithCardData called");
+
 	Card->LastFrame = 0;
 	Card->CardId = CardData->CardId;
 	Card->Definition = CardData->Definition;
@@ -444,6 +482,8 @@ void InitCardWithCardData(card* Card, card_data* CardData)
 
 void AddCardToCardDataSet(card* Card, card_data_set* CardDataSet)
 {
+	AppendToFrameLog("AddCardToCardDataSet called");
+
 	ASSERT(CardDataSet->CardCount < MAX_CARDS_PER_DATA_SET);
 	card_data* CardData = CardDataSet->Cards + CardDataSet->CardCount;
 	CardDataSet->CardCount++;
@@ -467,6 +507,8 @@ void RemoveCardsFromDataSet(
 	card_data_set* DataSet, uint32_t StartIndex, uint32_t RemoveCount
 )
 {
+	AppendToFrameLog("RemoveCardsFromDataSet called");
+
 	ASSERT(RemoveCount <= DataSet->CardCount);
 	memcpy(
 		DataSet->Cards + StartIndex,
@@ -478,6 +520,8 @@ void RemoveCardsFromDataSet(
 
 bool AnyHasTaunt(card_set* CardSet)
 {
+	AppendToFrameLog("AnyHasTaunt called");
+
 	for(int Index = 0; Index < ARRAY_COUNT(CardSet->Cards); Index++)
 	{
 		card* Card = CardSet->Cards[Index];
@@ -497,6 +541,8 @@ void ShuffleDrawSet(
 	card_game_state* SceneState, player_id Player
 )
 {
+	AppendToFrameLog("ShuffleDrawSet called");
+
 	card_data_set* DrawSet = SceneState->DrawSets + Player;
 	for(uint32_t Index = 0; Index < DrawSet->CardCount; Index++)
 	{
@@ -511,6 +557,8 @@ void ShuffleDrawSet(
 
 void DiscardCard(game_state* GameState, card_game_state* SceneState, card* Card)
 {
+	AppendToFrameLog("DiscardCard called");
+
 	card_set* Hand = SceneState->Hands + Card->Owner;
 	AddCardToCardDataSet(Card, SceneState->DiscardSets + Card->Owner);
 	SafeRemoveCard(GameState, SceneState, Card);
@@ -524,6 +572,8 @@ void DiscardByIndex(
 	uint32_t Index
 )
 {
+	AppendToFrameLog("DiscardByIndex called");
+
 	card_set* Hand = SceneState->Hands + Player;
 	card_data_set* DiscardSet = SceneState->DiscardSets + Player;
 	ASSERT(Index < Hand->CardCount);
@@ -552,6 +602,8 @@ void DiscardFullHand(
 	game_state* GameState, card_game_state* SceneState, player_id Player
 )
 {
+	AppendToFrameLog("DiscardFullHand called");
+
 	card_set* Hand = SceneState->Hands + Player;
 	card_data_set* DiscardSet = SceneState->DiscardSets + Player;
 
@@ -578,6 +630,8 @@ card* DrawCard(
 	game_state* GameState, card_game_state* SceneState, player_id Owner
 )
 {
+	AppendToFrameLog("DrawCard called");
+
 	// NOTE: can't exceed maximum hand size
 	card_set* CardSet = &SceneState->Hands[Owner];
 	if(CardSet->CardCount >= MAX_CARDS_PER_SET)
@@ -599,6 +653,8 @@ card* DrawCard(
 
 void DrawFullHand(card_game_state* SceneState, player_id Player)
 {
+	AppendToFrameLog("DrawFullHand called");
+
 	card_set* Hand = SceneState->Hands + Player;
 	ASSERT(Hand->CardCount == 0);
 
@@ -654,6 +710,8 @@ void InitDeckCard(
 
 bool CheckAndTap(game_state* GameState, card_game_state* SceneState, card* Card)
 {
+	AppendToFrameLog("CheckAndTap called");
+
 	// NOTE: only activate card if you have the resources for it
 	if(Card->TimesTapped < Card->TapsAvailable)
 	{
@@ -691,11 +749,15 @@ tapped:
 
 void UntapCard(card* Card)
 {
+	AppendToFrameLog("UntapCard called");
+
 	Card->TimesTapped--;
 }
 
 bool CheckAndPlay(card_game_state* SceneState, card* Card)
 {
+	AppendToFrameLog("CheckAndPlay called");
+
 	// NOTE: only activate card if you have the resources for it
 	bool Played = CanChangeTimers(SceneState, Card);
 	if(Played)
@@ -708,6 +770,8 @@ bool CheckAndPlay(card_game_state* SceneState, card* Card)
 
 float GetStackEntriesHeight(card_game_state* SceneState)
 {
+	AppendToFrameLog("GetStackEntriesHeight called");
+
 	float Height = 0.0f;
 	for(
 		uint32_t EntryIndex = 0;
@@ -723,6 +787,8 @@ float GetStackEntriesHeight(card_game_state* SceneState)
 
 void SetStackPositions(card_game_state* SceneState)
 {
+	AppendToFrameLog("SetStackPositions called");
+
 	float NewY = GetElementsYStart(
 		&SceneState->StackScrollBar, GetStackEntriesHeight(SceneState)
 	);
@@ -743,6 +809,8 @@ void SetStackPositions(card_game_state* SceneState)
 
 card_stack_entry* AddCardToStack(card_game_state* SceneState, card* Card)
 {
+	AppendToFrameLog("AddCardToStack called");
+
 	RemoveCardAndAlign(SceneState, Card);
 	
 	card_stack_entry* StackEntry = SceneState->Stack + SceneState->StackSize;
@@ -766,6 +834,8 @@ card_stack_entry* AddCardToStack(card_game_state* SceneState, card* Card)
 
 void SwitchTurns(game_state* GameState, card_game_state* SceneState)
 {
+	AppendToFrameLog("SwitchTurns called");
+
 	SceneState->CurrentTurn = GetOpponent(SceneState->CurrentTurn);
 	char Buffer[64];
 	if(SceneState->CurrentTurn == Player_One)
@@ -781,6 +851,8 @@ void SwitchTurns(game_state* GameState, card_game_state* SceneState)
 
 void SwitchStackTurns(game_state* GameState, card_game_state* SceneState)
 {
+	AppendToFrameLog("SwitchStackTurns called");
+
 	SceneState->StackTurn = GetOpponent(SceneState->StackTurn);
 
 	char Buffer[64];
@@ -830,6 +902,8 @@ void PlayStackCard(
 	game_state* GameState, card_game_state* SceneState, card* Card
 )
 {
+	AppendToFrameLog("PlayStackCard called");
+
 	// NOTE: this function plays the stack card without checking HasAnyTag
 	card_stack_entry* StackEntry = AddCardToStack(SceneState, Card);
 	stack_effect_tags* StackTags = &Card->StackTags;
@@ -866,6 +940,8 @@ void NormalPlayCard(
 	game_state* GameState, card_game_state* SceneState, card* Card
 )
 {
+	AppendToFrameLog("NormalPlayCard called");
+
 	// NOTE: handle cards that go onto the stack
 	if(HasAnyTag(&Card->StackTags))
 	{
@@ -893,6 +969,8 @@ bool StackBuildingPlayCard(
 	game_state* GameState, card_game_state* SceneState, card* Card
 )
 {
+	AppendToFrameLog("StackBuildingPlayCard called");
+
 	bool WasPlayed = false;
 	if(HasAnyTag(&Card->StackTags))
 	{
@@ -905,6 +983,8 @@ bool StackBuildingPlayCard(
 
 void SelectCard(card_game_state* SceneState, card* Card)
 {
+	AppendToFrameLog("SelectCard called");
+
 	Card->Color = Vector4(1.0f, 0.0f, 0.0f, 1.0f);
 	SceneState->SelectedCard = Card;
 	SceneState->TargetsSet = 0;
@@ -914,6 +994,8 @@ void SelectCard(card_game_state* SceneState, card* Card)
 
 void DeselectCard(card_game_state* SceneState)
 {
+	AppendToFrameLog("DeselectCard called");
+
 	card* Card = SceneState->SelectedCard;
 	if(Card != NULL)
 	{
@@ -929,6 +1011,8 @@ bool TriggerCommonAttackEffects(
 	card_game_state* SceneState, card* AttackingCard
 )
 {
+	AppendToFrameLog("TriggerCommonAttackEffects called");
+
 	// NOTE: return false
 	// NOTE: these effects happen regardless of whether you're attacking player
 	// CONT: or the card
@@ -972,6 +1056,8 @@ attack_card_result AttackCard(
 	card* AttackedCard
 )
 {
+	AppendToFrameLog("AttackCard called");
+
 	// NOTE: this currently assumes cards must attack from the tableau
 	attack_card_result Result = {};
 
@@ -1421,6 +1507,12 @@ void StartCardGame(
 		}
 		uint32_t Seed = SceneState->Seed;
 		srand(Seed);
+		{
+			AppendToFrameLog("StackBuildingKeyboardHandler called");
+			char SeedString[64];
+			snprintf(SeedString, sizeof(SeedString), "Seed: %d", Seed);
+			AppendToFrameLog(SeedString);
+		}
 
 		if(SceneState->NetworkGame && SceneState->IsLeader)
 		{
@@ -1526,6 +1618,8 @@ void StartCardGame(
 
 void EndStackBuilding(game_state* GameState, card_game_state* SceneState)
 {
+	AppendToFrameLog("EndStackBuilding called");
+
 	if(SceneState->StackBuilding)
 	{
 		bool IsDisabled = false;
@@ -1732,6 +1826,13 @@ void EndStackBuilding(game_state* GameState, card_game_state* SceneState)
 
 		SceneState->SelectedCard = NULL;
 	}
+	else
+	{
+		AppendToFrameLog(
+			"EndStackBuilding called without StackBuilding == True"
+		);
+
+	}
 }
 
 bool AddCardToSet(
@@ -1741,6 +1842,8 @@ bool AddCardToSet(
 	card* Card
 )
 {
+	AppendToFrameLog("AddCardToSet called");
+
 	// NOTE: utility function for adding a card to any set, ignoring any rules 
 	// CONT: checks (probably only used for network sync?)
 	card_set* CardSet = NULL;
@@ -1818,6 +1921,8 @@ void PushNextTurnTimer(
 
 void ResolveTargeting(game_state* GameState, card_game_state* SceneState)
 {
+	AppendToFrameLog("ResolveTargeting called");
+
 	if(SceneState->TargetsSet == SceneState->TargetsNeeded)
 	{
 		card* SelectedCard = SceneState->SelectedCard;
@@ -1952,13 +2057,14 @@ void ResolveTargeting(game_state* GameState, card_game_state* SceneState)
 	}
 }
 
-void CardPrimaryUpHandler(
+bool CardPrimaryUpHandler(
 	game_state* GameState,
 	card_game_state* SceneState,
 	card* Card,
 	vector2 MouseEventWorldPos
 )
 {
+	bool CardActedOn = false;
 	if(
 		Card->Active && PointInRectangle(MouseEventWorldPos, Card->Rectangle)
 	)
@@ -1977,6 +2083,7 @@ void CardPrimaryUpHandler(
 				{
 					UntapCard(Card);
 				}
+				CardActedOn = true;
 			}
 			else if(HasTag(&SceneState->ValidTargets, TargetType_Card))
 			{
@@ -1987,6 +2094,7 @@ void CardPrimaryUpHandler(
 				Target->Type = TargetType_Card;
 				SceneState->TargetsSet++;
 				ResolveTargeting(GameState, SceneState);
+				CardActedOn = true;
 			}
 		}
 		else
@@ -2000,6 +2108,7 @@ void CardPrimaryUpHandler(
 				if(HasAnyTag(&Card->StackTags))
 				{
 					NormalPlayCard(GameState, SceneState, Card);
+					CardActedOn = true;
 				}
 			}
 			else if(Card->Owner == SceneState->CurrentTurn)
@@ -2007,6 +2116,7 @@ void CardPrimaryUpHandler(
 				if(Card->SetType == CardSet_Hand)
 				{
 					NormalPlayCard(GameState, SceneState, Card);
+					CardActedOn = true;
 				}
 				else if(Card->SetType == CardSet_Tableau)
 				{
@@ -2019,10 +2129,14 @@ void CardPrimaryUpHandler(
 						SetTag(&SceneState->ValidTargets, TargetType_Player);
 						// TODO: is this ok being hard-coded?
 					}
+
+					CardActedOn = true;
 				}
 			}
 		}
 	}
+
+	return CardActedOn;
 }
 
 void PlayerPrimaryUpHandler(
@@ -2082,12 +2196,20 @@ inline void StandardPrimaryUpHandler(
 	vector2 MouseEventWorldPos
 )
 {
+	AppendToFrameLog("StandardPrimaryUpHandler called");
+
 	// NOTE: inlined function b/c this is only called once
 	card* Card = &SceneState->Cards[0];
 	for(uint32_t CardIndex = 0; CardIndex < SceneState->MaxCards; CardIndex++)
 	{
-		CardPrimaryUpHandler(GameState, SceneState, Card, MouseEventWorldPos);
+		bool CardActedOnEvent = CardPrimaryUpHandler(
+			GameState, SceneState, Card, MouseEventWorldPos
+		);
 		Card++;
+		if(CardActedOnEvent)
+		{
+			break;
+		}
 	}
 
 	for(int Player = Player_One; Player < Player_Count; Player++)
@@ -2104,6 +2226,8 @@ inline void StackBuildingPrimaryUpHandler(
 	vector2 MouseEventWorldPos
 )
 {
+	AppendToFrameLog("StackBuildingPrimaryUpHandler called");
+
 	card* Card = &SceneState->Cards[0];
 	for(uint32_t CardIndex = 0; CardIndex < SceneState->MaxCards; CardIndex++)
 	{
@@ -2125,6 +2249,8 @@ inline void CardDataSetViewPrimaryUpHandler(
 	vector2 MouseEventWorldPos
 )
 {
+	AppendToFrameLog("CardDataSetViewPrimaryUpHandler called");
+
 	card_data_set* DataSet = SceneState->ViewingCardDataSet;
 	ASSERT(DataSet != NULL);
 
@@ -2153,6 +2279,8 @@ bool StandardKeyboardHandler(
 	game_keyboard_event* KeyboardEvent
 )
 {
+	AppendToFrameLog("StandardKeyboardHandler called");
+
 	// NOTE: end turn currently is the return value
 	bool EndTurn = false;
 
@@ -2198,6 +2326,8 @@ bool StackBuildingKeyboardHandler(
 	game_keyboard_event* KeyboardEvent
 )
 {
+	AppendToFrameLog("StackBuildingKeyboardHandler called");
+
 	// NOTE: end turn is the current return type
 	bool EndTurn = false;
 
@@ -2242,6 +2372,8 @@ void CardDataSetViewKeyboardHandler(
 	game_keyboard_event* KeyboardEvent
 )
 {
+	AppendToFrameLog("CardDataSetViewKeyboardHandler called");
+
 	if(
 		!KeyboardEvent->IsDown && 
 		(KeyboardEvent->IsDown != KeyboardEvent->WasDown)
@@ -2263,6 +2395,8 @@ void CardDataSetViewKeyboardHandler(
 
 card* GetCardWithId(card_game_state* SceneState, uint32_t CardId)
 {
+	AppendToFrameLog("GetCardWithId called");
+
 	// NOTE: check if CardId exists
 	card* Card = NULL;
 	for(
@@ -2574,7 +2708,7 @@ void FollowerCardGameLogic(
 	float DtForFrame,
 	bool* EndTurn
 )
-{	
+{
 	ui_context* UiContext = &SceneState->UiContext;
 	user_event_index UserEventIndex = 0;
 	int MouseEventIndex = 0;
@@ -3019,9 +3153,7 @@ void UpdateAndRenderCardGame(
 	game_keyboard_events* KeyboardEvents,
 	float DtForFrame
 )
-{
-	AppendToFrameLog("UpdateAndRenderCardGame called");
-	
+{	
 	ui_context* UiContext = &SceneState->UiContext;
 	memory_arena* FrameArena = &GameState->FrameArena;
 	assets* Assets = &GameState->Assets;

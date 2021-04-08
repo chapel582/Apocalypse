@@ -7,12 +7,11 @@
 // TODO: probably get LOGS_PATH at run time
 #define LOGS_PATH "./logs"
 #define ASSERT_LOG_PATH (LOGS_PATH "/assert.log")
-#define PERM_COREDUMP_LOG_PATH (LOGS_PATH "/perm_coredump.bin")
-#define TRANS_COREDUMP_LOG_PATH (LOGS_PATH "/trans_coredump.bin")
+#define PERM_COREDUMP_LOG_PATH (LOGS_PATH "/coredump.bin")
 
 #if APOCALYPSE_SLOW
 // TODO: Complete assertion macro
-#define ASSERT(Expression) if(!(Expression)) {PlatformWriteEntireFile(ASSERT_LOG_PATH, "At " __FILE__ ": " __FUNCTION__ ": " LINE_STRING, sizeof("At " __FILE__ ": " __FUNCTION__ ": " LINE_STRING) - 1);PlatformWriteEntireFile(PERM_COREDUMP_LOG_PATH, GlobalGameMemoryPtr->PermanentStorage, (uint32_t) GlobalGameMemoryPtr->PermanentStorageSize);PlatformWriteEntireFile(TRANS_COREDUMP_LOG_PATH, GlobalGameMemoryPtr->TransientStorage, (uint32_t) GlobalGameMemoryPtr->TransientStorageSize);*(int*) 0 = 0;}
+#define ASSERT(Expression) if(!(Expression)) {PlatformWriteEntireFile(ASSERT_LOG_PATH, "At " __FILE__ ": " __FUNCTION__ ": " LINE_STRING, sizeof("At " __FILE__ ": " __FUNCTION__ ": " LINE_STRING) - 1);PlatformWriteEntireFile(PERM_COREDUMP_LOG_PATH, GlobalGameMemoryPtr->PermanentStorage, (uint32_t) (GlobalGameMemoryPtr->PermanentStorageSize + GlobalGameMemoryPtr->TransientStorageSize));*(int*) 0 = 0;}
 #else
 #define ASSERT(Expression)
 #endif

@@ -290,7 +290,6 @@ void UpdateAndRenderDeckSelector(
 	// CONT: of rects throughout this function call
 	float AllElementsHeight = 0.0f;
 	{
-		load_deck_button* LoadDeckButtons = SceneState->LoadDeckButtons;
 		char* CurrentDeckName = SceneState->DeckNames;
 		flat_string_array_reader FlatArrayReader;
 		InitFlatStringArrayReader(

@@ -48,15 +48,6 @@
 #define STRINGIZE2(x) #x
 #define LINE_STRING STRINGIZE(__LINE__)
 
-#if APOCALYPSE_SLOW
-// TODO: Complete assertion macro
-#define ASSERT(Expression) if(!(Expression)) {*(int*) 0 = 0;}
-#elif APOCALYPSE_INTERNAL
-#define ASSERT(Expression) if(!(Expression)) {PlatformAppendToFile(ASSERT_LOG_PATH, "At " __FILE__ ": " __FUNCTION__ ": " LINE_STRING, sizeof("At " __FILE__ ": " __FUNCTION__ ": " LINE_STRING) - 1); *(int*) 0 = 0;}
-#else
-#define ASSERT(Expression)
-#endif
-
 #define ARRAY_COUNT(Array) (sizeof(Array) / sizeof(Array[0]))
 
 #define MAX_THREAD_COUNT 64
@@ -240,33 +231,8 @@ struct platform_job_queue
 	uint32_t ThreadIds[MAX_THREAD_COUNT];
 };
 
-inline int32_t GetNextEmpty(platform_job_queue* JobQueue)
-{
-	ASSERT(JobQueue->EmptyEntriesCount > 0);
-	if(JobQueue->EmptyEntriesCount == 0)
-	{
-		// TODO: handle errors
-		// TODO: logging
-		return -1;
-	}
-	uint32_t Result = JobQueue->EmptyEntries[JobQueue->EmptyEntriesStart];
-	JobQueue->EmptyEntriesStart++;
-	if(JobQueue->EmptyEntriesStart >= JOB_QUEUE_ENTRIES_COUNT)
-	{
-		JobQueue->EmptyEntriesStart = 0;	
-	}
-	JobQueue->EmptyEntriesCount--;
-	return (int32_t) Result;
-}
-
-inline void AddEmpty(platform_job_queue* JobQueue, uint32_t NewEmpty)
-{
-	ASSERT(JobQueue->EmptyEntriesCount < JOB_QUEUE_ENTRIES_COUNT);
-	JobQueue->EmptyEntries[JobQueue->EmptyEntriesCount] = NewEmpty;
-	JobQueue->EmptyEntriesCount++;
-	ASSERT(JobQueue->EmptyEntriesCount <= JOB_QUEUE_ENTRIES_COUNT);
-}
-
+void AddEmpty(platform_job_queue* JobQueue, uint32_t NewEmpty);
+int32_t GetNextEmpty(platform_job_queue* JobQueue);
 void PlatformAddJob(
 	platform_job_queue* JobQueue,
 	platform_job_callback* Callback,
@@ -379,12 +345,6 @@ void GameFillSound(game_memory* Memory, game_sound_output_buffer* SoundBuffer);
 void HandleGameDebug(
 	game_memory* Memory, uint32_t WindowWidth, uint32_t WindowHeight
 );
-
-inline uint32_t SafeTruncateUInt64(uint64_t Value)
-{
-	ASSERT(Value <= UINT32_MAX);
-	return (uint32_t) Value;
-}
 
 #define APOCALYPSE_PLATFORM_H
 #endif

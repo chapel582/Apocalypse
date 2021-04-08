@@ -1,5 +1,7 @@
 #ifndef APOCALYPSE_MEMORY_ARENA_H
 
+#include "apocalypse_logging.h"
+
 struct memory_arena
 {
 	size_t TotalSize;

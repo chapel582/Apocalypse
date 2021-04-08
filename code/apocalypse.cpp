@@ -289,6 +289,7 @@ void GameInitMemory(
 		GameState->FrameLog = PushArray(&GameState->Arena, MAX_LOG_SIZE, char);
 		GameState->FrameLogSize = 0; 
 		GlobalLoggingGameState = GameState;
+		GlobalGameMemoryPtr = Memory;
 	}
 }
 

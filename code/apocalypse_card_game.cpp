@@ -3153,7 +3153,7 @@ void UpdateAndRenderCardGame(
 	game_keyboard_events* KeyboardEvents,
 	float DtForFrame
 )
-{	
+{
 	ui_context* UiContext = &SceneState->UiContext;
 	memory_arena* FrameArena = &GameState->FrameArena;
 	assets* Assets = &GameState->Assets;

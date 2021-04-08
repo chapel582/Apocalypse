@@ -11,6 +11,7 @@ TODO: This is not a final platform layer
 // NOTE: Apocalypse stuff
 #include "apocalypse.cpp"
 #include "apocalypse_platform.h"
+#include "apocalypse_platform.cpp"
 
 // NOTE: C stuff
 #include <stdio.h>
@@ -1216,7 +1217,7 @@ int CALLBACK WinMain(
 
 			game_memory GameMemory = {};
 			GameMemory.PermanentStorageSize = MEGABYTES(64);
-			GameMemory.TransientStorageSize = GIGABYTES(4);
+			GameMemory.TransientStorageSize = GIGABYTES(1);
 			GameMemory.PermanentStorage = VirtualAlloc(
 				BaseAddress,
 				(

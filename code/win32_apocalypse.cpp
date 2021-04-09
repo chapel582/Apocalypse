@@ -1217,7 +1217,7 @@ int CALLBACK WinMain(
 
 			game_memory GameMemory = {};
 			GameMemory.PermanentStorageSize = MEGABYTES(64);
-			GameMemory.TransientStorageSize = GIGABYTES(1);
+			GameMemory.TransientStorageSize = GIGABYTES(2);
 			GameMemory.PermanentStorage = VirtualAlloc(
 				BaseAddress,
 				(

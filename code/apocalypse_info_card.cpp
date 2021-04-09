@@ -19,6 +19,7 @@ void PushInfoCard(
 	int16_t OppPlayDelta,
 	char* Description,
 	int32_t TapsRemaining,
+	bool IsStackCard,
 	uint32_t Layer
 )
 {
@@ -44,16 +45,18 @@ void PushInfoCard(
 		ResourceString, MaxCharacters 
 	);
 	AppendToString(&StringAppender, "%s\n", Name);
-	AppendToString(&StringAppender, "Attack: %d\n", Attack);
-	AppendToString(&StringAppender, "Health: %d\n", Health);
+
 	AppendToString(&StringAppender, "SelfPlayDelta: %d\n", SelfPlayDelta);
 	AppendToString(&StringAppender, "OppPlayDelta: %d\n", OppPlayDelta);
-
-	if(TapsRemaining >= 0)
+	if(!IsStackCard)
 	{
-		AppendToString(&StringAppender, "TapsLeft: %d", TapsRemaining);
+		AppendToString(&StringAppender, "Attack: %d\n", Attack);
+		AppendToString(&StringAppender, "Health: %d\n", Health);
+		if(TapsRemaining >= 0)
+		{
+			AppendToString(&StringAppender, "TapsLeft: %d", TapsRemaining);
+		}
 	}
-
 
 	vector2 TopLeft = (
 		InfoCardCenter - 0.5f * InfoCardXBound + 0.5f * InfoCardYBound
@@ -121,6 +124,7 @@ inline void PushInfoCard(
 		Definition->OppPlayDelta,
 		Definition->Description,
 		TapsRemaining,
+		HasAnyTag(&Definition->StackTags),
 		Layer
 	);
 }

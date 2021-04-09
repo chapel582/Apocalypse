@@ -3806,7 +3806,8 @@ void UpdateAndRenderCardGame(
 						Card->SelfPlayDelta,
 						Card->OppPlayDelta,
 						Card->Definition->Description,
-						Card->TapsAvailable - Card->TimesTapped
+						Card->TapsAvailable - Card->TimesTapped,
+						HasAnyTag(&Card->StackTags)
 					);
 				}
 			}

@@ -21,6 +21,7 @@ void PushInfoCard(
 	int16_t OppPlayDelta,
 	char* Description,
 	int32_t TapsRemaining,
+	bool IsStackCard,
 	uint32_t Layer = 1
 );
 void PushInfoCard(

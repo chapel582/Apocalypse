@@ -3704,12 +3704,26 @@ void UpdateAndRenderCardGame(
 		char* TimeString = PushArray(
 			FrameArena, MAX_RESOURCE_STRING_SIZE, char
 		);
-		snprintf(
-			TimeString,
-			MAX_RESOURCE_STRING_SIZE,
-			"%d",
-			Int32Ceil(SceneState->TurnTimer)
-		);
+		
+		if(SceneState->CurrentTurn == Player_One)
+		{
+			snprintf(
+				TimeString,
+				MAX_RESOURCE_STRING_SIZE,
+				"P1: %d",
+				Int32Ceil(SceneState->TurnTimer)
+			);
+		}
+		else
+		{
+			snprintf(
+				TimeString,
+				MAX_RESOURCE_STRING_SIZE,
+				"P2: %d",
+				Int32Ceil(SceneState->TurnTimer)
+			);
+		}
+		
 		PushText(
 			RenderGroup,
 			Assets,

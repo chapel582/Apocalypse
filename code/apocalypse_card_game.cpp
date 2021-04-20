@@ -4033,12 +4033,13 @@ void UpdateAndRenderCardGame(
 	}
 	// SECTION STOP: Push player draw/discard totals
 
+	vector4 White = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+
 	// SECTION START: push cards in card data set
 	if(SceneState->ViewingCardDataSet != NULL)
 	{
 		uint32_t CardDataLayer = 3;
 		uint32_t InfoLayer = CardDataLayer + 1;
-		vector4 White = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 		RenderGroup->ColorMultiply = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 
 		card_data_set* DataSet = SceneState->ViewingCardDataSet;
@@ -4099,6 +4100,36 @@ void UpdateAndRenderCardGame(
 		}
 	}
 	// SECTION STOP: push cards in card data set
+
+	{
+		float Dimension = (1.0f / 15.0f) * SceneState->ScreenDimInWorld.X;
+		float Margin = 2.5f;
+		vector2 RowStart = Vector2(
+			2 * Dimension,
+			SceneState->ScreenDimInWorld.Y - SceneState->CardHeight - (
+				ARRAY_COUNT(SceneState->Grid) * (Dimension + Margin)
+			)
+		);
+		for(uint32_t Row = 0; Row < ARRAY_COUNT(SceneState->Grid); Row++)
+		{
+			vector2 Center = RowStart;
+			for(uint32_t Col = 0; Col < ARRAY_COUNT(SceneState->Grid[0]); Col++)
+			{
+				PushSizedBitmap(
+					RenderGroup,
+					Assets,
+					BitmapHandle_TestCard2,
+					Center,
+					Vector2(Dimension, 0.0f),
+					Vector2(0.0f, Dimension),
+					White,
+					1
+				);
+				Center.X += Dimension + Margin;
+			}
+			RowStart.Y += Dimension + Margin;
+		}
+	}
 
 	PushCenteredAlert(&SceneState->Alert, GameState, ScreenDimInWorld);
 

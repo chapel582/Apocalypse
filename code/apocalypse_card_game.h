@@ -190,6 +190,11 @@ struct target
 	};
 };
 
+struct grid_cell
+{
+	
+};
+
 struct card_game_state
 {
 	ui_context UiContext;
@@ -252,6 +257,8 @@ struct card_game_state
 	platform_socket ListenSocket;
 	platform_socket ConnectSocket;
 	packet_reader_data PacketReader;
+
+	grid_cell Grid[5][9];
 
 	// NOTE: last frame received from master
 	uint64_t LastFrame;

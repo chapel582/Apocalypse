@@ -26,7 +26,7 @@
 typedef enum
 {
 	CardSet_Hand,
-	CardSet_Tableau,
+	CardSet_Grid,
 	CardSet_Stack,
 	CardSet_Count
 } card_set_type;
@@ -72,7 +72,7 @@ struct card // TODO: maybe rename to active or visible card?
 	int16_t TurnStartAttack;
 	int16_t Health;
 	int16_t TurnStartHealth;
-	tableau_effect_tags TableauTags;
+	grid_effect_tags GridTags;
 	stack_effect_tags StackTags;
 };
 
@@ -97,7 +97,7 @@ struct card_data
 	int16_t OppPlayDelta;
 	int16_t Attack;
 	int16_t Health;
-	tableau_effect_tags TableauTags;
+	grid_effect_tags GridTags;
 	stack_effect_tags StackTags;
 
 	rectangle Rectangle;
@@ -192,7 +192,8 @@ struct target
 
 struct grid_cell
 {
-	
+	rectangle Rectangle;
+	card* Occupant;
 };
 
 struct card_game_state
@@ -209,6 +210,7 @@ struct card_game_state
 	bool ShouldUpdateBaseline;
 	card* Cards;
 	card* SelectedCard;
+	// TODO: should probably put this in an arena
 	target Targets[64];
 	target_type_tags ValidTargets;
 	uint8_t TargetsSet;
@@ -219,7 +221,6 @@ struct card_game_state
 	card_data_set DrawSets[Player_Count];
 	card_data_set DiscardSets[Player_Count];
 	card_set* Hands;
-	card_set* Tableaus;
 	vector2 InfoCardCenter;
 	vector2 InfoCardXBound;
 	vector2 InfoCardYBound;
@@ -243,6 +244,7 @@ struct card_game_state
 
 	player_id StackTurn;
 	bool StackBuilding;
+	// TODO: probably should put this in an arena
 	card_stack_entry Stack[256];
 	uint32_t StackSize;
 	float StackYStart;
@@ -258,6 +260,7 @@ struct card_game_state
 	platform_socket ConnectSocket;
 	packet_reader_data PacketReader;
 
+	// TODO: probably should put this in an arena
 	grid_cell Grid[5][9];
 
 	// NOTE: last frame received from master
@@ -302,7 +305,7 @@ struct card_update_payload
 	int16_t TurnStartAttack;
 	int16_t Health;
 	int16_t TurnStartHealth;
-	tableau_effect_tags TableauTags;
+	grid_effect_tags GridTags;
 	stack_effect_tags StackTags;
 };
 struct card_update_packet
@@ -348,7 +351,7 @@ struct card_data_update
 	int16_t OppPlayDelta;
 	int16_t Attack;
 	int16_t Health;
-	tableau_effect_tags TableauTags;
+	grid_effect_tags GridTags;
 	stack_effect_tags StackTags;
 };
 

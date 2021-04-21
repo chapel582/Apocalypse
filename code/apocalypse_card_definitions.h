@@ -13,71 +13,71 @@ typedef enum
 	NOTE: card attack decreases during owner's turn, resets at end of owner's
 	turn
 	*/
-	TableauEffect_SelfWeaken,
+	GridEffect_SelfWeaken,
 	/* 
 	NOTE: card attack increases during opponent's turn, resets at end of 
 	opponent's turn
 	*/
-	TableauEffect_OppStrengthen,
+	GridEffect_OppStrengthen,
 	/*
 	NOTE: card life decreases during owner's turn, resets at end of owner's
 	turn
 	*/
-	TableauEffect_SelfLifeLoss,
+	GridEffect_SelfLifeLoss,
 	/*
 	NOTE: card life increases during opponent's turn, resets at end of 
 	opponent's turn
 	*/
-	TableauEffect_OppLifeGain,
+	GridEffect_OppLifeGain,
 	/*
 	NOTE: cost increases during owner's turn, resets at end of owner's turn
 	*/
-	TableauEffect_CostIncrease,
+	GridEffect_CostIncrease,
 	/*
 	NOTE: time given to opponent increases during owner's turn, resets at end of
 	owner's turn
 	*/
-	TableauEffect_GiveIncrease,
+	GridEffect_GiveIncrease,
 	/*
 	NOTE: while this card is in the tableau, give turn timer a 10 second boost
 	*/
-	TableauEffect_CurrentBoost,
+	GridEffect_CurrentBoost,
 	/*
 	NOTE: while this card is in the tableau, lose 10 seconds from the turn timer
 	at the start of your turn
 	*/
-	TableauEffect_CurrentLoss,
+	GridEffect_CurrentLoss,
 	/*
 	NOTE: while this card is in the tableau, when you end your turn, your card's
 	attack is increased by half of the remaining turn time
 	*/
-	TableauEffect_GainRemainingAsAttack,
+	GridEffect_GainRemainingAsAttack,
 	/*
 	NOTE: When a taunt card is in play, only taunt cards can be attacked
 	*/
-	TableauEffect_Taunt,
+	GridEffect_Taunt,
 	/*
 	NOTE: Trigger the self delta on each attack
 	*/
-	TableauEffect_SelfDeltaOnAttack,
+	GridEffect_SelfDeltaOnAttack,
 	/*
 	NOTE: Trigger the opp delta on each attack
 	*/
-	TableauEffect_OppDeltaOnAttack,
+	GridEffect_OppDeltaOnAttack,
 	/*
 	NOTE: SelfDelta acts on current instead of next turn
 	if this would cause the current timer to go below 0, it cannot be played
 
 	TODO: should we have some way to tag stack cards with this as well?
 	*/
-	TableauEffect_SelfDeltaFromCurrent,
+	GridEffect_SelfDeltaFromCurrent,
 	/*
 	NOTE: OppDelta acts on current instead of next turn
 	if this would cause current timer to go below 0, it cannot be played
 
 	TODO: should we have some way to tag stack cards with this as well?
 	*/
-	TableauEffect_OppDeltaFromCurrent,
+	GridEffect_OppDeltaFromCurrent,
 
 	/*
 	TODO: Unimplemented card ideas
@@ -86,23 +86,23 @@ typedef enum
 	A tag that has a card switch from attacking to healing over time (like attack loss, but with negative values permitted)
 	Expensive cards that give you time each time you play a stack card
 	*/
-} tableau_effect;
+} grid_effect;
 
-struct tableau_effect_tags
+struct grid_effect_tags
 {
 	// NOTE: wrapped in a struct for easy transtion to having even more tags
 	uint64_t Tags;
 };
 
-inline void SetTag(tableau_effect_tags* Tags, tableau_effect ToAdd)
+inline void SetTag(grid_effect_tags* Tags, grid_effect ToAdd)
 {
-	ASSERT(ToAdd < ((8 * sizeof(tableau_effect_tags)) - 1));
+	ASSERT(ToAdd < ((8 * sizeof(grid_effect_tags)) - 1));
 	Tags->Tags |= (1LL << ToAdd);
 }
 
-inline bool HasTag(tableau_effect_tags* Tags, tableau_effect Check)
+inline bool HasTag(grid_effect_tags* Tags, grid_effect Check)
 {
-	ASSERT(Check < ((8 * sizeof(tableau_effect_tags)) - 1));
+	ASSERT(Check < ((8 * sizeof(grid_effect_tags)) - 1));
 	return (Tags->Tags & (1LL << Check)) > 0;
 }
 
@@ -217,7 +217,7 @@ struct card_definition
 	int16_t OppPlayDelta;
 	char Name[CARD_NAME_SIZE];
 	char Description[CARD_DESCRIPTION_SIZE];
-	tableau_effect_tags TableauTags;
+	grid_effect_tags GridTags;
 	stack_effect_tags StackTags;
 };
 

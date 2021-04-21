@@ -59,32 +59,32 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 10, 10, -10, 10);
 	SetName(Definition, "Self Weaker", sizeof("Self Weaker"));
-	SetTag(&Definition->TableauTags, TableauEffect_SelfWeaken);
+	SetTag(&Definition->GridTags, GridEffect_SelfWeaken);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 10, 10, -10, 10);
 	SetName(Definition, "Opp Strengthen", sizeof("Opp Strengthen"));
-	SetTag(&Definition->TableauTags, TableauEffect_OppStrengthen);
+	SetTag(&Definition->GridTags, GridEffect_OppStrengthen);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 10, 10, -10, 10);
 	SetName(Definition, "Life Loss", sizeof("Life Loss"));
-	SetTag(&Definition->TableauTags, TableauEffect_SelfLifeLoss);
+	SetTag(&Definition->GridTags, GridEffect_SelfLifeLoss);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 10, 20, -10, 10);
 	SetName(Definition, "Life Gain", sizeof("Life Gain"));
-	SetTag(&Definition->TableauTags, TableauEffect_OppLifeGain);
+	SetTag(&Definition->GridTags, GridEffect_OppLifeGain);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 10, 10, -10, 10);
 	SetName(Definition, "Cost Increase", sizeof("Cost Increase"));
-	SetTag(&Definition->TableauTags, TableauEffect_CostIncrease);
+	SetTag(&Definition->GridTags, GridEffect_CostIncrease);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 10, 10, -10, 10);
 	SetName(Definition, "Give Increase", sizeof("Give Increase"));
-	SetTag(&Definition->TableauTags, TableauEffect_GiveIncrease);
+	SetTag(&Definition->GridTags, GridEffect_GiveIncrease);
 	SetDescription(
 		Definition,
 		"Opp delta increases each second",
@@ -94,32 +94,32 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 10, 40, -20, 20);
 	SetName(Definition, "Current Boost", sizeof("Current Boost"));
-	SetTag(&Definition->TableauTags, TableauEffect_CurrentBoost);
+	SetTag(&Definition->GridTags, GridEffect_CurrentBoost);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 40, 40, -20, 0);
 	SetName(Definition, "Current Loss", sizeof("Current Loss"));
-	SetTag(&Definition->TableauTags, TableauEffect_CurrentLoss);
+	SetTag(&Definition->GridTags, GridEffect_CurrentLoss);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 20, 40, -40, 30);
 	SetName(Definition, "Taunt 1", sizeof("Taunt 1"));
-	SetTag(&Definition->TableauTags, TableauEffect_Taunt);
+	SetTag(&Definition->GridTags, GridEffect_Taunt);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 20, 40, -10, 0);
 	SetName(Definition, "Self Delta on Attack", sizeof("Self Delta on Attack"));
-	SetTag(&Definition->TableauTags, TableauEffect_SelfDeltaOnAttack);
+	SetTag(&Definition->GridTags, GridEffect_SelfDeltaOnAttack);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 20, 40, 0, 10);
 	SetName(Definition, "Opp Delta on Attack", sizeof("Opp Delta on Attack"));
-	SetTag(&Definition->TableauTags, TableauEffect_OppDeltaOnAttack);
+	SetTag(&Definition->GridTags, GridEffect_OppDeltaOnAttack);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 20, 20, -20, 0);
 	SetName(Definition, "SelfDeltaFromCurrent", sizeof("SelfDeltaFromCurrent"));
-	SetTag(&Definition->TableauTags, TableauEffect_SelfDeltaFromCurrent);
+	SetTag(&Definition->GridTags, GridEffect_SelfDeltaFromCurrent);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 20, 20, -10, 0);
@@ -128,8 +128,8 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		"SelfDeltaFromCurrentOnAttack",
 		sizeof("SelfDeltaFromCurrentOnAttack")
 	);
-	SetTag(&Definition->TableauTags, TableauEffect_SelfDeltaFromCurrent);
-	SetTag(&Definition->TableauTags, TableauEffect_SelfDeltaOnAttack);
+	SetTag(&Definition->GridTags, GridEffect_SelfDeltaFromCurrent);
+	SetTag(&Definition->GridTags, GridEffect_SelfDeltaOnAttack);
 	SetDescription(
 		Definition,
 		"Take from self play from current. Trigger self play delta on attack.",
@@ -143,7 +143,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 		"GainRemainingAsAttack",
 		sizeof("GainRemainingAsAttack")
 	);
-	SetTag(&Definition->TableauTags, TableauEffect_GainRemainingAsAttack);
+	SetTag(&Definition->GridTags, GridEffect_GainRemainingAsAttack);
 	SetDescription(
 		Definition,
 		"At the end of your turn, gain half of the time remaining as attack",

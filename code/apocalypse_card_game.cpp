@@ -32,7 +32,7 @@ inline player_id GetOpponent(player_id Player)
 bool CheckSelfPlayDelta(card_game_state* SceneState, card* Card)
 {
 	AppendToFrameLog("CheckSelfPlayDelta called");
-	if(HasTag(&Card->TableauTags, TableauEffect_SelfDeltaFromCurrent))
+	if(HasTag(&Card->GridTags, GridEffect_SelfDeltaFromCurrent))
 	{
 		return (SceneState->TurnTimer + Card->SelfPlayDelta) > 0;
 	}
@@ -46,7 +46,7 @@ bool CheckSelfPlayDelta(card_game_state* SceneState, card* Card)
 bool CheckOppPlayDelta(card_game_state* SceneState, card* Card)
 {
 	AppendToFrameLog("CheckOppPlayDelta called");
-	if(HasTag(&Card->TableauTags, TableauEffect_OppDeltaFromCurrent))
+	if(HasTag(&Card->GridTags, GridEffect_OppDeltaFromCurrent))
 	{
 		return (SceneState->TurnTimer + Card->OppPlayDelta) > 0;
 	}
@@ -73,7 +73,7 @@ void ChangeSelfPlayTimer(card_game_state* SceneState, card* Card)
 {
 	AppendToFrameLog("ChangeSelfPlayTimer called");
 
-	if(HasTag(&Card->TableauTags, TableauEffect_SelfDeltaFromCurrent))
+	if(HasTag(&Card->GridTags, GridEffect_SelfDeltaFromCurrent))
 	{
 		SceneState->TurnTimer += Card->SelfPlayDelta;
 	}
@@ -88,7 +88,7 @@ void ChangeOppPlayTimer(card_game_state* SceneState, card* Card)
 {
 	AppendToFrameLog("ChangeOppPlayTimer called");
 
-	if(HasTag(&Card->TableauTags, TableauEffect_OppDeltaFromCurrent))
+	if(HasTag(&Card->GridTags, GridEffect_OppDeltaFromCurrent))
 	{
 		SceneState->TurnTimer += Card->OppPlayDelta;
 	}
@@ -259,11 +259,6 @@ bool RemoveCardFromSet(card_game_state* SceneState, card* Card)
 			CardSet = SceneState->Hands + Card->Owner;
 			break;
 		}
-		case(CardSet_Tableau):
-		{
-			CardSet = SceneState->Tableaus + Card->Owner;
-			break;
-		}
 		case(CardSet_Stack):
 		{
 			// NOTE: different flow for stack
@@ -297,10 +292,6 @@ void RemoveCardAndAlign(card_game_state* SceneState, card* Card)
 	if(Card->SetType == CardSet_Hand)
 	{
 		CardSet = SceneState->Hands + Card->Owner;
-	}
-	else if(Card->SetType == CardSet_Tableau)
-	{
-		CardSet = SceneState->Tableaus + Card->Owner; 
 	}
 	else
 	{
@@ -437,7 +428,7 @@ void InitCardWithDef(
 	Card->TurnStartAttack = Definition->Attack;
 	Card->Health = Definition->Health;
 	Card->TurnStartHealth = Definition->Health;
-	Card->TableauTags = Definition->TableauTags;
+	Card->GridTags = Definition->GridTags;
 	Card->StackTags = Definition->StackTags;
 	Card->SelfPlayDelta = Definition->SelfPlayDelta;
 	Card->TurnStartSelfPlayDelta = Definition->SelfPlayDelta;
@@ -471,7 +462,7 @@ void InitCardWithCardData(card* Card, card_data* CardData)
 	Card->OppPlayDelta = CardData->OppPlayDelta;
 	Card->Attack = CardData->Attack;
 	Card->Health = CardData->Health;
-	Card->TableauTags = CardData->TableauTags;
+	Card->GridTags = CardData->GridTags;
 	Card->StackTags = CardData->StackTags;
 
 	Card->TurnStartAttack = Card->Attack;
@@ -499,7 +490,7 @@ void AddCardToCardDataSet(card* Card, card_data_set* CardDataSet)
 	CardData->OppPlayDelta = Card->OppPlayDelta;
 	CardData->Attack = Card->Attack;
 	CardData->Health = Card->Health;
-	CardData->TableauTags = Card->TableauTags;
+	CardData->GridTags = Card->GridTags;
 	CardData->StackTags = Card->StackTags;
 }
 
@@ -527,7 +518,7 @@ bool AnyHasTaunt(card_set* CardSet)
 		card* Card = CardSet->Cards[Index];
 		if(Card != NULL)
 		{
-			if(HasTag(&Card->TableauTags, TableauEffect_Taunt))
+			if(HasTag(&Card->GridTags, GridEffect_Taunt))
 			{
 				return true;
 			}
@@ -715,14 +706,14 @@ bool CheckAndTap(game_state* GameState, card_game_state* SceneState, card* Card)
 	// NOTE: only activate card if you have the resources for it
 	if(Card->TimesTapped < Card->TapsAvailable)
 	{
-		if(HasTag(&Card->TableauTags, TableauEffect_SelfDeltaOnAttack))
+		if(HasTag(&Card->GridTags, GridEffect_SelfDeltaOnAttack))
 		{
 			if(!CheckSelfPlayDelta(SceneState, Card))
 			{
 				goto not_tapped;
 			}
 		}
-		if(HasTag(&Card->TableauTags, TableauEffect_OppDeltaOnAttack))
+		if(HasTag(&Card->GridTags, GridEffect_OppDeltaOnAttack))
 		{
 			if(!CheckOppPlayDelta(SceneState, Card))
 			{
@@ -936,32 +927,35 @@ void PlayStackCard(
 	}
 }
 
-void NormalPlayCard(
+void PlayFirstStackCard(
 	game_state* GameState, card_game_state* SceneState, card* Card
 )
 {
-	AppendToFrameLog("NormalPlayCard called");
+	ASSERT(HasAnyTag(&Card->StackTags));
+	SceneState->StackBuilding = true;
+	SceneState->StackTurn = SceneState->CurrentTurn;
+	PlayStackCard(GameState, SceneState, Card);
+}
 
-	// NOTE: handle cards that go onto the stack
-	if(HasAnyTag(&Card->StackTags))
+void PlayGridCard(
+	game_state* GameState,
+	card_game_state* SceneState,
+	card* Card,
+	uint32_t GridRow,
+	uint32_t GridCol
+)
+{
+	AppendToFrameLog("PlayGridCard called");
+	bool WasPlayed = CheckAndPlay(SceneState, Card);
+	if(WasPlayed)
 	{
-		SceneState->StackBuilding = true;
-		SceneState->StackTurn = SceneState->CurrentTurn;
-		PlayStackCard(GameState, SceneState, Card);
+		RemoveCardAndAlign(SceneState, Card);
+		SceneState->Grid[GridRow][GridCol].Occupant = Card;
+		Card->Visible = false;
 	}
-	// NOTE: handle cards that go in the tableau
 	else
 	{
-		bool WasPlayed = CheckAndPlay(SceneState, Card);
-		if(WasPlayed)
-		{
-			RemoveCardAndAlign(SceneState, Card);
-			AddCardAndAlign(&SceneState->Tableaus[Card->Owner], Card);
-		}
-		else
-		{
-			CannotActivateCardMessage(GameState, &SceneState->Alert);
-		}
+		CannotActivateCardMessage(GameState, &SceneState->Alert);
 	}
 }
 
@@ -1016,7 +1010,7 @@ bool TriggerCommonAttackEffects(
 	// NOTE: return false
 	// NOTE: these effects happen regardless of whether you're attacking player
 	// CONT: or the card
-	if(HasTag(&AttackingCard->TableauTags, TableauEffect_SelfDeltaOnAttack))
+	if(HasTag(&AttackingCard->GridTags, GridEffect_SelfDeltaOnAttack))
 	{
 		if(CheckSelfPlayDelta(SceneState, AttackingCard))
 		{
@@ -1027,7 +1021,7 @@ bool TriggerCommonAttackEffects(
 			return false;
 		}
 	}
-	if(HasTag(&AttackingCard->TableauTags, TableauEffect_OppDeltaOnAttack))
+	if(HasTag(&AttackingCard->GridTags, GridEffect_OppDeltaOnAttack))
 	{
 		if(CheckSelfPlayDelta(SceneState, AttackingCard))
 		{
@@ -1058,7 +1052,7 @@ attack_card_result AttackCard(
 {
 	AppendToFrameLog("AttackCard called");
 
-	// NOTE: this currently assumes cards must attack from the tableau
+	// NOTE: this currently assumes cards must attack from the Grid
 	attack_card_result Result = {};
 
 	bool CanAttack = TriggerCommonAttackEffects(SceneState, AttackingCard);
@@ -1256,9 +1250,6 @@ void StartCardGameDataSetup(
 		&GameState->TransientArena, Player_Count, card_set
 	);
 	memset(SceneState->Hands, 0, Player_Count * sizeof(card_set));
-	SceneState->Tableaus = PushArray(
-		&GameState->TransientArena, Player_Count, card_set
-	);
 
 	float HandTableauMargin = 5.0f;
 	// NOTE: transform assumes screen and camera are 1:1
@@ -1296,22 +1287,6 @@ void StartCardGameDataSetup(
 	CardSet->CardCount = 0;
 	CardSet->ScreenWidth = ScreenWidthInWorld;
 	CardSet->YPos = ScreenDimInWorld.Y - CardHeight;
-	CardSet->CardWidth = CardWidth;
-
-	CardSet = &SceneState->Tableaus[Player_One];
-	CardSet->Type = CardSet_Tableau;
-	CardSet->CardCount = 0;
-	CardSet->ScreenWidth = ScreenWidthInWorld;
-	CardSet->YPos = CardHeight + HandTableauMargin;
-	CardSet->CardWidth = CardWidth;
-
-	CardSet = &SceneState->Tableaus[Player_Two];
-	CardSet->Type = CardSet_Tableau;
-	CardSet->CardCount = 0;
-	CardSet->ScreenWidth = ScreenWidthInWorld;
-	CardSet->YPos = (
-		ScreenDimInWorld.Y - (2 * CardHeight) - HandTableauMargin 
-	);
 	CardSet->CardWidth = CardWidth;
 	
 	SceneState->InfoCardCenter = ScreenDimInWorld / 2.0f;
@@ -1578,7 +1553,7 @@ void StartCardGame(
 					CardData->OppPlayDelta = CardDefinition->OppPlayDelta;
 					CardData->Attack = CardDefinition->Attack;
 					CardData->Health = CardDefinition->Health;
-					CardData->TableauTags = CardDefinition->TableauTags;
+					CardData->GridTags = CardDefinition->GridTags;
 					CardData->StackTags = CardDefinition->StackTags;
 
 					DrawSet->CardCount++;
@@ -1594,6 +1569,33 @@ void StartCardGame(
 		SetTurnTimer(SceneState, DEFAULT_NEXT_TURN_TIMER);
 		SceneState->NextTurnTimer[Player_One] = DEFAULT_NEXT_TURN_TIMER;
 		SceneState->NextTurnTimer[Player_Two] = DEFAULT_NEXT_TURN_TIMER;
+
+		{
+			float Dimension = (1.0f / 15.0f) * SceneState->ScreenDimInWorld.X;
+			vector2 V2Dimension = Vector2(Dimension, Dimension);
+			float Margin = 2.5f;
+			vector2 RowStart = Vector2(
+				2 * Dimension,
+				SceneState->ScreenDimInWorld.Y - SceneState->CardHeight - (
+					ARRAY_COUNT(SceneState->Grid) * (Dimension + Margin)
+				)
+			);
+			for(uint32_t Row = 0; Row < ARRAY_COUNT(SceneState->Grid); Row++)
+			{
+				vector2 Center = RowStart;
+				for(uint32_t Col = 0; Col < ARRAY_COUNT(SceneState->Grid[0]); Col++)
+				{
+					grid_cell* GridCell = &(SceneState->Grid[Row][Col]);
+					GridCell->Rectangle = (
+						MakeRectangleCentered(Center, V2Dimension)
+					);
+					GridCell->Occupant = NULL;
+
+					Center.X += Dimension + Margin;
+				}
+				RowStart.Y += Dimension + Margin;
+			}
+		}
 
 		SceneState->PlayerLife[Player_One] = 100.0f;
 		SceneState->PlayerLife[Player_Two] = 100.0f;
@@ -1851,10 +1853,6 @@ bool AddCardToSet(
 	{
 		CardSet = SceneState->Hands + Owner;
 	}
-	else if(CardSetType == CardSet_Tableau)
-	{
-		CardSet = SceneState->Tableaus + Owner;
-	}
 	else if(CardSetType == CardSet_Stack)
 	{
 		// NOTE: different return path for stack
@@ -1953,8 +1951,10 @@ void ResolveTargeting(game_state* GameState, card_game_state* SceneState)
 			DeselectCard(SceneState);
 			SwitchStackTurns(GameState, SceneState);
 		}
-		else if(SelectedCard->SetType == CardSet_Tableau)
+		else if(SelectedCard->SetType == CardSet_Grid)
 		{
+			// TODO: fix attacks
+
 			// NOTE: currently assumes tableau cards can only target one target
 			target* Target = SceneState->Targets;
 			card* CardTarget = NULL;
@@ -1977,78 +1977,78 @@ void ResolveTargeting(game_state* GameState, card_game_state* SceneState)
 			{
 				OppId = GetOpponent(SceneState->StackTurn);
 			}
-			card_set* OppTableau = (SceneState->Tableaus + OppId);
-			if(AnyHasTaunt(OppTableau))
-			{
-				if(Target->Type != TargetType_Card)
-				{
-					DisplayMessageFor(
-						GameState,
-						&SceneState->Alert,
-						"Cannot attack this target (taunt active)",
-						1.0f
-					);
-				}
-				else if(HasTag(&CardTarget->TableauTags, TableauEffect_Taunt))
-				{
-					DeselectCard(SceneState);
-					attack_card_result Result = AttackCard(
-						GameState, SceneState, SelectedCard, CardTarget
-					);
-				}
-				else
-				{
-					DisplayMessageFor(
-						GameState,
-						&SceneState->Alert,
-						"Cannot attack this target (taunt active)",
-						1.0f
-					);
-				}
-			}
-			else
-			{
-				if(Target->Type == TargetType_Card)
-				{
-					// TODO: should this be moved into AttackCard?
-					DeselectCard(SceneState);
-					attack_card_result Result = AttackCard(
-						GameState, SceneState, SelectedCard, CardTarget
-					);
-				}
-				else if(Target->Type == TargetType_Player)
-				{
-					bool CanAttack = TriggerCommonAttackEffects(
-						SceneState, SelectedCard
-					);
+			// card_set* OppTableau = (SceneState->Tableaus + OppId);
+			// if(AnyHasTaunt(OppTableau))
+			// {
+			// 	if(Target->Type != TargetType_Card)
+			// 	{
+			// 		DisplayMessageFor(
+			// 			GameState,
+			// 			&SceneState->Alert,
+			// 			"Cannot attack this target (taunt active)",
+			// 			1.0f
+			// 		);
+			// 	}
+			// 	else if(HasTag(&CardTarget->TableauTags, TableauEffect_Taunt))
+			// 	{
+			// 		DeselectCard(SceneState);
+			// 		attack_card_result Result = AttackCard(
+			// 			GameState, SceneState, SelectedCard, CardTarget
+			// 		);
+			// 	}
+			// 	else
+			// 	{
+			// 		DisplayMessageFor(
+			// 			GameState,
+			// 			&SceneState->Alert,
+			// 			"Cannot attack this target (taunt active)",
+			// 			1.0f
+			// 		);
+			// 	}
+			// }
+			// else
+			// {
+			// 	if(Target->Type == TargetType_Card)
+			// 	{
+			// 		// TODO: should this be moved into AttackCard?
+			// 		DeselectCard(SceneState);
+			// 		attack_card_result Result = AttackCard(
+			// 			GameState, SceneState, SelectedCard, CardTarget
+			// 		);
+			// 	}
+			// 	else if(Target->Type == TargetType_Player)
+			// 	{
+			// 		bool CanAttack = TriggerCommonAttackEffects(
+			// 			SceneState, SelectedCard
+			// 		);
 
-					if(CanAttack)
-					{
-						// TODO: give a confirmation option for attacking yourself
-						player_id Owner = SelectedCard->Owner;
-						SceneState->PlayerLife[PlayerTarget] -= (
-							SelectedCard->Attack
-						);
+			// 		if(CanAttack)
+			// 		{
+			// 			// TODO: give a confirmation option for attacking yourself
+			// 			player_id Owner = SelectedCard->Owner;
+			// 			SceneState->PlayerLife[PlayerTarget] -= (
+			// 				SelectedCard->Attack
+			// 			);
 
-						if(SceneState->PlayerLife[PlayerTarget] <= 0.0f)
-						{
-							// TODO: give a small amount of fanfare for the winner
-							GameState->Scene = SceneType_MainMenu;
-						}
-					}
-					else
-					{
-						UntapCard(SceneState->SelectedCard);
-						DisplayMessageFor(
-							GameState,
-							&SceneState->Alert,
-							"Cannot attack",
-							1.0f
-						);
-					}
-					DeselectCard(SceneState);
-				}
-			}
+			// 			if(SceneState->PlayerLife[PlayerTarget] <= 0.0f)
+			// 			{
+			// 				// TODO: give a small amount of fanfare for the winner
+			// 				GameState->Scene = SceneType_MainMenu;
+			// 			}
+			// 		}
+			// 		else
+			// 		{
+			// 			UntapCard(SceneState->SelectedCard);
+			// 			DisplayMessageFor(
+			// 				GameState,
+			// 				&SceneState->Alert,
+			// 				"Cannot attack",
+			// 				1.0f
+			// 			);
+			// 		}
+			// 		DeselectCard(SceneState);
+			// 	}
+			// }
 		}
 		else
 		{
@@ -2072,6 +2072,7 @@ bool CardPrimaryUpHandler(
 		card* SelectedCard = SceneState->SelectedCard;
 		if(SelectedCard != NULL)
 		{
+			// TODO: do these still make sense with our grid changes?
 			// TODO: maybe formalize the targeting and reuse memory for 
 			// CONT: different phases
 			// NOTE: targeting phase
@@ -2079,7 +2080,7 @@ bool CardPrimaryUpHandler(
 			{
 				// TODO: this means that no card can target itself
 				DeselectCard(SceneState);
-				if(Card->SetType == CardSet_Tableau)
+				if(Card->SetType == CardSet_Grid)
 				{
 					UntapCard(Card);
 				}
@@ -2107,7 +2108,7 @@ bool CardPrimaryUpHandler(
 			{
 				if(HasAnyTag(&Card->StackTags))
 				{
-					NormalPlayCard(GameState, SceneState, Card);
+					PlayStackCard(GameState, SceneState, Card);
 					CardActedOn = true;
 				}
 			}
@@ -2115,10 +2116,18 @@ bool CardPrimaryUpHandler(
 			{
 				if(Card->SetType == CardSet_Hand)
 				{
-					NormalPlayCard(GameState, SceneState, Card);
+					if(HasAnyTag(&Card->StackTags))
+					{
+						PlayFirstStackCard(GameState, SceneState, Card);
+						CardActedOn = true;
+					}
+					else
+					{
+						SelectCard(SceneState, Card);
+					}
 					CardActedOn = true;
 				}
-				else if(Card->SetType == CardSet_Tableau)
+				else if(Card->SetType == CardSet_Grid)
 				{
 					bool Tapped = CheckAndTap(GameState, SceneState, Card);
 					if(Tapped)
@@ -2137,57 +2146,6 @@ bool CardPrimaryUpHandler(
 	}
 
 	return CardActedOn;
-}
-
-void PlayerPrimaryUpHandler(
-	game_state* GameState,
-	card_game_state* SceneState,
-	player_id Player,
-	vector2 MouseEventWorldPos
-)
-{
-	if(
-		PointInRectangle(
-			MouseEventWorldPos, SceneState->PlayerLifeRects[Player]
-		)
-	)
-	{
-		card* SelectedCard = SceneState->SelectedCard;
-		if(SelectedCard != NULL)
-		{
-			if(HasTag(&SceneState->ValidTargets, TargetType_Player))
-			{
-				ASSERT(SceneState->TargetsNeeded > 0);
-				target* Target = SceneState->Targets + SceneState->TargetsSet;
-				*Target = {};
-				Target->PlayerTarget = Player;
-				Target->Type = TargetType_Player;
-				SceneState->TargetsSet++;
-				ResolveTargeting(GameState, SceneState);
-			}
-			else
-			{
-				DisplayMessageFor(
-					GameState,
-					&SceneState->Alert,
-					"Cannot target players with this effect",
-					1.0f
-				);
-			}
-		}
-	}
-	else if(
-		PointInRectangle(MouseEventWorldPos, SceneState->DrawRects[Player])
-	)
-	{
-		SceneState->ViewingCardDataSet = SceneState->DrawSets + Player;
-	}
-	else if(
-		PointInRectangle(MouseEventWorldPos, SceneState->DiscardRects[Player])
-	)
-	{
-		SceneState->ViewingCardDataSet = SceneState->DiscardSets + Player;
-	}
 }
 
 inline void StandardPrimaryUpHandler(
@@ -2212,11 +2170,31 @@ inline void StandardPrimaryUpHandler(
 		}
 	}
 
-	for(int Player = Player_One; Player < Player_Count; Player++)
+	card* SelectedCard = SceneState->SelectedCard;
+	if(SelectedCard != NULL)
 	{
-		PlayerPrimaryUpHandler(
-			GameState, SceneState, (player_id) Player, MouseEventWorldPos
-		);
+		for(uint32_t Row = 0; Row < ARRAY_COUNT(SceneState->Grid); Row++)
+		{
+			for(uint32_t Col = 0; Col < ARRAY_COUNT(SceneState->Grid[0]); Col++)
+			{
+				rectangle Rectangle = SceneState->Grid[Row][Col].Rectangle;
+				if(PointInRectangle(MouseEventWorldPos, Rectangle))
+				{
+					if(SelectedCard->SetType == CardSet_Hand)
+					{
+						PlayGridCard(
+							GameState, SceneState, SelectedCard, Row, Col
+						);
+						DeselectCard(SceneState);
+						// TODO: summoning sickness
+					}
+					else if(SelectedCard->SetType == CardSet_Grid)
+					{
+						// NOTE: time to move!
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -2233,13 +2211,6 @@ inline void StackBuildingPrimaryUpHandler(
 	{
 		CardPrimaryUpHandler(GameState, SceneState, Card, MouseEventWorldPos);
 		Card++;
-	}
-
-	for(int Player = Player_One; Player < Player_Count; Player++)
-	{
-		PlayerPrimaryUpHandler(
-			GameState, SceneState, (player_id) Player, MouseEventWorldPos
-		);
 	}
 }
 
@@ -2454,7 +2425,7 @@ void SendCardDataSetUpdates(
 		Update->OppPlayDelta = CardData->OppPlayDelta;
 		Update->Attack = CardData->Attack;
 		Update->Health = CardData->Health;
-		Update->TableauTags = CardData->TableauTags;
+		Update->GridTags = CardData->GridTags;
 		Update->StackTags = CardData->StackTags;
 	}
 
@@ -2599,7 +2570,7 @@ void SendGameState(
 		Payload->TurnStartSelfPlayDelta = Card->TurnStartSelfPlayDelta;
 		Payload->OppPlayDelta = Card->OppPlayDelta;
 		Payload->TurnStartOppPlayDelta = Card->TurnStartOppPlayDelta;
-		Payload->TableauTags = Card->TableauTags;
+		Payload->GridTags = Card->GridTags;
 		Payload->StackTags = Card->StackTags;
 
 		packet_header* Header = &CardPacket->Header;
@@ -2973,8 +2944,8 @@ void CardGameLogic(
 			{
 				Card->TimesTapped = 0;
 
-				tableau_effect_tags* EffectTags = &Card->TableauTags;
-				if(HasTag(EffectTags, TableauEffect_GainRemainingAsAttack))
+				grid_effect_tags* EffectTags = &Card->GridTags;
+				if(HasTag(EffectTags, GridEffect_GainRemainingAsAttack))
 				{
 					if(Card->Owner == EndingTurnPlayer)
 					{
@@ -2984,56 +2955,56 @@ void CardGameLogic(
 						Card->Attack = Card->TurnStartAttack;
 					}
 				}
-				if(HasTag(EffectTags, TableauEffect_SelfWeaken))
+				if(HasTag(EffectTags, GridEffect_SelfWeaken))
 				{
-					if(Card->SetType == CardSet_Tableau)
+					if(Card->SetType == CardSet_Grid)
 					{
 						Card->Attack = Card->TurnStartAttack;
 					}
 				}
-				if(HasTag(EffectTags, TableauEffect_OppStrengthen))
+				if(HasTag(EffectTags, GridEffect_OppStrengthen))
 				{
-					if(Card->SetType == CardSet_Tableau)
+					if(Card->SetType == CardSet_Grid)
 					{
 						Card->Attack = Card->TurnStartAttack;
 					}
 				}
-				if(HasTag(EffectTags, TableauEffect_SelfLifeLoss))
+				if(HasTag(EffectTags, GridEffect_SelfLifeLoss))
 				{
-					if(Card->SetType == CardSet_Tableau)
+					if(Card->SetType == CardSet_Grid)
 					{
 						Card->Health = Card->TurnStartHealth;
 					}
 				}
-				if(HasTag(EffectTags, TableauEffect_OppLifeGain))
+				if(HasTag(EffectTags, GridEffect_OppLifeGain))
 				{
-					if(Card->SetType == CardSet_Tableau)
+					if(Card->SetType == CardSet_Grid)
 					{
 						Card->Health = Card->TurnStartHealth;
 					}
 				}
-				if(HasTag(EffectTags, TableauEffect_CurrentBoost))
+				if(HasTag(EffectTags, GridEffect_CurrentBoost))
 				{
-					if(Card->SetType == CardSet_Tableau)
+					if(Card->SetType == CardSet_Grid)
 					{
 						SceneState->TurnTimer += 10.0f;
 					}
 				}
-				if(HasTag(EffectTags, TableauEffect_CurrentLoss))
+				if(HasTag(EffectTags, GridEffect_CurrentLoss))
 				{
-					if(Card->SetType == CardSet_Tableau)
+					if(Card->SetType == CardSet_Grid)
 					{
 						SceneState->TurnTimer -= 10.0f;
 					}
 				}
-				if(HasTag(EffectTags, TableauEffect_CostIncrease))
+				if(HasTag(EffectTags, GridEffect_CostIncrease))
 				{
 					if(Card->SetType == CardSet_Hand)
 					{
 						Card->SelfPlayDelta = Card->TurnStartSelfPlayDelta;
 					}
 				}
-				if(HasTag(EffectTags, TableauEffect_GiveIncrease))
+				if(HasTag(EffectTags, GridEffect_GiveIncrease))
 				{
 					if(Card->SetType == CardSet_Hand)
 					{
@@ -3055,12 +3026,12 @@ void CardGameLogic(
 		{
 			if(Card->Active)
 			{
-				tableau_effect_tags* TableauTags = &Card->TableauTags;
-				if(HasTag(TableauTags, TableauEffect_SelfWeaken))
+				grid_effect_tags* GridTags = &Card->GridTags;
+				if(HasTag(GridTags, GridEffect_SelfWeaken))
 				{
 					if(
 						Card->Owner == SceneState->CurrentTurn && 
-						Card->SetType == CardSet_Tableau
+						Card->SetType == CardSet_Grid
 					)
 					{
 						if(WholeSecondPassed)
@@ -3073,11 +3044,11 @@ void CardGameLogic(
 						}
 					}
 				}
-				if(HasTag(TableauTags, TableauEffect_OppStrengthen))
+				if(HasTag(GridTags, GridEffect_OppStrengthen))
 				{
 					if(
 						Card->Owner != SceneState->CurrentTurn && 
-						Card->SetType == CardSet_Tableau
+						Card->SetType == CardSet_Grid
 					)
 					{
 						if(WholeSecondPassed)
@@ -3086,11 +3057,11 @@ void CardGameLogic(
 						}
 					}
 				}
-				if(HasTag(TableauTags, TableauEffect_SelfLifeLoss))
+				if(HasTag(GridTags, GridEffect_SelfLifeLoss))
 				{
 					if(
 						Card->Owner == SceneState->CurrentTurn && 
-						Card->SetType == CardSet_Tableau
+						Card->SetType == CardSet_Grid
 					)
 					{
 						if(WholeSecondPassed)
@@ -3103,11 +3074,11 @@ void CardGameLogic(
 						}
 					}
 				}
-				if(HasTag(TableauTags, TableauEffect_OppLifeGain))
+				if(HasTag(GridTags, GridEffect_OppLifeGain))
 				{
 					if(
 						Card->Owner != SceneState->CurrentTurn && 
-						Card->SetType == CardSet_Tableau
+						Card->SetType == CardSet_Grid
 					)
 					{
 						if(WholeSecondPassed)
@@ -3116,7 +3087,7 @@ void CardGameLogic(
 						}						
 					}
 				}
-				if(HasTag(TableauTags, TableauEffect_CostIncrease))
+				if(HasTag(GridTags, GridEffect_CostIncrease))
 				{
 					if(Card->SetType == CardSet_Hand)
 					{
@@ -3126,7 +3097,7 @@ void CardGameLogic(
 						}
 					}
 				}
-				if(HasTag(TableauTags, TableauEffect_GiveIncrease))
+				if(HasTag(GridTags, GridEffect_GiveIncrease))
 				{
 					if(Card->SetType == CardSet_Hand)
 					{
@@ -3361,7 +3332,7 @@ void UpdateAndRenderCardGame(
 							CardUpdate->TurnStartOppPlayDelta
 						);
 
-						CardToChange->TableauTags = CardUpdate->TableauTags;
+						CardToChange->GridTags = CardUpdate->GridTags;
 						CardToChange->StackTags = CardUpdate->StackTags;
 
 						break;
@@ -3433,7 +3404,7 @@ void UpdateAndRenderCardGame(
 							CardData->OppPlayDelta = Update->OppPlayDelta;
 							CardData->Attack = Update->Attack;
 							CardData->Health = Update->Health;
-							CardData->TableauTags = Update->TableauTags;
+							CardData->GridTags = Update->GridTags;
 							CardData->StackTags = Update->StackTags;
 						}
 						break;
@@ -3498,8 +3469,6 @@ void UpdateAndRenderCardGame(
 
 		AlignCardSet(SceneState->Hands + Player_One);
 		AlignCardSet(SceneState->Hands + Player_Two);
-		AlignCardSet(SceneState->Tableaus + Player_One);
-		AlignCardSet(SceneState->Tableaus + Player_Two);
 	}
 	// SECTION STOP: Read leader state
 
@@ -4115,16 +4084,49 @@ void UpdateAndRenderCardGame(
 			vector2 Center = RowStart;
 			for(uint32_t Col = 0; Col < ARRAY_COUNT(SceneState->Grid[0]); Col++)
 			{
+				grid_cell* GridCell = &(SceneState->Grid[Row][Col]);
+				rectangle Rectangle = GridCell->Rectangle;
+				vector2 GridXDim = Vector2(Rectangle.Dim.X, 0.0f);
+				vector2 GridYDim = Vector2(0.0f, Rectangle.Dim.Y);
 				PushSizedBitmap(
 					RenderGroup,
 					Assets,
 					BitmapHandle_TestCard2,
-					Center,
-					Vector2(Dimension, 0.0f),
-					Vector2(0.0f, Dimension),
+					GetCenter(Rectangle),
+					GridXDim,
+					GridYDim,
 					White,
 					1
 				);
+
+				card* Occupant = GridCell->Occupant;
+				if(Occupant != NULL)
+				{
+					vector4 PlayerColor = {};
+					if(Occupant->Owner == Player_One)
+					{
+						PlayerColor = Vector4(1.0f, 0.0f, 0.0f, 1.0f);
+					}
+					else if(Occupant->Owner == Player_Two)
+					{
+						PlayerColor = Vector4(0.0f, 0.0f, 1.0f, 1.0f);
+					}
+					else
+					{
+						ASSERT(false);
+					}
+					PushSizedBitmap(
+						RenderGroup,
+						Assets,
+						BitmapHandle_TestCard2,
+						GetCenter(Rectangle),
+						0.65f * GridXDim,
+						0.65f * GridYDim,
+						PlayerColor,
+						1
+					);
+				}
+
 				Center.X += Dimension + Margin;
 			}
 			RowStart.Y += Dimension + Margin;

@@ -1571,19 +1571,23 @@ void StartCardGame(
 		SceneState->NextTurnTimer[Player_Two] = DEFAULT_NEXT_TURN_TIMER;
 
 		{
+			float ScreenCenterX = 0.5f * SceneState->ScreenDimInWorld.X;
+			float ScreenCenterY = 0.5f * SceneState->ScreenDimInWorld.Y;
+
+			uint32_t RowCount = ARRAY_COUNT(SceneState->Grid);
+			uint32_t ColCount = ARRAY_COUNT(SceneState->Grid[0]);
+
 			float Dimension = (1.0f / 15.0f) * SceneState->ScreenDimInWorld.X;
 			vector2 V2Dimension = Vector2(Dimension, Dimension);
 			float Margin = 2.5f;
 			vector2 RowStart = Vector2(
-				2 * Dimension,
-				SceneState->ScreenDimInWorld.Y - SceneState->CardHeight - (
-					ARRAY_COUNT(SceneState->Grid) * (Dimension + Margin)
-				)
+				ScreenCenterX - ((Dimension + Margin) * (ColCount / 2)),
+				ScreenCenterY - ((Dimension + Margin) * (RowCount / 2))
 			);
-			for(uint32_t Row = 0; Row < ARRAY_COUNT(SceneState->Grid); Row++)
+			for(uint32_t Row = 0; Row < RowCount; Row++)
 			{
 				vector2 Center = RowStart;
-				for(uint32_t Col = 0; Col < ARRAY_COUNT(SceneState->Grid[0]); Col++)
+				for(uint32_t Col = 0; Col < ColCount; Col++)
 				{
 					grid_cell* GridCell = &(SceneState->Grid[Row][Col]);
 					GridCell->Rectangle = (

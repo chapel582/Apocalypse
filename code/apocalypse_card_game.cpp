@@ -937,6 +937,34 @@ void PlayFirstStackCard(
 	PlayStackCard(GameState, SceneState, Card);
 }
 
+void MoveGridCard(
+	card_game_state* SceneState,
+	card* Mover,
+	uint32_t TargetRow,
+	uint32_t TargetCol
+)
+{
+	grid_cell* GridCell = NULL;
+	for(uint32_t Row = 0; Row < ARRAY_COUNT(SceneState->Grid); Row++)
+	{
+		for(uint32_t Col = 0; Col < ARRAY_COUNT(SceneState->Grid[0]); Col++)
+		{
+			grid_cell* Check = &(SceneState->Grid[Row][Col]);
+			if(Mover == Check->Occupant)
+			{
+				GridCell = Check;
+				break;
+			}
+		}
+	}
+	if(GridCell != NULL)
+	{
+		grid_cell* MoveTo = &(SceneState->Grid[TargetRow][TargetCol]);
+		MoveTo->Occupant = Mover;
+		GridCell->Occupant = NULL;
+	}
+}
+
 void PlayGridCard(
 	game_state* GameState,
 	card_game_state* SceneState,
@@ -951,6 +979,7 @@ void PlayGridCard(
 	{
 		RemoveCardAndAlign(SceneState, Card);
 		SceneState->Grid[GridRow][GridCol].Occupant = Card;
+		Card->SetType = CardSet_Grid;
 		Card->Visible = false;
 	}
 	else
@@ -2175,14 +2204,15 @@ inline void StandardPrimaryUpHandler(
 	}
 
 	card* SelectedCard = SceneState->SelectedCard;
-	if(SelectedCard != NULL)
+	for(uint32_t Row = 0; Row < ARRAY_COUNT(SceneState->Grid); Row++)
 	{
-		for(uint32_t Row = 0; Row < ARRAY_COUNT(SceneState->Grid); Row++)
+		for(uint32_t Col = 0; Col < ARRAY_COUNT(SceneState->Grid[0]); Col++)
 		{
-			for(uint32_t Col = 0; Col < ARRAY_COUNT(SceneState->Grid[0]); Col++)
+			grid_cell* GridCell = &(SceneState->Grid[Row][Col]);
+			rectangle Rectangle = GridCell->Rectangle;
+			if(PointInRectangle(MouseEventWorldPos, Rectangle))
 			{
-				rectangle Rectangle = SceneState->Grid[Row][Col].Rectangle;
-				if(PointInRectangle(MouseEventWorldPos, Rectangle))
+				if(SelectedCard != NULL)
 				{
 					if(SelectedCard->SetType == CardSet_Hand)
 					{
@@ -2195,6 +2225,19 @@ inline void StandardPrimaryUpHandler(
 					else if(SelectedCard->SetType == CardSet_Grid)
 					{
 						// NOTE: time to move!
+						MoveGridCard(SceneState, SelectedCard, Row, Col);
+						DeselectCard(SceneState);
+					}
+				}
+				else if(GridCell->Occupant != NULL)
+				{
+					if(SelectedCard == GridCell->Occupant)
+					{
+						DeselectCard(SceneState);
+					}
+					else
+					{
+						SelectCard(SceneState, GridCell->Occupant);
 					}
 				}
 			}
@@ -4075,17 +4118,9 @@ void UpdateAndRenderCardGame(
 	// SECTION STOP: push cards in card data set
 
 	{
-		float Dimension = (1.0f / 15.0f) * SceneState->ScreenDimInWorld.X;
-		float Margin = 2.5f;
-		vector2 RowStart = Vector2(
-			2 * Dimension,
-			SceneState->ScreenDimInWorld.Y - SceneState->CardHeight - (
-				ARRAY_COUNT(SceneState->Grid) * (Dimension + Margin)
-			)
-		);
+		uint32_t GridLayer = 0;
 		for(uint32_t Row = 0; Row < ARRAY_COUNT(SceneState->Grid); Row++)
 		{
-			vector2 Center = RowStart;
 			for(uint32_t Col = 0; Col < ARRAY_COUNT(SceneState->Grid[0]); Col++)
 			{
 				grid_cell* GridCell = &(SceneState->Grid[Row][Col]);
@@ -4100,7 +4135,7 @@ void UpdateAndRenderCardGame(
 					GridXDim,
 					GridYDim,
 					White,
-					1
+					GridLayer
 				);
 
 				card* Occupant = GridCell->Occupant;
@@ -4127,13 +4162,10 @@ void UpdateAndRenderCardGame(
 						0.65f * GridXDim,
 						0.65f * GridYDim,
 						PlayerColor,
-						1
+						GridLayer + 1
 					);
 				}
-
-				Center.X += Dimension + Margin;
 			}
-			RowStart.Y += Dimension + Margin;
 		}
 	}
 

@@ -2209,30 +2209,44 @@ void ResolveTargeting(game_state* GameState, card_game_state* SceneState)
 		}
 		else if(SelectedCard->SetType == CardSet_Grid)
 		{
-			// TODO: fix attacks
-
-			// NOTE: currently assumes tableau cards can only target one target
 			target* Target = SceneState->Targets;
-			card* CardTarget = NULL;
-			player_id PlayerTarget = Player_Count;
-			if(Target->Type == TargetType_Card)
+			card* CardTarget = Target->CardTarget;
+			bool IsAdjacent = (
+				(
+					(CardTarget->Row - SelectedCard->Row) == 1 ||
+					(SelectedCard->Row - CardTarget->Row) == 1
+				) &&
+				(
+					(CardTarget->Col - SelectedCard->Col) == 1 ||
+					(SelectedCard->Col - CardTarget->Col) == 1
+				)
+			);
+			if(IsAdjacent)
 			{
-				CardTarget = Target->CardTarget;
-			}
-			else if(Target->Type == TargetType_Player)
-			{
-				PlayerTarget = Target->PlayerTarget;
-			}
+				DeselectCard(SceneState);
 
-			player_id OppId = Player_Count;
-			if(!SceneState->StackBuilding)
-			{
-				OppId = GetOpponent(SceneState->CurrentTurn);
+				attack_card_result Result = AttackCard(
+					GameState, SceneState, SelectedCard, CardTarget
+				);
 			}
-			else
-			{
-				OppId = GetOpponent(SceneState->StackTurn);
-			}
+			// if(Target->Type == TargetType_Card)
+			// {
+			// 	CardTarget = Target->CardTarget;
+			// }
+			// else if(Target->Type == TargetType_Player)
+			// {
+			// 	PlayerTarget = Target->PlayerTarget;
+			// }
+
+			// player_id OppId = Player_Count;
+			// if(!SceneState->StackBuilding)
+			// {
+			// 	OppId = GetOpponent(SceneState->CurrentTurn);
+			// }
+			// else
+			// {
+			// 	OppId = GetOpponent(SceneState->StackTurn);
+			// }
 			// card_set* OppTableau = (SceneState->Tableaus + OppId);
 			// if(AnyHasTaunt(OppTableau))
 			// {
@@ -2926,7 +2940,7 @@ void TurnTimerUpdate(card_game_state* SceneState, float DtForFrame)
 }
 
 void CheckAndSetCardHoverOver(
-	card* Cards, uint32_t MaxCards, vector2 MouseEventWorldPos
+	card* Cards, uint32_t MaxCards, grid* Grid, vector2 MouseEventWorldPos
 )
 {
 	card* Card = Cards;
@@ -2934,13 +2948,28 @@ void CheckAndSetCardHoverOver(
 	{
 		if(Card->Active)
 		{
-			if(PointInRectangle(MouseEventWorldPos, Card->Rectangle))
+			if(Card->SetType == CardSet_Grid)
 			{
-				Card->HoveredOver = true;							
+				grid_cell* GridCell = GetGridCell(Grid, Card->Row, Card->Col);
+				if(PointInRectangle(MouseEventWorldPos, GridCell->Rectangle))
+				{
+					Card->HoveredOver = true;
+				}
+				else
+				{
+					Card->HoveredOver = false;
+				}
 			}
 			else
 			{
-				Card->HoveredOver = false;
+				if(PointInRectangle(MouseEventWorldPos, Card->Rectangle))
+				{
+					Card->HoveredOver = true;
+				}
+				else
+				{
+					Card->HoveredOver = false;
+				}
 			}
 		}
 		Card++;
@@ -2987,7 +3016,10 @@ void FollowerCardGameLogic(
 			{
 				card* Cards = &SceneState->Cards[0];
 				CheckAndSetCardHoverOver(
-					Cards, SceneState->MaxCards, MouseEventWorldPos
+					Cards,
+					SceneState->MaxCards,
+					&SceneState->Grid,
+					MouseEventWorldPos
 				);
 			}
 
@@ -3102,7 +3134,10 @@ void CardGameLogic(
 			{
 				card* Card = &SceneState->Cards[0];
 				CheckAndSetCardHoverOver(
-					Card, SceneState->MaxCards, MouseEventWorldPos
+					Card,
+					SceneState->MaxCards,
+					&SceneState->Grid,
+					MouseEventWorldPos
 				);
 			}
 
@@ -4051,26 +4086,26 @@ void UpdateAndRenderCardGame(
 						2
 					);
 				}
-				if(Card->HoveredOver)
-				{
-					PushInfoCard(
-						RenderGroup,
-						Assets,
-						SceneState->InfoCardCenter,
-						SceneState->InfoCardXBound,
-						SceneState->InfoCardYBound,
-						Card->Color,
-						FrameArena,
-						Card->Definition->Name,
-						Card->Attack,
-						Card->Health,
-						Card->SelfPlayDelta,
-						Card->OppPlayDelta,
-						Card->Definition->Description,
-						Card->TapsAvailable - Card->TimesTapped,
-						HasAnyTag(&Card->StackTags)
-					);
-				}
+			}
+			if(Card->HoveredOver)
+			{
+				PushInfoCard(
+					RenderGroup,
+					Assets,
+					SceneState->InfoCardCenter,
+					SceneState->InfoCardXBound,
+					SceneState->InfoCardYBound,
+					Card->Color,
+					FrameArena,
+					Card->Definition->Name,
+					Card->Attack,
+					Card->Health,
+					Card->SelfPlayDelta,
+					Card->OppPlayDelta,
+					Card->Definition->Description,
+					Card->TapsAvailable - Card->TimesTapped,
+					HasAnyTag(&Card->StackTags)
+				);
 			}
 			Card++;
 		}

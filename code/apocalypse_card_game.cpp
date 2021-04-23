@@ -434,7 +434,9 @@ void InitCardWithDef(
 	Card->TurnStartSelfPlayDelta = Definition->SelfPlayDelta;
 	Card->OppPlayDelta = Definition->OppPlayDelta;
 	Card->TurnStartOppPlayDelta = Definition->OppPlayDelta;
+	Card->Movement = Definition->Movement;
 }
+
 void InitCardWithDef(
 	card_game_state* SceneState,
 	card* Card,
@@ -462,6 +464,7 @@ void InitCardWithCardData(card* Card, card_data* CardData)
 	Card->OppPlayDelta = CardData->OppPlayDelta;
 	Card->Attack = CardData->Attack;
 	Card->Health = CardData->Health;
+	Card->Movement = CardData->Movement;
 	Card->GridTags = CardData->GridTags;
 	Card->StackTags = CardData->StackTags;
 
@@ -490,6 +493,7 @@ void AddCardToCardDataSet(card* Card, card_data_set* CardDataSet)
 	CardData->OppPlayDelta = Card->OppPlayDelta;
 	CardData->Attack = Card->Attack;
 	CardData->Health = Card->Health;
+	CardData->Movement = Card->Movement;
 	CardData->GridTags = Card->GridTags;
 	CardData->StackTags = Card->StackTags;
 }
@@ -888,13 +892,16 @@ void SwitchStackTurns(game_state* GameState, card_game_state* SceneState)
 	DisplayMessageFor(GameState, &SceneState->Alert, Buffer, 1.0f);
 }
 
-void SelectCard(card_game_state* SceneState, card* Card);
+void SelectCard(
+	card_game_state* SceneState, card* Card, memory_arena* FrameArena
+);
 void PlayStackCard(
 	game_state* GameState, card_game_state* SceneState, card* Card
 )
 {
 	AppendToFrameLog("PlayStackCard called");
 
+	memory_arena* FrameArena = &GameState->FrameArena;
 	// NOTE: this function plays the stack card without checking HasAnyTag
 	card_stack_entry* StackEntry = AddCardToStack(SceneState, Card);
 	stack_effect_tags* StackTags = &Card->StackTags;
@@ -908,7 +915,7 @@ void PlayStackCard(
 		HasTag(StackTags, StackEffect_DiscardAndGive)
 	)
 	{
-		SelectCard(SceneState, Card);
+		SelectCard(SceneState, Card, FrameArena);
 		SceneState->TargetsNeeded++;
 		SetTag(&SceneState->ValidTargets, TargetType_Card);
 	}
@@ -917,7 +924,7 @@ void PlayStackCard(
 		HasTag(StackTags, StackEffect_SelfDeltaConfuse)
 	)
 	{
-		SelectCard(SceneState, Card);
+		SelectCard(SceneState, Card, FrameArena);
 		SceneState->TargetsNeeded++;
 		SetTag(&SceneState->ValidTargets, TargetType_Player);	
 	}
@@ -937,31 +944,217 @@ void PlayFirstStackCard(
 	PlayStackCard(GameState, SceneState, Card);
 }
 
+struct path_data;
+struct path_data
+{
+	uint32_t Row;
+	uint32_t Col;
+	grid_cell* GridCell;
+	path_data* Next;
+};
+
+void CheckAndAddToPathQueue(
+	grid_cell* SourceGridCell,
+	grid* Grid,
+	uint32_t RowCheck,
+	uint32_t ColCheck,
+	path_data** Head,
+	path_data** FreePtr,
+	memory_arena* FrameArena
+)
+{
+	grid_cell* Check = GetGridCell(Grid, RowCheck, ColCheck);
+	if(
+		(
+			Check->ShortestPathPrev != NULL &&
+			Check->MovesTaken <= (SourceGridCell->MovesTaken + 1)
+		) ||
+		Check->Occupant != NULL
+	)
+	{
+		return;
+	}
+
+	path_data* Free = *FreePtr;
+
+	Check->ShortestPathPrev = SourceGridCell;
+	Check->MovesTaken = SourceGridCell->MovesTaken + 1;
+	path_data* NewHead = NULL;
+	if(Free != NULL)
+	{
+		NewHead = Free;
+		*FreePtr = Free->Next;
+	}
+	else
+	{
+		NewHead = PushStruct(FrameArena, path_data);
+	}
+	NewHead->Row = RowCheck;
+	NewHead->Col = ColCheck;
+	NewHead->GridCell = Check;
+	NewHead->Next = *Head;
+	*Head = NewHead;
+}
+
+void PathFromNoCheck(
+	grid* Grid,
+	uint32_t FromRow,
+	uint32_t FromCol,
+	uint8_t Movement,
+	memory_arena* FrameArena
+)
+{
+	Grid->FromRow = FromRow;
+	Grid->FromCol = FromCol;
+	Grid->Movement = Movement;
+
+	temp_memory TempMemory = BeginTempMemory(FrameArena);
+
+	for(uint32_t Row = 0; Row < Grid->RowCount; Row++)
+	{
+		for(uint32_t Col = 0; Col < Grid->ColCount; Col++)
+		{
+			grid_cell* GridCell = GetGridCell(Grid, Row, Col);
+			GridCell->ShortestPathPrev = NULL;
+		}
+	}
+	path_data* Head = PushStruct(FrameArena, path_data);
+	*Head = {};
+	Head->Next = NULL;
+	Head->Row = FromRow;
+	Head->Col = FromCol;
+	Head->GridCell = GetGridCell(Grid, FromRow, FromCol);
+	Head->GridCell->MovesTaken = 0;
+
+	path_data* Free = NULL;
+	while(Head != NULL)
+	{
+		path_data* Expand = Head;
+		Head = Head->Next;
+		grid_cell* SourceGridCell = Expand->GridCell;
+		if(SourceGridCell->MovesTaken < Movement)
+		{
+			if((Expand->Row + 1) < Grid->RowCount)
+			{
+				CheckAndAddToPathQueue(
+					SourceGridCell,
+					Grid,
+					Expand->Row + 1,
+					Expand->Col,
+					&Head,
+					&Free,
+					FrameArena
+				);
+			}
+			if(Expand->Row > 0)
+			{
+				CheckAndAddToPathQueue(
+					SourceGridCell,
+					Grid,
+					Expand->Row - 1,
+					Expand->Col,
+					&Head,
+					&Free,
+					FrameArena
+				);
+			}
+			if((Expand->Col + 1) < Grid->ColCount)
+			{
+				CheckAndAddToPathQueue(
+					SourceGridCell,
+					Grid,
+					Expand->Row,
+					Expand->Col + 1,
+					&Head,
+					&Free,
+					FrameArena
+				);
+			}
+			if(Expand->Col > 0)
+			{
+				CheckAndAddToPathQueue(
+					SourceGridCell,
+					Grid,
+					Expand->Row,
+					Expand->Col - 1,
+					&Head,
+					&Free,
+					FrameArena
+				);
+			}
+		}
+
+		Expand->Next = Free;
+		Free = Expand;
+	}
+
+	EndTempMemory(TempMemory);
+}
+
+void PathFrom(
+	grid* Grid,
+	uint32_t FromRow,
+	uint32_t FromCol,
+	uint8_t Movement,
+	memory_arena* FrameArena
+)
+{
+	if(
+		Grid->FromRow == FromRow &&
+		Grid->FromCol == FromCol &&
+		Grid->Movement == Movement
+	)
+	{
+		return;
+	}
+	PathFromNoCheck(Grid, FromRow, FromCol, Movement, FrameArena);
+}
+
+bool CanPathTo(grid* Grid, uint32_t RowTarget, uint32_t ColTarget)
+{
+	// NOTE: assumes PathFrom has been called already
+	grid_cell* GridCell = GetGridCell(Grid, RowTarget, ColTarget);
+
+	return GridCell->ShortestPathPrev != NULL;
+}
+
+// TODO: construct pathto using ShortestPathPrev
+// bool PathTo(
+// 	grid* Grid,
+// 	uint32_t FromRow,
+// 	uint32_t FromCol,
+// 	uint32_t ToRow,
+// 	uint32_t ToCol,
+// 	uint8_t Movement
+// )
+// {
+// 	bool Result = false;
+// 	grid_cell* Last
+// 	if()
+// 	{
+// 		return Result;
+// 	}
+// }
+
 void MoveGridCard(
 	card_game_state* SceneState,
 	card* Mover,
-	uint32_t TargetRow,
-	uint32_t TargetCol
+	uint8_t TargetRow,
+	uint8_t TargetCol
 )
 {
-	grid_cell* GridCell = NULL;
-	for(uint32_t Row = 0; Row < ARRAY_COUNT(SceneState->Grid); Row++)
+	grid* Grid = &SceneState->Grid;
+	ASSERT(Mover->Row < Grid->RowCount);
+	ASSERT(Mover->Col < Grid->ColCount);
+	grid_cell* GridCell = GetGridCell(Grid, Mover->Row, Mover->Col);
+	ASSERT(GridCell->Occupant == Mover);
+
+	if(CanPathTo(Grid, TargetRow, TargetCol))
 	{
-		for(uint32_t Col = 0; Col < ARRAY_COUNT(SceneState->Grid[0]); Col++)
-		{
-			grid_cell* Check = &(SceneState->Grid[Row][Col]);
-			if(Mover == Check->Occupant)
-			{
-				GridCell = Check;
-				break;
-			}
-		}
-	}
-	if(GridCell != NULL)
-	{
-		grid_cell* MoveTo = &(SceneState->Grid[TargetRow][TargetCol]);
+		grid_cell* MoveTo = GetGridCell(Grid, TargetRow, TargetCol);
 		MoveTo->Occupant = Mover;
 		GridCell->Occupant = NULL;
+		Mover->Movement -= GridCell->MovesTaken;
 	}
 }
 
@@ -969,8 +1162,8 @@ void PlayGridCard(
 	game_state* GameState,
 	card_game_state* SceneState,
 	card* Card,
-	uint32_t GridRow,
-	uint32_t GridCol
+	uint8_t GridRow,
+	uint8_t GridCol
 )
 {
 	AppendToFrameLog("PlayGridCard called");
@@ -978,9 +1171,11 @@ void PlayGridCard(
 	if(WasPlayed)
 	{
 		RemoveCardAndAlign(SceneState, Card);
-		SceneState->Grid[GridRow][GridCol].Occupant = Card;
+		GetGridCell(&SceneState->Grid, GridRow, GridCol)->Occupant = Card;
 		Card->SetType = CardSet_Grid;
 		Card->Visible = false;
+		Card->Row = GridRow;
+		Card->Col = GridCol;
 	}
 	else
 	{
@@ -1004,7 +1199,9 @@ bool StackBuildingPlayCard(
 	return WasPlayed;
 }
 
-void SelectCard(card_game_state* SceneState, card* Card)
+void SelectCard(
+	card_game_state* SceneState, card* Card, memory_arena* FrameArena
+)
 {
 	AppendToFrameLog("SelectCard called");
 
@@ -1013,6 +1210,18 @@ void SelectCard(card_game_state* SceneState, card* Card)
 	SceneState->TargetsSet = 0;
 	SceneState->TargetsNeeded = 0;
 	SceneState->ValidTargets.Tags = 0;
+
+	if(Card->SetType == CardSet_Grid)
+	{
+		grid* Grid = &SceneState->Grid;
+		PathFromNoCheck(
+			Grid,
+			Card->Row,
+			Card->Col,
+			Card->Movement,
+			FrameArena
+		);
+	}
 }
 
 void DeselectCard(card_game_state* SceneState)
@@ -1582,6 +1791,7 @@ void StartCardGame(
 					CardData->OppPlayDelta = CardDefinition->OppPlayDelta;
 					CardData->Attack = CardDefinition->Attack;
 					CardData->Health = CardDefinition->Health;
+					CardData->Movement = CardDefinition->Movement;
 					CardData->GridTags = CardDefinition->GridTags;
 					CardData->StackTags = CardDefinition->StackTags;
 
@@ -1603,22 +1813,28 @@ void StartCardGame(
 			float ScreenCenterX = 0.5f * SceneState->ScreenDimInWorld.X;
 			float ScreenCenterY = 0.5f * SceneState->ScreenDimInWorld.Y;
 
-			uint32_t RowCount = ARRAY_COUNT(SceneState->Grid);
-			uint32_t ColCount = ARRAY_COUNT(SceneState->Grid[0]);
+			grid* Grid = &SceneState->Grid;
+			Grid->RowCount = 5;
+			Grid->ColCount = 9;
+			Grid->Cells = PushArray(
+				&GameState->TransientArena,
+				Grid->RowCount * Grid->ColCount,
+				grid_cell
+			);
 
 			float Dimension = (1.0f / 15.0f) * SceneState->ScreenDimInWorld.X;
 			vector2 V2Dimension = Vector2(Dimension, Dimension);
 			float Margin = 2.5f;
 			vector2 RowStart = Vector2(
-				ScreenCenterX - ((Dimension + Margin) * (ColCount / 2)),
-				ScreenCenterY - ((Dimension + Margin) * (RowCount / 2))
+				ScreenCenterX - ((Dimension + Margin) * (Grid->ColCount / 2)),
+				ScreenCenterY - ((Dimension + Margin) * (Grid->RowCount / 2))
 			);
-			for(uint32_t Row = 0; Row < RowCount; Row++)
+			for(uint32_t Row = 0; Row < Grid->RowCount; Row++)
 			{
 				vector2 Center = RowStart;
-				for(uint32_t Col = 0; Col < ColCount; Col++)
+				for(uint32_t Col = 0; Col < Grid->ColCount; Col++)
 				{
-					grid_cell* GridCell = &(SceneState->Grid[Row][Col]);
+					grid_cell* GridCell = GetGridCell(Grid, Row, Col);
 					GridCell->Rectangle = (
 						MakeRectangleCentered(Center, V2Dimension)
 					);
@@ -2097,6 +2313,7 @@ bool CardPrimaryUpHandler(
 	vector2 MouseEventWorldPos
 )
 {
+	memory_arena* FrameArena = &GameState->FrameArena;
 	bool CardActedOn = false;
 	if(
 		Card->Active && PointInRectangle(MouseEventWorldPos, Card->Rectangle)
@@ -2156,7 +2373,7 @@ bool CardPrimaryUpHandler(
 					}
 					else
 					{
-						SelectCard(SceneState, Card);
+						SelectCard(SceneState, Card, FrameArena);
 					}
 					CardActedOn = true;
 				}
@@ -2165,7 +2382,7 @@ bool CardPrimaryUpHandler(
 					bool Tapped = CheckAndTap(GameState, SceneState, Card);
 					if(Tapped)
 					{
-						SelectCard(SceneState, Card);
+						SelectCard(SceneState, Card, FrameArena);
 						SceneState->TargetsNeeded = 1;
 						SetTag(&SceneState->ValidTargets, TargetType_Card);
 						SetTag(&SceneState->ValidTargets, TargetType_Player);
@@ -2189,6 +2406,7 @@ inline void StandardPrimaryUpHandler(
 {
 	AppendToFrameLog("StandardPrimaryUpHandler called");
 
+	memory_arena* FrameArena = &GameState->FrameArena;
 	// NOTE: inlined function b/c this is only called once
 	card* Card = &SceneState->Cards[0];
 	for(uint32_t CardIndex = 0; CardIndex < SceneState->MaxCards; CardIndex++)
@@ -2203,12 +2421,13 @@ inline void StandardPrimaryUpHandler(
 		}
 	}
 
+	grid* Grid = &SceneState->Grid;
 	card* SelectedCard = SceneState->SelectedCard;
-	for(uint32_t Row = 0; Row < ARRAY_COUNT(SceneState->Grid); Row++)
+	for(uint8_t Row = 0; Row < Grid->RowCount; Row++)
 	{
-		for(uint32_t Col = 0; Col < ARRAY_COUNT(SceneState->Grid[0]); Col++)
+		for(uint8_t Col = 0; Col < Grid->ColCount; Col++)
 		{
-			grid_cell* GridCell = &(SceneState->Grid[Row][Col]);
+			grid_cell* GridCell = GetGridCell(Grid, Row, Col);
 			rectangle Rectangle = GridCell->Rectangle;
 			if(PointInRectangle(MouseEventWorldPos, Rectangle))
 			{
@@ -2237,7 +2456,7 @@ inline void StandardPrimaryUpHandler(
 					}
 					else
 					{
-						SelectCard(SceneState, GridCell->Occupant);
+						SelectCard(SceneState, GridCell->Occupant, FrameArena);
 					}
 				}
 			}
@@ -2610,7 +2829,7 @@ void SendGameState(
 		Payload->TapsAvailable = Card->TapsAvailable;
 		Payload->TimesTapped = Card->TimesTapped;
 		Payload->Attack = Card->Attack;
-		Payload->TurnStartAttack= Card->TurnStartAttack;
+		Payload->TurnStartAttack = Card->TurnStartAttack;
 		Payload->Health = Card->Health;
 		Payload->TurnStartHealth = Card->TurnStartHealth;
 		Payload->SelfPlayDelta = Card->SelfPlayDelta;
@@ -3058,6 +3277,8 @@ void CardGameLogic(
 						Card->OppPlayDelta = Card->TurnStartOppPlayDelta;
 					}
 				}
+
+				Card->Movement = Card->Definition->Movement;
 			}
 		}
 	}
@@ -4118,15 +4339,34 @@ void UpdateAndRenderCardGame(
 	// SECTION STOP: push cards in card data set
 
 	{
+		grid* Grid = &SceneState->Grid;
+		vector4 Yellow = Vector4(1.0f, 1.0f, 0.0f, 1.0f);
 		uint32_t GridLayer = 0;
-		for(uint32_t Row = 0; Row < ARRAY_COUNT(SceneState->Grid); Row++)
+		for(uint8_t Row = 0; Row < Grid->RowCount; Row++)
 		{
-			for(uint32_t Col = 0; Col < ARRAY_COUNT(SceneState->Grid[0]); Col++)
+			for(uint8_t Col = 0; Col < Grid->ColCount; Col++)
 			{
-				grid_cell* GridCell = &(SceneState->Grid[Row][Col]);
+				grid_cell* GridCell = GetGridCell(Grid, Row, Col);
 				rectangle Rectangle = GridCell->Rectangle;
 				vector2 GridXDim = Vector2(Rectangle.Dim.X, 0.0f);
 				vector2 GridYDim = Vector2(0.0f, Rectangle.Dim.Y);
+				vector4 GridCellColor;
+				if(SceneState->SelectedCard != NULL)
+				{
+					if(CanPathTo(Grid, Row, Col))
+					{
+						GridCellColor = Yellow;
+					}
+					else
+					{
+						GridCellColor = White;
+					}
+				}
+				else
+				{
+					GridCellColor = White;
+				}
+
 				PushSizedBitmap(
 					RenderGroup,
 					Assets,
@@ -4134,7 +4374,7 @@ void UpdateAndRenderCardGame(
 					GetCenter(Rectangle),
 					GridXDim,
 					GridYDim,
-					White,
+					GridCellColor,
 					GridLayer
 				);
 

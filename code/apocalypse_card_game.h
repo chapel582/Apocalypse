@@ -72,6 +72,9 @@ struct card // TODO: maybe rename to active or visible card?
 	int16_t TurnStartAttack;
 	int16_t Health;
 	int16_t TurnStartHealth;
+	uint8_t Movement;
+	uint8_t Row;
+	uint8_t Col;
 	grid_effect_tags GridTags;
 	stack_effect_tags StackTags;
 };
@@ -97,6 +100,7 @@ struct card_data
 	int16_t OppPlayDelta;
 	int16_t Attack;
 	int16_t Health;
+	uint8_t Movement;
 	grid_effect_tags GridTags;
 	stack_effect_tags StackTags;
 
@@ -190,11 +194,29 @@ struct target
 	};
 };
 
+struct grid_cell;
 struct grid_cell
 {
 	rectangle Rectangle;
 	card* Occupant;
+	grid_cell* ShortestPathPrev;
+	uint8_t MovesTaken;
 };
+
+struct grid
+{
+	grid_cell* Cells;
+	uint8_t RowCount;
+	uint8_t ColCount;
+	uint32_t FromRow;
+	uint32_t FromCol;
+	uint32_t Movement;
+};
+
+inline grid_cell* GetGridCell(grid* Grid, uint32_t Row, uint32_t Col)
+{
+	return Grid->Cells + Row * Grid->ColCount + Col;
+}
 
 struct card_game_state
 {
@@ -261,7 +283,7 @@ struct card_game_state
 	packet_reader_data PacketReader;
 
 	// TODO: probably should put this in an arena
-	grid_cell Grid[5][9];
+	grid Grid;
 
 	// NOTE: last frame received from master
 	uint64_t LastFrame;

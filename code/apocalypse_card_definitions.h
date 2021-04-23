@@ -215,6 +215,7 @@ struct card_definition
 	int16_t Health;
 	int16_t SelfPlayDelta;
 	int16_t OppPlayDelta;
+	uint8_t Movement;
 	char Name[CARD_NAME_SIZE];
 	char Description[CARD_DESCRIPTION_SIZE];
 	grid_effect_tags GridTags;
@@ -252,6 +253,7 @@ inline void InitCard(
 	Card->Health = Health;
 	Card->SelfPlayDelta = SelfPlayDelta;
 	Card->OppPlayDelta = OppPlayDelta;
+	Card->Movement = 2;
 }
 
 inline void SetName(card_definition* Definition, char* Name, uint32_t NameSize)

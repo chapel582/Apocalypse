@@ -72,7 +72,7 @@ struct card // TODO: maybe rename to active or visible card?
 	int16_t TurnStartAttack;
 	int16_t Health;
 	int16_t TurnStartHealth;
-	uint8_t Movement;
+	int16_t Movement;
 	uint8_t Row;
 	uint8_t Col;
 	grid_effect_tags GridTags;
@@ -100,7 +100,7 @@ struct card_data
 	int16_t OppPlayDelta;
 	int16_t Attack;
 	int16_t Health;
-	uint8_t Movement;
+	int16_t Movement;
 	grid_effect_tags GridTags;
 	stack_effect_tags StackTags;
 

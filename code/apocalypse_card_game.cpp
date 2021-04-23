@@ -1000,7 +1000,7 @@ void PathFromNoCheck(
 	grid* Grid,
 	uint32_t FromRow,
 	uint32_t FromCol,
-	uint8_t Movement,
+	int16_t Movement,
 	memory_arena* FrameArena
 )
 {
@@ -1153,8 +1153,14 @@ void MoveGridCard(
 	{
 		grid_cell* MoveTo = GetGridCell(Grid, TargetRow, TargetCol);
 		MoveTo->Occupant = Mover;
+		Mover->Row = TargetRow;
+		Mover->Col = TargetCol;
 		GridCell->Occupant = NULL;
-		Mover->Movement -= GridCell->MovesTaken;
+		Mover->Movement -= MoveTo->MovesTaken;
+		if(Mover->Movement <= 0)
+		{
+			Mover->Movement = 0;
+		}
 	}
 }
 
@@ -2444,7 +2450,10 @@ inline void StandardPrimaryUpHandler(
 					else if(SelectedCard->SetType == CardSet_Grid)
 					{
 						// NOTE: time to move!
-						MoveGridCard(SceneState, SelectedCard, Row, Col);
+						if(Row != SelectedCard->Row || Col != SelectedCard->Col)
+						{
+							MoveGridCard(SceneState, SelectedCard, Row, Col);
+						}
 						DeselectCard(SceneState);
 					}
 				}
@@ -4393,6 +4402,13 @@ void UpdateAndRenderCardGame(
 					else
 					{
 						ASSERT(false);
+					}
+
+					if(Occupant == SceneState->SelectedCard)
+					{
+						PlayerColor = Hadamard(
+							PlayerColor, Vector4(0.8f, 0.8f, 0.8f, 1.0f)
+						);
 					}
 					PushSizedBitmap(
 						RenderGroup,

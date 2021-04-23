@@ -1533,8 +1533,6 @@ void StartCardGameDataSetup(
 	CardSet->YPos = ScreenDimInWorld.Y - CardHeight;
 	CardSet->CardWidth = CardWidth;
 	
-	SceneState->InfoCardCenter = ScreenDimInWorld / 2.0f;
-
 	vector2 ScaledInfoCardDim = {};
 	if(ScreenDimInWorld.X > ScreenDimInWorld.Y)
 	{
@@ -1548,6 +1546,9 @@ void StartCardGameDataSetup(
 	}
 	SceneState->InfoCardXBound = Vector2(ScaledInfoCardDim.X, 0.0f);
 	SceneState->InfoCardYBound = Vector2(0.0f, ScaledInfoCardDim.Y);
+	SceneState->InfoCardCenter = Vector2(
+		0.5f * ScaledInfoCardDim.X, 0.5f * ScreenDimInWorld.Y
+	);
 
 	SceneState->Alert = MakeAlert();
 

@@ -3203,8 +3203,7 @@ void CardGameLogic(
 
 		SceneState->NextTurnTimer[NextTurnPlayer] = DEFAULT_NEXT_TURN_TIMER;
 
-		DiscardFullHand(GameState, SceneState, SceneState->CurrentTurn);
-		DrawFullHand(SceneState, SceneState->CurrentTurn);
+		DrawCard(GameState, SceneState, SceneState->CurrentTurn);
 
 		SwitchTurns(GameState, SceneState);
 		// NOTE: turn start effects and resets

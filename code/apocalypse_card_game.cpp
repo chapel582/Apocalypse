@@ -2435,6 +2435,22 @@ inline void StandardPrimaryUpHandler(
 			}
 		}
 	}
+
+	for(int Player = Player_One; Player < Player_Count; Player++)
+	{
+		if(
+			PointInRectangle(MouseEventWorldPos, SceneState->DrawRects[Player])
+		)
+		{
+			SceneState->ViewingCardDataSet = SceneState->DrawSets + Player;
+		}
+		else if(
+			PointInRectangle(MouseEventWorldPos, SceneState->DiscardRects[Player])
+		)
+		{
+			SceneState->ViewingCardDataSet = SceneState->DiscardSets + Player;
+		}
+	}
 }
 
 inline void StackBuildingPrimaryUpHandler(

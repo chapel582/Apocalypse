@@ -301,6 +301,12 @@ void RemoveCardAndAlign(card_game_state* SceneState, card* Card)
 	RemoveCardAndAlign(CardSet, Card);
 }
 
+void RemoveCardFromGrid(card_game_state* SceneState, card* Card)
+{
+	grid_cell* GridCell = GetGridCell(&SceneState->Grid, Card->Row, Card->Col);
+	GridCell->Occupant = NULL;
+}
+
 void SafeRemoveCardCommon(
 	game_state* GameState, card_game_state* SceneState, card* Card
 )
@@ -346,6 +352,10 @@ void SafeRemoveCard(
 	{
 		RemoveCardFromStack(SceneState, Card);
 	}
+	else if(Card->SetType == CardSet_Grid)
+	{
+		RemoveCardFromGrid(SceneState, Card);
+	}
 	else
 	{
 		RemoveCardFromSet(SceneState, Card);
@@ -362,6 +372,7 @@ void SafeRemoveCardAndAlign(
 	// NOTE: a function for removing the card from its card set 
 	// CONT: without any concerns for speed. Card will no longer be active and 
 	// CONT: the card set will be decremented and aligned
+	ASSERT(Card->SetType != CardSet_Grid);
 	if(Card->SetType == CardSet_Stack)
 	{
 		RemoveCardFromStack(SceneState, Card);
@@ -554,10 +565,13 @@ void DiscardCard(game_state* GameState, card_game_state* SceneState, card* Card)
 {
 	AppendToFrameLog("DiscardCard called");
 
-	card_set* Hand = SceneState->Hands + Card->Owner;
 	AddCardToCardDataSet(Card, SceneState->DiscardSets + Card->Owner);
 	SafeRemoveCard(GameState, SceneState, Card);
-	AlignCardSet(Hand);
+	if(Card->SetType == CardSet_Hand)
+	{
+		card_set* Hand = SceneState->Hands + Card->Owner;
+		AlignCardSet(Hand);
+	}
 }
 
 void DiscardByIndex(
@@ -1334,7 +1348,7 @@ attack_card_result AttackCard(
 
 	if(AttackingCard->Health <= 0)
 	{
-		SafeRemoveCardAndAlign(GameState, SceneState, AttackingCard);
+		DiscardCard(GameState, SceneState, AttackingCard);
 		Result.AttackerDied = true;
 	}
 	else
@@ -1344,7 +1358,7 @@ attack_card_result AttackCard(
 
 	if(AttackedCard->Health <= 0)
 	{
-		SafeRemoveCardAndAlign(GameState, SceneState, AttackedCard);
+		DiscardCard(GameState, SceneState, AttackedCard);
 		Result.AttackedDied = true;
 	}
 	else
@@ -2221,119 +2235,6 @@ void ResolveTargeting(game_state* GameState, card_game_state* SceneState)
 			DeselectCard(SceneState);
 			SwitchStackTurns(GameState, SceneState);
 		}
-		else if(SelectedCard->SetType == CardSet_Grid)
-		{
-			target* Target = SceneState->Targets;
-			card* CardTarget = Target->CardTarget;
-			bool IsAdjacent = (
-				(
-					(CardTarget->Row - SelectedCard->Row) == 1 ||
-					(SelectedCard->Row - CardTarget->Row) == 1
-				) &&
-				(
-					(CardTarget->Col - SelectedCard->Col) == 1 ||
-					(SelectedCard->Col - CardTarget->Col) == 1
-				)
-			);
-			if(IsAdjacent)
-			{
-				DeselectCard(SceneState);
-
-				attack_card_result Result = AttackCard(
-					GameState, SceneState, SelectedCard, CardTarget
-				);
-			}
-			// if(Target->Type == TargetType_Card)
-			// {
-			// 	CardTarget = Target->CardTarget;
-			// }
-			// else if(Target->Type == TargetType_Player)
-			// {
-			// 	PlayerTarget = Target->PlayerTarget;
-			// }
-
-			// player_id OppId = Player_Count;
-			// if(!SceneState->StackBuilding)
-			// {
-			// 	OppId = GetOpponent(SceneState->CurrentTurn);
-			// }
-			// else
-			// {
-			// 	OppId = GetOpponent(SceneState->StackTurn);
-			// }
-			// card_set* OppTableau = (SceneState->Tableaus + OppId);
-			// if(AnyHasTaunt(OppTableau))
-			// {
-			// 	if(Target->Type != TargetType_Card)
-			// 	{
-			// 		DisplayMessageFor(
-			// 			GameState,
-			// 			&SceneState->Alert,
-			// 			"Cannot attack this target (taunt active)",
-			// 			1.0f
-			// 		);
-			// 	}
-			// 	else if(HasTag(&CardTarget->TableauTags, TableauEffect_Taunt))
-			// 	{
-			// 		DeselectCard(SceneState);
-			// 		attack_card_result Result = AttackCard(
-			// 			GameState, SceneState, SelectedCard, CardTarget
-			// 		);
-			// 	}
-			// 	else
-			// 	{
-			// 		DisplayMessageFor(
-			// 			GameState,
-			// 			&SceneState->Alert,
-			// 			"Cannot attack this target (taunt active)",
-			// 			1.0f
-			// 		);
-			// 	}
-			// }
-			// else
-			// {
-			// 	if(Target->Type == TargetType_Card)
-			// 	{
-			// 		// TODO: should this be moved into AttackCard?
-			// 		DeselectCard(SceneState);
-			// 		attack_card_result Result = AttackCard(
-			// 			GameState, SceneState, SelectedCard, CardTarget
-			// 		);
-			// 	}
-			// 	else if(Target->Type == TargetType_Player)
-			// 	{
-			// 		bool CanAttack = TriggerCommonAttackEffects(
-			// 			SceneState, SelectedCard
-			// 		);
-
-			// 		if(CanAttack)
-			// 		{
-			// 			// TODO: give a confirmation option for attacking yourself
-			// 			player_id Owner = SelectedCard->Owner;
-			// 			SceneState->PlayerLife[PlayerTarget] -= (
-			// 				SelectedCard->Attack
-			// 			);
-
-			// 			if(SceneState->PlayerLife[PlayerTarget] <= 0.0f)
-			// 			{
-			// 				// TODO: give a small amount of fanfare for the winner
-			// 				GameState->Scene = SceneType_MainMenu;
-			// 			}
-			// 		}
-			// 		else
-			// 		{
-			// 			UntapCard(SceneState->SelectedCard);
-			// 			DisplayMessageFor(
-			// 				GameState,
-			// 				&SceneState->Alert,
-			// 				"Cannot attack",
-			// 				1.0f
-			// 			);
-			// 		}
-			// 		DeselectCard(SceneState);
-			// 	}
-			// }
-		}
 		else
 		{
 			ASSERT(false);
@@ -2478,12 +2379,46 @@ inline void StandardPrimaryUpHandler(
 					}
 					else if(SelectedCard->SetType == CardSet_Grid)
 					{
-						// NOTE: time to move!
-						if(Row != SelectedCard->Row || Col != SelectedCard->Col)
+						if(GridCell->Occupant == SelectedCard)
 						{
-							MoveGridCard(SceneState, SelectedCard, Row, Col);
+							DeselectCard(SceneState);
 						}
-						DeselectCard(SceneState);
+						else if(GridCell->Occupant == NULL)
+						{
+							if(
+								Row != SelectedCard->Row ||
+								Col != SelectedCard->Col
+							)
+							{
+								MoveGridCard(SceneState, SelectedCard, Row, Col);
+							}
+							DeselectCard(SceneState);
+						}
+						else
+						{
+							card* CardTarget = GridCell->Occupant;
+							bool IsAdjacent = (
+								(
+									(CardTarget->Row - SelectedCard->Row) <= 1 ||
+									(SelectedCard->Row - CardTarget->Row) <= 1
+								) &&
+								(
+									(CardTarget->Col - SelectedCard->Col) <= 1 ||
+									(SelectedCard->Col - CardTarget->Col) <= 1
+								)
+							);
+							if(IsAdjacent)
+							{
+								DeselectCard(SceneState);
+
+								attack_card_result Result = AttackCard(
+									GameState,
+									SceneState,
+									SelectedCard,
+									CardTarget
+								);
+							}
+						}
 					}
 				}
 				else if(GridCell->Occupant != NULL)
@@ -4101,7 +4036,7 @@ void UpdateAndRenderCardGame(
 					);
 				}
 			}
-			if(Card->HoveredOver)
+			if(Card->Active && Card->HoveredOver)
 			{
 				PushInfoCard(
 					RenderGroup,

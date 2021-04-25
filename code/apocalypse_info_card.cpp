@@ -2,7 +2,7 @@
 #include "apocalypse_string.h"
 #include "apocalypse_player_id.h"
 
-#define ATTACK_HEALTH_MAX_LENGTH 8
+#define ATTACK_HEALTH_MAX_LENGTH 16
 
 void PushInfoCard(
 	render_group* RenderGroup,

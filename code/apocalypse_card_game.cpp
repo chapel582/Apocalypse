@@ -1875,6 +1875,29 @@ void StartCardGame(
 		{
 			SceneState->SyncState = SyncState_Read;
 		}
+
+		card* GeneralCard = GetInactiveCard(SceneState);
+		// TODO: grab general from loaded deck
+		card_definition* GeneralDef = SceneState->Definitions->Array + 0; 
+		InitCardWithDef(SceneState, GeneralCard, GeneralDef);
+		GeneralCard->Owner = Player_One;
+		PlayGridCard(
+			GameState,
+			SceneState,
+			GeneralCard,
+			2,
+			0
+		);
+		GeneralCard = GetInactiveCard(SceneState);
+		InitCardWithDef(SceneState, GeneralCard, GeneralDef);
+		GeneralCard->Owner = Player_Two;
+		PlayGridCard(
+			GameState,
+			SceneState,
+			GeneralCard,
+			2,
+			8
+		);
 	}
 	else
 	{

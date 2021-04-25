@@ -13,8 +13,12 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	
 	uint32_t CardId = 0;
 	card_definition* Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 1, 2, -1, 1);
-	SetName(Definition, "ACard", sizeof("ACard"));
+	InitCard(Definition, CardId++, 1, 20, 300, 0, 0);
+	SetName(
+		Definition,
+		"General",
+		sizeof("General")
+	);
 
 	Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 10, 10, -10, 10);
@@ -359,14 +363,6 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;
-
-	Definition = &Definitions->Array[CardId];
-	InitCard(Definition, CardId++, 1, 0, 20, 0, 0);
-	SetName(
-		Definition,
-		"General",
-		sizeof("General")
-	);
 	
 	return Definitions;
 }

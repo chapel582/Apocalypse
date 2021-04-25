@@ -996,6 +996,18 @@ void CheckAndAddToPathQueue(
 	*Head = NewHead;
 }
 
+void ClearPaths(grid* Grid)
+{
+	for(uint32_t Row = 0; Row < Grid->RowCount; Row++)
+	{
+		for(uint32_t Col = 0; Col < Grid->ColCount; Col++)
+		{
+			grid_cell* GridCell = GetGridCell(Grid, Row, Col);
+			GridCell->ShortestPathPrev = NULL;
+		}
+	}
+}
+
 void PathFromNoCheck(
 	grid* Grid,
 	uint32_t FromRow,
@@ -1010,14 +1022,7 @@ void PathFromNoCheck(
 
 	temp_memory TempMemory = BeginTempMemory(FrameArena);
 
-	for(uint32_t Row = 0; Row < Grid->RowCount; Row++)
-	{
-		for(uint32_t Col = 0; Col < Grid->ColCount; Col++)
-		{
-			grid_cell* GridCell = GetGridCell(Grid, Row, Col);
-			GridCell->ShortestPathPrev = NULL;
-		}
-	}
+	ClearPaths(Grid);
 	path_data* Head = PushStruct(FrameArena, path_data);
 	*Head = {};
 	Head->Next = NULL;
@@ -1209,6 +1214,11 @@ void SelectCard(
 	card_game_state* SceneState, card* Card, memory_arena* FrameArena
 )
 {
+	if(Card->Owner != SceneState->CurrentTurn)
+	{
+		return;
+	}
+
 	AppendToFrameLog("SelectCard called");
 
 	Card->Color = Vector4(1.0f, 0.0f, 0.0f, 1.0f);
@@ -1217,9 +1227,9 @@ void SelectCard(
 	SceneState->TargetsNeeded = 0;
 	SceneState->ValidTargets.Tags = 0;
 
+	grid* Grid = &SceneState->Grid;
 	if(Card->SetType == CardSet_Grid)
 	{
-		grid* Grid = &SceneState->Grid;
 		PathFromNoCheck(
 			Grid,
 			Card->Row,
@@ -1227,6 +1237,10 @@ void SelectCard(
 			Card->Movement,
 			FrameArena
 		);
+	}
+	else
+	{
+		ClearPaths(Grid);
 	}
 }
 

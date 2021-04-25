@@ -1608,18 +1608,21 @@ void StartCardGameDataSetup(
 	float YPaddingLife = 0.065f * ScreenDimInWorld.Y;
 	SceneState->ResourceLeftPadding = 0.11f * ScreenDimInWorld.X;
 	float ResourceLeftPadding = SceneState->ResourceLeftPadding;
-	vector2 PlayerLifeRectDim = Vector2(
+	vector2 InfoRectDim = Vector2(
 		0.1f * ScreenDimInWorld.X,
 		0.03f * ScreenDimInWorld.Y
 	);
-	SceneState->PlayerLifeRects[Player_One] = MakeRectangle(
+
+	float YPadding = 0.011f * ScreenDimInWorld.Y;
+	rectangle* DrawRects = SceneState->DrawRects;
+	DrawRects[Player_One] = MakeRectangle(
 		Vector2(
 			ScreenDimInWorld.X - ResourceLeftPadding,
 			(ScreenDimInWorld.Y / 2.0f) - YPaddingLife - 2.0f
 		),
-		PlayerLifeRectDim
+		InfoRectDim
 	);
-	SceneState->PlayerLifeRects[Player_Two] = MakeRectangle(
+	DrawRects[Player_Two] = MakeRectangle(
 		Vector2(
 			ScreenDimInWorld.X - ResourceLeftPadding,
 			(
@@ -1629,37 +1632,20 @@ void StartCardGameDataSetup(
 				2.0f
 			)
 		),
-		PlayerLifeRectDim
-	);
-
-	float YPadding = 0.011f * ScreenDimInWorld.Y;
-	rectangle* DrawRects = SceneState->DrawRects;
-	DrawRects[Player_One] = MakeRectangle(
-		(
-			GetBottomLeft(SceneState->PlayerLifeRects[Player_One]) -
-			Vector2(0.0f, PlayerLifeRectDim.Y + YPadding)
-		),
-		PlayerLifeRectDim
-	);
-	DrawRects[Player_Two] = MakeRectangle(
-		(
-			GetTopLeft(SceneState->PlayerLifeRects[Player_Two]) +
-			Vector2(0.0f, YPadding)
-		),
-		PlayerLifeRectDim
+		InfoRectDim
 	);
 
 	rectangle* DiscardRects = SceneState->DiscardRects;
 	DiscardRects[Player_One] = MakeRectangle(
 		(
 			GetBottomLeft(DrawRects[Player_One]) -
-			Vector2(0.0f, PlayerLifeRectDim.Y + YPadding)
+			Vector2(0.0f, InfoRectDim.Y + YPadding)
 		),
-		PlayerLifeRectDim
+		InfoRectDim
 	);
 	DiscardRects[Player_Two] = MakeRectangle(
 		GetTopLeft(DrawRects[Player_Two]) + Vector2(0.0f, YPadding),
-		PlayerLifeRectDim
+		InfoRectDim
 	);
 
 	SceneState->NextTurnTimerPos[Player_One] = (
@@ -1881,8 +1867,6 @@ void StartCardGame(
 			}
 		}
 
-		SceneState->PlayerLife[Player_One] = 100.0f;
-		SceneState->PlayerLife[Player_Two] = 100.0f;
 		if(SceneState->IsLeader)
 		{
 			SceneState->SyncState = SyncState_Send;
@@ -1921,15 +1905,7 @@ void EndStackBuilding(game_state* GameState, card_game_state* SceneState)
 			{
 				ChangeTimers(SceneState, Card);
 
-				if(HasTag(StackTags, StackEffect_HurtOpp))
-				{
-					if(CardStackEntry->PlayerTargetSet)
-					{
-						player_id ToHurt = CardStackEntry->PlayerTarget;
-						SceneState->PlayerLife[ToHurt] -= 5.0f;
-					}
-				}
-				else if(HasTag(StackTags, StackEffect_DisableNext))
+				if(HasTag(StackTags, StackEffect_DisableNext))
 				{
 					IsDisabled = true;
 				}
@@ -2740,12 +2716,6 @@ void SendGameState(
 		);
 		Payload->StackTurn = SceneState->StackTurn;
 		Payload->StackBuilding = SceneState->StackBuilding;
-		Payload->PlayerLife[Player_One] = (
-			SceneState->PlayerLife[Player_One]
-		);
-		Payload->PlayerLife[Player_Two] = (
-			SceneState->PlayerLife[Player_Two]
-		);
 		
 		Header->DataSize = sizeof(state_update_packet);
 		InitPacketHeader(
@@ -3514,13 +3484,6 @@ void UpdateAndRenderCardGame(
 								);
 							}
 
-							SceneState->PlayerLife[Player_One] = (
-								LeaderState->PlayerLife[Player_Two]
-							);
-							SceneState->PlayerLife[Player_Two] = (
-								LeaderState->PlayerLife[Player_One]
-							);
-
 							SceneState->LastFrame = Header->FrameId;
 						}
 						break;
@@ -4075,75 +4038,6 @@ void UpdateAndRenderCardGame(
 		}
 	}
 	// SECTION STOP: Push cards
-
-	// SECTION START: Push player life totals
-	{
-		char* PlayerLifeString = PushArray(
-			FrameArena, MAX_RESOURCE_STRING_SIZE, char
-		);
-		snprintf(
-			PlayerLifeString,
-			MAX_RESOURCE_STRING_SIZE,
-			"P1 Life:%d",
-			(int) SceneState->PlayerLife[Player_One]
-		);
-
-		vector4 White = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-		vector4 Black = Vector4(0.0f, 0.0f, 0.0f, 1.0f);
-		rectangle* PlayerLifeRects = SceneState->PlayerLifeRects;
-		PushSizedBitmap(
-			RenderGroup,
-			Assets,
-			BitmapHandle_TestCard2,
-			GetCenter(PlayerLifeRects[Player_One]),
-			Vector2(PlayerLifeRects[Player_One].Dim.X, 0.0f),
-			Vector2(0.0f, PlayerLifeRects[Player_One].Dim.Y),
-			White,
-			1
-		);
-		PushText(
-			RenderGroup,
-			Assets,
-			FontHandle_TestFont,
-			PlayerLifeString,
-			MAX_RESOURCE_STRING_SIZE,
-			PlayerLifeRects[Player_One].Dim.Y,
-			PlayerLifeRects[Player_One].Min,
-			Black,
-			FrameArena,
-			2
-		);
-
-		snprintf(
-			PlayerLifeString,
-			MAX_RESOURCE_STRING_SIZE,
-			"P2 Life:%d",
-			(int) SceneState->PlayerLife[Player_Two]
-		);
-		PushSizedBitmap(
-			RenderGroup,
-			Assets,
-			BitmapHandle_TestCard2,
-			GetCenter(PlayerLifeRects[Player_Two]),
-			Vector2(PlayerLifeRects[Player_Two].Dim.X, 0.0f),
-			Vector2(0.0f, PlayerLifeRects[Player_Two].Dim.Y),
-			White,
-			1
-		);
-		PushText(
-			RenderGroup,
-			Assets,
-			FontHandle_TestFont,
-			PlayerLifeString,
-			MAX_RESOURCE_STRING_SIZE,
-			PlayerLifeRects[Player_Two].Dim.Y,
-			PlayerLifeRects[Player_Two].Min,
-			Black,
-			FrameArena,
-			2
-		);
-	}
-	// SECTION STOP: Push player life totals
 
 	// SECTION START: Push player draw/discard totals
 	{

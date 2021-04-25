@@ -359,6 +359,14 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;
+
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 0, 20, 0, 0);
+	SetName(
+		Definition,
+		"General",
+		sizeof("General")
+	);
 	
 	return Definitions;
 }

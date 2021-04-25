@@ -9,6 +9,7 @@
 
 typedef enum
 {
+	GridEffect_IsGeneral,
 	/* 
 	NOTE: card attack decreases during owner's turn, resets at end of owner's
 	turn

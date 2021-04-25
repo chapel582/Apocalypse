@@ -257,8 +257,6 @@ struct card_game_state
 
 	vector2 NextTurnTimerPos[Player_Count];
 
-	float PlayerLife[Player_Count];
-	rectangle PlayerLifeRects[Player_Count];
 	float NextTurnTimer[Player_Count];
 
 	rectangle DrawRects[Player_Count];
@@ -354,7 +352,6 @@ struct state_update_payload
 	bool StackBuilding;
 
 	float TurnTimer;
-	float PlayerLife[Player_Count];
 	float NextTurnTimer[Player_Count];
 };
 struct state_update_packet

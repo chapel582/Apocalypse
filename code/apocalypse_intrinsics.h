@@ -58,6 +58,18 @@ inline uint32_t GetThreadId(void)
 	return ThreadId;
 } 
 
+inline int32_t AbsoluteValueInt32(int32_t Value)
+{
+	if(Value < 0)
+	{
+		return -1 * Value;
+	}
+	else
+	{
+		return Value;
+	}
+}
+
 #else
 inline bit_scan_result FindLeastSignificantSetBit(uint32_t Value)
 {

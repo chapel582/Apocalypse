@@ -2396,16 +2396,15 @@ inline void StandardPrimaryUpHandler(
 						else
 						{
 							card* CardTarget = GridCell->Occupant;
-							bool IsAdjacent = (
-								(
-									(CardTarget->Row - SelectedCard->Row) <= 1 ||
-									(SelectedCard->Row - CardTarget->Row) <= 1
-								) &&
-								(
-									(CardTarget->Col - SelectedCard->Col) <= 1 ||
-									(SelectedCard->Col - CardTarget->Col) <= 1
-								)
+							int32_t RowDistance = AbsoluteValueInt32(
+								(int32_t) CardTarget->Row - 
+								(int32_t) SelectedCard->Row
 							);
+							int32_t ColDistance = AbsoluteValueInt32(
+								(int32_t) CardTarget->Col - 
+								(int32_t) SelectedCard->Col
+							);
+							bool IsAdjacent = (RowDistance + ColDistance) == 1;
 							if(IsAdjacent)
 							{
 								DeselectCard(SceneState);

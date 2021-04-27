@@ -1376,6 +1376,11 @@ void SetTurnTimer(card_game_state* SceneState, float Value)
 	SceneState->LastWholeSecond = IntTurnTimer;
 }
 
+void EndGame(game_state* GameState)
+{
+	GameState->Scene = SceneType_MainMenu;
+}
+
 card_game_args* StartCardGamePrepCommon(game_state* GameState)
 {
 	card_game_args* SceneArgs = PushStruct(
@@ -2415,6 +2420,30 @@ inline void StandardPrimaryUpHandler(
 									SelectedCard,
 									CardTarget
 								);
+								if(Result.AttackerDied)
+								{
+									if(
+										HasTag(
+											&SelectedCard->GridTags,
+											GridEffect_IsGeneral
+										)
+									)
+									{
+										EndGame(GameState);
+									}
+								}
+								if(Result.AttackedDied)
+								{
+									if(
+										HasTag(
+											&CardTarget->GridTags,
+											GridEffect_IsGeneral
+										)
+									)
+									{
+										EndGame(GameState);
+									}
+								}
 							}
 						}
 					}

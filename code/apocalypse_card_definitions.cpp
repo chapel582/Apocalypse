@@ -14,6 +14,7 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	uint32_t CardId = 0;
 	card_definition* Definition = &Definitions->Array[CardId];
 	InitCard(Definition, CardId++, 1, 20, 300, 0, 0);
+	SetTag(&Definition->GridTags, GridEffect_IsGeneral);
 	SetName(
 		Definition,
 		"General",

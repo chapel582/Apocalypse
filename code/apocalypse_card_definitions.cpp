@@ -362,6 +362,15 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	);
 	SetTag(&Definition->StackTags, StackEffect_BothDraw);
 
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 10, 40, -40, 20);
+	SetName(
+		Definition,
+		"PushOnAttack",
+		sizeof("PushOnAttack")
+	);
+	SetTag(&Definition->GridTags, GridEffect_PushAttack);
+
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;
 	

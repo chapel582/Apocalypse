@@ -1155,6 +1155,28 @@ bool CanPathTo(grid* Grid, uint32_t RowTarget, uint32_t ColTarget)
 // 	}
 // }
 
+grid_cell* MoveGridCardOnly(
+	grid* Grid, card* Mover, uint8_t TargetRow, uint8_t TargetCol
+)
+{
+	/* NOTE:
+	this function is for use when you already have completed the pathing or if 
+	you move without costing any of the movement available (e.g. when pushed)
+	*/
+	grid_cell* GridCell = GetGridCell(Grid, Mover->Row, Mover->Col);
+	ASSERT(GridCell->Occupant == Mover);
+
+	grid_cell* MoveTo = GetGridCell(Grid, TargetRow, TargetCol);
+	if(MoveTo->Occupant == NULL)
+	{
+		MoveTo->Occupant = Mover;
+		Mover->Row = TargetRow;
+		Mover->Col = TargetCol;
+		GridCell->Occupant = NULL;
+	}
+	return MoveTo;
+}
+
 void MoveGridCard(
 	card_game_state* SceneState,
 	card* Mover,
@@ -1165,16 +1187,10 @@ void MoveGridCard(
 	grid* Grid = &SceneState->Grid;
 	ASSERT(Mover->Row < Grid->RowCount);
 	ASSERT(Mover->Col < Grid->ColCount);
-	grid_cell* GridCell = GetGridCell(Grid, Mover->Row, Mover->Col);
-	ASSERT(GridCell->Occupant == Mover);
 
 	if(CanPathTo(Grid, TargetRow, TargetCol))
 	{
-		grid_cell* MoveTo = GetGridCell(Grid, TargetRow, TargetCol);
-		MoveTo->Occupant = Mover;
-		Mover->Row = TargetRow;
-		Mover->Col = TargetCol;
-		GridCell->Occupant = NULL;
+		grid_cell* MoveTo = MoveGridCardOnly(Grid, Mover, TargetRow, TargetCol);
 		Mover->Movement -= MoveTo->MovesTaken;
 		if(Mover->Movement <= 0)
 		{
@@ -1345,6 +1361,46 @@ attack_card_result AttackCard(
 	int16_t AttackedCardHealthDelta = AttackingCard->Attack;
 	AttackingCard->Health -= AttackingCardHealthDelta;
 	AttackedCard->Health -= AttackedCardHealthDelta;
+
+	if(HasTag(&AttackingCard->GridTags, GridEffect_PushAttack))
+	{
+		grid* Grid = &SceneState->Grid;
+		uint8_t TargetRow = AttackedCard->Row;
+		uint8_t TargetCol = AttackedCard->Col;
+		if(AttackingCard->Row == (AttackedCard->Row - 1))
+		{
+			if(AttackedCard->Row + 1 < Grid->RowCount)
+			{
+				TargetRow = AttackedCard->Row + 1; 
+			}
+		}
+		else if(AttackingCard->Row == (AttackedCard->Row + 1))
+		{
+			if(AttackedCard->Row > 0)
+			{
+				TargetRow = AttackedCard->Row - 1;
+			}
+		}
+		else if(AttackingCard->Col == (AttackedCard->Col - 1))
+		{
+			if(AttackedCard->Col + 1 < Grid->ColCount)
+			{
+				TargetCol = AttackedCard->Col + 1;
+			}
+		}
+		else if(AttackingCard->Col == (AttackedCard->Col + 1))
+		{
+			if(AttackedCard->Col > 0)
+			{
+				TargetCol = AttackedCard->Col - 1;
+			}
+		}
+		else
+		{
+			ASSERT(false);
+		}
+		MoveGridCardOnly(Grid, AttackedCard, TargetRow, TargetCol);
+	}
 
 	if(AttackingCard->Health <= 0)
 	{

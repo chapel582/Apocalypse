@@ -80,6 +80,8 @@ typedef enum
 	*/
 	GridEffect_OppDeltaFromCurrent,
 
+	GridEffect_PushAttack
+
 	/*
 	TODO: Unimplemented card ideas
 	A tag that gives your opponent time on an attack

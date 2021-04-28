@@ -80,7 +80,13 @@ typedef enum
 	*/
 	GridEffect_OppDeltaFromCurrent,
 
-	GridEffect_PushAttack
+	GridEffect_PushAttack,
+
+	/*
+	NOTE: for the purposes of attacking, diagonals are considered to be distance
+	1 away
+	*/
+	GridEffect_DiagonalAttack
 
 	/*
 	TODO: Unimplemented card ideas

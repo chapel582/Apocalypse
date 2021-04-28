@@ -2464,6 +2464,8 @@ inline void StandardPrimaryUpHandler(
 						else
 						{
 							card* CardTarget = GridCell->Occupant;
+							bool CanAttack = false;
+							
 							int32_t RowDistance = AbsoluteValueInt32(
 								(int32_t) CardTarget->Row - 
 								(int32_t) SelectedCard->Row
@@ -2472,8 +2474,23 @@ inline void StandardPrimaryUpHandler(
 								(int32_t) CardTarget->Col - 
 								(int32_t) SelectedCard->Col
 							);
-							bool IsAdjacent = (RowDistance + ColDistance) == 1;
-							if(IsAdjacent)
+							if(
+								HasTag(
+									&SelectedCard->GridTags,
+									GridEffect_DiagonalAttack
+								)
+							)
+							{
+								CanAttack = (
+									RowDistance == 1 || ColDistance == 1
+								);
+							}
+							else
+							{
+								CanAttack = (RowDistance + ColDistance) == 1;
+							}
+
+							if(CanAttack)
 							{
 								DeselectCard(SceneState);
 

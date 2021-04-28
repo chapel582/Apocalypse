@@ -236,7 +236,10 @@ struct card_game_state
 	target Targets[64];
 	target_type_tags ValidTargets;
 	uint8_t TargetsSet;
-	uint8_t TargetsNeeded; // NOTE: when a card needs targets, set this 
+	uint8_t TargetsNeeded; // NOTE: when a card needs targets, set this
+
+	float AlertSize;
+	vector2 AlertCenter;
 
 	uint32_t MaxCards;
 	deck* Decks;

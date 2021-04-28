@@ -15,10 +15,11 @@ void DisplayMessageFor(
 	);
 }
 
-void PushCenteredAlert(
+void PushAlert(
 	alert* Alert,
 	game_state* GameState,
-	vector2 WindowDim
+	vector2 Center,
+	float TextSize
 )
 {
 	if(GameState->Time < Alert->DisplayMessageUntil)
@@ -29,10 +30,19 @@ void PushCenteredAlert(
 			FontHandle_TestFont,
 			Alert->MessageBuffer,
 			ARRAY_COUNT(Alert->MessageBuffer),
-			50.0f,
-			0.5f * WindowDim,
+			TextSize,
+			Center,
 			Vector4(1.0f, 1.0f, 1.0f, 1.0f),
 			&GameState->FrameArena
 		);
 	}
+}
+
+void PushCenteredAlert(
+	alert* Alert,
+	game_state* GameState,
+	vector2 WindowDim
+)
+{
+	PushAlert(Alert, GameState, 0.5f * WindowDim, 50.0f);
 }

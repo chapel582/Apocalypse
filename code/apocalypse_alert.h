@@ -18,6 +18,12 @@ inline alert MakeAlert()
 void DisplayMessageFor(
 	game_state* GameState, alert* Alert, char* Message, float Time
 );
+void PushAlert(
+	alert* Alert,
+	game_state* GameState,
+	vector2 Center,
+	float TextSize
+);
 void PushCenteredAlert(
 	alert* Alert,
 	game_state* GameState,

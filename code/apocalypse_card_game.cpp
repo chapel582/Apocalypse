@@ -1926,6 +1926,13 @@ void StartCardGame(
 				}
 				RowStart.Y += Dimension + Margin;
 			}
+
+			SceneState->AlertSize = 20.0f;
+			grid_cell* BottomCell = GetGridCell(Grid, 0, 0);
+			float BottomOfBottomCell = GetBottom(BottomCell->Rectangle); 
+			SceneState->AlertCenter = Vector2(
+				ScreenCenterX, BottomOfBottomCell - SceneState->AlertSize
+			);
 		}
 
 		if(SceneState->IsLeader)
@@ -4426,7 +4433,12 @@ void UpdateAndRenderCardGame(
 		}
 	}
 
-	PushCenteredAlert(&SceneState->Alert, GameState, ScreenDimInWorld);
+	PushAlert(
+		&SceneState->Alert,
+		GameState,
+		SceneState->AlertCenter,
+		SceneState->AlertSize
+	);
 
 	if(CanScroll(&SceneState->StackScrollBar))
 	{

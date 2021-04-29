@@ -2464,7 +2464,7 @@ inline void StandardPrimaryUpHandler(
 						else
 						{
 							card* CardTarget = GridCell->Occupant;
-							bool CanAttack = false;
+							bool InRange = false;
 							
 							int32_t RowDistance = AbsoluteValueInt32(
 								(int32_t) CardTarget->Row - 
@@ -2481,16 +2481,19 @@ inline void StandardPrimaryUpHandler(
 								)
 							)
 							{
-								CanAttack = (
+								InRange = (
 									RowDistance == 1 || ColDistance == 1
 								);
 							}
 							else
 							{
-								CanAttack = (RowDistance + ColDistance) == 1;
+								InRange = (RowDistance + ColDistance) == 1;
 							}
 
-							if(CanAttack)
+							bool WasTapped = CheckAndTap(
+								GameState, SceneState, SelectedCard
+							);
+							if(InRange && WasTapped)
 							{
 								DeselectCard(SceneState);
 
@@ -2511,6 +2514,10 @@ inline void StandardPrimaryUpHandler(
 									{
 										EndGame(GameState);
 									}
+								}
+								else
+								{
+									SelectedCard->TapsAvailable -= 1;
 								}
 								if(Result.AttackedDied)
 								{

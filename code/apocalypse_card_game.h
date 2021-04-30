@@ -213,9 +213,14 @@ struct grid
 	uint32_t Movement;
 };
 
-inline grid_cell* GetGridCell(grid* Grid, uint32_t Row, uint32_t Col)
+inline grid_cell* GetGridCell(grid* Grid, uint8_t Row, uint8_t Col)
 {
 	return Grid->Cells + Row * Grid->ColCount + Col;
+}
+
+inline card* GetOccupant(grid* Grid, uint8_t Row, uint8_t Col)
+{
+	return GetGridCell(Grid, Row, Col)->Occupant;
 }
 
 struct card_game_state

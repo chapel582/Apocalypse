@@ -380,6 +380,15 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	);
 	SetTag(&Definition->GridTags, GridEffect_DiagonalAttack);
 
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 40, 40, -40, 20);
+	SetName(
+		Definition,
+		"AttackAll",
+		sizeof("AttackAll")
+	);
+	SetTag(&Definition->GridTags, GridEffect_AttackAll);
+
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;
 	

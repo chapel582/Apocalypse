@@ -574,6 +574,21 @@ void DiscardCard(game_state* GameState, card_game_state* SceneState, card* Card)
 	}
 }
 
+void DiscardIfDead(
+	game_state* GameState, card_game_state* SceneState, card* Card
+)
+{
+	if(Card == NULL)
+	{
+		return;
+	}
+
+	if(Card->Health <= 0)
+	{
+		DiscardCard(GameState, SceneState, Card);
+	}
+}
+
 void DiscardByIndex(
 	game_state* GameState,
 	card_game_state* SceneState,
@@ -961,8 +976,8 @@ void PlayFirstStackCard(
 struct path_data;
 struct path_data
 {
-	uint32_t Row;
-	uint32_t Col;
+	uint8_t Row;
+	uint8_t Col;
 	grid_cell* GridCell;
 	path_data* Next;
 };
@@ -970,8 +985,8 @@ struct path_data
 void CheckAndAddToPathQueue(
 	grid_cell* SourceGridCell,
 	grid* Grid,
-	uint32_t RowCheck,
-	uint32_t ColCheck,
+	uint8_t RowCheck,
+	uint8_t ColCheck,
 	path_data** Head,
 	path_data** FreePtr,
 	memory_arena* FrameArena
@@ -1012,9 +1027,9 @@ void CheckAndAddToPathQueue(
 
 void ClearPaths(grid* Grid)
 {
-	for(uint32_t Row = 0; Row < Grid->RowCount; Row++)
+	for(uint8_t Row = 0; Row < Grid->RowCount; Row++)
 	{
-		for(uint32_t Col = 0; Col < Grid->ColCount; Col++)
+		for(uint8_t Col = 0; Col < Grid->ColCount; Col++)
 		{
 			grid_cell* GridCell = GetGridCell(Grid, Row, Col);
 			GridCell->ShortestPathPrev = NULL;
@@ -1024,8 +1039,8 @@ void ClearPaths(grid* Grid)
 
 void PathFromNoCheck(
 	grid* Grid,
-	uint32_t FromRow,
-	uint32_t FromCol,
+	uint8_t FromRow,
+	uint8_t FromCol,
 	int16_t Movement,
 	memory_arena* FrameArena
 )
@@ -1112,8 +1127,8 @@ void PathFromNoCheck(
 
 void PathFrom(
 	grid* Grid,
-	uint32_t FromRow,
-	uint32_t FromCol,
+	uint8_t FromRow,
+	uint8_t FromCol,
 	uint8_t Movement,
 	memory_arena* FrameArena
 )
@@ -1129,7 +1144,7 @@ void PathFrom(
 	PathFromNoCheck(Grid, FromRow, FromCol, Movement, FrameArena);
 }
 
-bool CanPathTo(grid* Grid, uint32_t RowTarget, uint32_t ColTarget)
+bool CanPathTo(grid* Grid, uint8_t RowTarget, uint8_t ColTarget)
 {
 	// NOTE: assumes PathFrom has been called already
 	grid_cell* GridCell = GetGridCell(Grid, RowTarget, ColTarget);
@@ -1331,15 +1346,13 @@ struct attack_card_result
 	bool CouldntAttack;
 };
 
-attack_card_result AttackCard(
+attack_card_result AttackCardWithoutDiscarding(
 	game_state* GameState,
 	card_game_state* SceneState,
 	card* AttackingCard,
 	card* AttackedCard
 )
 {
-	AppendToFrameLog("AttackCard called");
-
 	// NOTE: this currently assumes cards must attack from the Grid
 	attack_card_result Result = {};
 
@@ -1360,7 +1373,9 @@ attack_card_result AttackCard(
 	int16_t AttackingCardHealthDelta = AttackedCard->Attack;
 	int16_t AttackedCardHealthDelta = AttackingCard->Attack;
 	AttackingCard->Health -= AttackingCardHealthDelta;
+	AttackingCard->TurnStartHealth -= AttackingCardHealthDelta;
 	AttackedCard->Health -= AttackedCardHealthDelta;
+	AttackedCard->TurnStartHealth -= AttackedCardHealthDelta;
 
 	if(HasTag(&AttackingCard->GridTags, GridEffect_PushAttack))
 	{
@@ -1402,24 +1417,32 @@ attack_card_result AttackCard(
 		MoveGridCardOnly(Grid, AttackedCard, TargetRow, TargetCol);
 	}
 
+	return Result;
+}
+
+attack_card_result AttackCard(
+	game_state* GameState,
+	card_game_state* SceneState,
+	card* AttackingCard,
+	card* AttackedCard
+)
+{
+	AppendToFrameLog("AttackCard called");
+
+	attack_card_result Result = AttackCardWithoutDiscarding(
+		GameState, SceneState, AttackingCard, AttackedCard
+	);
+
 	if(AttackingCard->Health <= 0)
 	{
 		DiscardCard(GameState, SceneState, AttackingCard);
 		Result.AttackerDied = true;
-	}
-	else
-	{
-		AttackingCard->TurnStartHealth -= AttackingCardHealthDelta;
 	}
 
 	if(AttackedCard->Health <= 0)
 	{
 		DiscardCard(GameState, SceneState, AttackedCard);
 		Result.AttackedDied = true;
-	}
-	else
-	{
-		AttackedCard->TurnStartHealth -= AttackedCardHealthDelta;
 	}
 
 	return Result;
@@ -1911,14 +1934,14 @@ void StartCardGame(
 				ScreenCenterX - ((Dimension + Margin) * (Grid->ColCount / 2)),
 				ScreenCenterY - ((Dimension + Margin) * (Grid->RowCount / 2))
 			);
-			for(uint32_t Row = 0; Row < Grid->RowCount; Row++)
+			for(uint8_t Row = 0; Row < Grid->RowCount; Row++)
 			{
 				vector2 Center = RowStart;
-				for(uint32_t Col = 0; Col < Grid->ColCount; Col++)
+				for(uint8_t Col = 0; Col < Grid->ColCount; Col++)
 				{
 					grid_cell* GridCell = GetGridCell(Grid, Row, Col);
-					GridCell->Rectangle = (
-						MakeRectangleCentered(Center, V2Dimension)
+					GridCell->Rectangle = MakeRectangleCentered(
+						Center, V2Dimension
 					);
 					GridCell->Occupant = NULL;
 
@@ -2497,38 +2520,121 @@ inline void StandardPrimaryUpHandler(
 							{
 								DeselectCard(SceneState);
 
-								attack_card_result Result = AttackCard(
-									GameState,
-									SceneState,
-									SelectedCard,
-									CardTarget
-								);
-								if(Result.AttackerDied)
-								{
-									if(
-										HasTag(
-											&SelectedCard->GridTags,
-											GridEffect_IsGeneral
-										)
+								if(
+									HasTag(
+										&SelectedCard->GridTags,
+										GridEffect_AttackAll
 									)
+								)
+								{
+									card* TargetOne = GetOccupant(
+										Grid,
+										SelectedCard->Row - 1,
+										SelectedCard->Col
+									);
+									if(TargetOne != NULL)
 									{
-										EndGame(GameState);
+										AttackCardWithoutDiscarding(
+											GameState,
+											SceneState,
+											SelectedCard,
+											TargetOne
+										);
 									}
+									card* TargetTwo = GetOccupant(
+										Grid,
+										SelectedCard->Row + 1,
+										SelectedCard->Col
+									);
+									if(TargetTwo != NULL)
+									{
+										AttackCardWithoutDiscarding(
+											GameState,
+											SceneState,
+											SelectedCard,
+											TargetTwo
+										);
+									}
+									card* TargetThree = GetOccupant(
+										Grid,
+										SelectedCard->Row,
+										SelectedCard->Col - 1
+									);
+									if(TargetThree != NULL)
+									{
+										AttackCardWithoutDiscarding(
+											GameState,
+											SceneState,
+											SelectedCard,
+											TargetThree
+										);
+									}
+									card* TargetFour = GetOccupant(
+										Grid,
+										SelectedCard->Row,
+										SelectedCard->Col + 1
+									);
+									if(TargetFour != NULL)
+									{
+										AttackCardWithoutDiscarding(
+											GameState,
+											SceneState,
+											SelectedCard,
+											TargetFour
+										);
+									}
+									
+									DiscardIfDead(
+										GameState, SceneState, SelectedCard
+									);
+									DiscardIfDead(
+										GameState, SceneState, TargetOne
+									);
+									DiscardIfDead(
+										GameState, SceneState, TargetTwo
+									);
+									DiscardIfDead(
+										GameState, SceneState, TargetThree
+									);
+									DiscardIfDead(
+										GameState, SceneState, TargetFour
+									);
 								}
 								else
 								{
-									SelectedCard->TapsAvailable -= 1;
-								}
-								if(Result.AttackedDied)
-								{
-									if(
-										HasTag(
-											&CardTarget->GridTags,
-											GridEffect_IsGeneral
-										)
-									)
+									attack_card_result Result = AttackCard(
+										GameState,
+										SceneState,
+										SelectedCard,
+										CardTarget
+									);
+									if(Result.AttackerDied)
 									{
-										EndGame(GameState);
+										if(
+											HasTag(
+												&SelectedCard->GridTags,
+												GridEffect_IsGeneral
+											)
+										)
+										{
+											EndGame(GameState);
+										}
+									}
+									else
+									{
+										SelectedCard->TapsAvailable -= 1;
+									}
+									if(Result.AttackedDied)
+									{
+										if(
+											HasTag(
+												&CardTarget->GridTags,
+												GridEffect_IsGeneral
+											)
+										)
+										{
+											EndGame(GameState);
+										}
 									}
 								}
 							}

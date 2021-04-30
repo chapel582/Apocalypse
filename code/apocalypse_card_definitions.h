@@ -86,8 +86,12 @@ typedef enum
 	NOTE: for the purposes of attacking, diagonals are considered to be distance
 	1 away
 	*/
-	GridEffect_DiagonalAttack
+	GridEffect_DiagonalAttack,
 
+	/*
+	NOTE: attack all in-range enemies
+	*/
+	GridEffect_AttackAll
 	/*
 	TODO: Unimplemented card ideas
 	A tag that gives your opponent time on an attack

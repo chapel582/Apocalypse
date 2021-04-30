@@ -551,13 +551,14 @@ void UpdateAndRenderDeckSelector(
 								break;
 							}
 
-							uint32_t StopAt = FindIndex(
+							int32_t StopAt = FindIndex(
 								CurrentDeckName, 
 								'.', 
 								FlatArrayReader.BytesRemaining
 							);
 
 							if(
+								StopAt != -1 &&
 								StrCmp(								
 									CurrentDeckName,
 									SceneState->DeckName,

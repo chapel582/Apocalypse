@@ -155,20 +155,33 @@ char* GetNextString(flat_string_array_reader* Reader)
 	}
 }
 
-uint32_t FindIndex(char* String, char Character, uint32_t BufferSize)
+int32_t FindIndex(char* String, char Character, uint32_t BufferSize)
 {
 	char* LastChar = String;
+	bool Found = false;
 	uint32_t Index;
 	for(Index = 0; Index < BufferSize; Index++)
 	{
-		if(*LastChar == Character || *LastChar == 0)
+		if(*LastChar == Character)
+		{
+			Found = true;
+			break;
+		}
+		else if(*LastChar == 0)
 		{
 			break;
 		}
 		LastChar++;
 	}
 
-	return Index;
+	if(Found)
+	{
+		return Index;
+	}
+	else
+	{
+		return -1;
+	}
 }
 
 bool StartsWith(char* String, char* Starter, uint32_t MaxSize)

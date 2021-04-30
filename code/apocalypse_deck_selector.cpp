@@ -311,7 +311,7 @@ void UpdateAndRenderDeckSelector(
 			ButtonIndex++
 		)
 		{
-			if(CurrentDeckName == NULL)
+			if(CurrentDeckName == NULL || *CurrentDeckName == 0)
 			{
 				break;
 			}
@@ -388,7 +388,7 @@ void UpdateAndRenderDeckSelector(
 					ButtonIndex++
 				)
 				{
-					if(CurrentDeckName == NULL)
+					if(CurrentDeckName == NULL || *CurrentDeckName == 0)
 					{
 						break;
 					}
@@ -710,7 +710,7 @@ void UpdateAndRenderDeckSelector(
 			ButtonIndex++
 		)
 		{
-			if(CurrentDeckName == NULL)
+			if(CurrentDeckName == NULL || *CurrentDeckName == 0)
 			{
 				break;
 			}

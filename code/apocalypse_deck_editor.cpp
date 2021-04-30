@@ -16,6 +16,7 @@ void SaveEditableDeck(
 {
 	loaded_deck Deck = {};
 	uint8_t IdIndex = 0;
+	uint8_t GeneralCount = 0;
 	deck_editor_card* Cards = DeckCards->Cards;
 	for(
 		uint32_t CardIndex = 0; CardIndex < MAX_CARDS_IN_DECK; CardIndex++
@@ -29,16 +30,34 @@ void SaveEditableDeck(
 		ASSERT(Card->Count > 0);
 		for(uint32_t Added = 0; Added < Card->Count; Added++)
 		{
+			if(HasTag(&Card->Definition->GridTags, GridEffect_IsGeneral))
+			{
+				GeneralCount++;
+			}
 			Deck.Ids[IdIndex++] = Card->Definition->Id;
 		}
 	}
 	ASSERT(IdIndex < 0xFF);
-	Deck.Header.CardCount = IdIndex;
-
-	char PathToDeck[256];
-	FormatDeckPath(PathToDeck, sizeof(PathToDeck), DeckName);
-	SaveDeck(PathToDeck, &Deck);
-	DisplayMessageFor(GameState, Alert, "Saved Deck", 1.0f);
+	if(GeneralCount == 0)
+	{
+		DisplayMessageFor(
+			GameState, Alert, "No general in deck. Cannot save.", 1.0f
+		);
+	}
+	else if(GeneralCount > 1)
+	{
+		DisplayMessageFor(
+			GameState, Alert, "Too many generals in deck. Cannot save.", 1.0f
+		);
+	}
+	else
+	{
+		Deck.Header.CardCount = IdIndex;
+		char PathToDeck[256];
+		FormatDeckPath(PathToDeck, sizeof(PathToDeck), DeckName);
+		SaveDeck(PathToDeck, &Deck);
+		DisplayMessageFor(GameState, Alert, "Saved Deck", 1.0f);
+	}
 }
 
 void DeleteDeck(game_state* GameState, char* DeckName)
@@ -236,7 +255,10 @@ void AddCardToDeck(
 		
 		if(DeckCard->Definition == Definition)
 		{
-			DeckCard->Count++;
+			if(!HasTag(&DeckCard->Definition->GridTags, GridEffect_IsGeneral))
+			{
+				DeckCard->Count++;
+			}
 			FoundCard = true;
 			break;
 		}

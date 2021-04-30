@@ -1832,6 +1832,50 @@ void StartCardGame(
 			AppendToFrameLog(SeedString);
 		}
 
+		{
+			float ScreenCenterX = 0.5f * SceneState->ScreenDimInWorld.X;
+			float ScreenCenterY = 0.5f * SceneState->ScreenDimInWorld.Y;
+
+			grid* Grid = &SceneState->Grid;
+			Grid->RowCount = 5;
+			Grid->ColCount = 9;
+			Grid->Cells = PushArray(
+				&GameState->TransientArena,
+				Grid->RowCount * Grid->ColCount,
+				grid_cell
+			);
+
+			float Dimension = (1.0f / 15.0f) * SceneState->ScreenDimInWorld.X;
+			vector2 V2Dimension = Vector2(Dimension, Dimension);
+			float Margin = 2.5f;
+			vector2 RowStart = Vector2(
+				ScreenCenterX - ((Dimension + Margin) * (Grid->ColCount / 2)),
+				ScreenCenterY - ((Dimension + Margin) * (Grid->RowCount / 2))
+			);
+			for(uint8_t Row = 0; Row < Grid->RowCount; Row++)
+			{
+				vector2 Center = RowStart;
+				for(uint8_t Col = 0; Col < Grid->ColCount; Col++)
+				{
+					grid_cell* GridCell = GetGridCell(Grid, Row, Col);
+					GridCell->Rectangle = MakeRectangleCentered(
+						Center, V2Dimension
+					);
+					GridCell->Occupant = NULL;
+
+					Center.X += Dimension + Margin;
+				}
+				RowStart.Y += Dimension + Margin;
+			}
+
+			SceneState->AlertSize = 20.0f;
+			grid_cell* BottomCell = GetGridCell(Grid, 0, 0);
+			float BottomOfBottomCell = GetBottom(BottomCell->Rectangle); 
+			SceneState->AlertCenter = Vector2(
+				ScreenCenterX, BottomOfBottomCell - SceneState->AlertSize
+			);
+		}
+
 		if(SceneState->NetworkGame && SceneState->IsLeader)
 		{
 			memory_arena* FrameArena = &GameState->FrameArena;
@@ -1885,6 +1929,41 @@ void StartCardGame(
 				)
 				{
 					card_definition* CardDefinition = Deck->Cards[CardIndex];
+					if(HasTag(&CardDefinition->GridTags, GridEffect_IsGeneral))
+					{
+						// NOTE: generals don't go in the deck
+						card* GeneralCard = GetInactiveCard(SceneState);
+						// TODO: grab general from loaded deck
+						InitCardWithDef(
+							SceneState, GeneralCard, CardDefinition
+						);
+						GeneralCard->Owner = (player_id) PlayerIndex;
+						if(PlayerIndex == Player_One)
+						{
+							PlayGridCard(
+								GameState,
+								SceneState,
+								GeneralCard,
+								2,
+								0
+							);
+						}
+						else if(PlayerIndex == Player_Two)
+						{
+							PlayGridCard(
+								GameState,
+								SceneState,
+								GeneralCard,
+								2,
+								8
+							);
+						}
+						else
+						{
+							ASSERT(false);
+						}
+						continue;
+					}
 					card_data* CardData = DrawSet->Cards + CardIndex;
 					
 					CardData->CardId = SceneState->NextCardId++;
@@ -1914,50 +1993,6 @@ void StartCardGame(
 		SceneState->NextTurnTimer[Player_One] = DEFAULT_NEXT_TURN_TIMER;
 		SceneState->NextTurnTimer[Player_Two] = DEFAULT_NEXT_TURN_TIMER;
 
-		{
-			float ScreenCenterX = 0.5f * SceneState->ScreenDimInWorld.X;
-			float ScreenCenterY = 0.5f * SceneState->ScreenDimInWorld.Y;
-
-			grid* Grid = &SceneState->Grid;
-			Grid->RowCount = 5;
-			Grid->ColCount = 9;
-			Grid->Cells = PushArray(
-				&GameState->TransientArena,
-				Grid->RowCount * Grid->ColCount,
-				grid_cell
-			);
-
-			float Dimension = (1.0f / 15.0f) * SceneState->ScreenDimInWorld.X;
-			vector2 V2Dimension = Vector2(Dimension, Dimension);
-			float Margin = 2.5f;
-			vector2 RowStart = Vector2(
-				ScreenCenterX - ((Dimension + Margin) * (Grid->ColCount / 2)),
-				ScreenCenterY - ((Dimension + Margin) * (Grid->RowCount / 2))
-			);
-			for(uint8_t Row = 0; Row < Grid->RowCount; Row++)
-			{
-				vector2 Center = RowStart;
-				for(uint8_t Col = 0; Col < Grid->ColCount; Col++)
-				{
-					grid_cell* GridCell = GetGridCell(Grid, Row, Col);
-					GridCell->Rectangle = MakeRectangleCentered(
-						Center, V2Dimension
-					);
-					GridCell->Occupant = NULL;
-
-					Center.X += Dimension + Margin;
-				}
-				RowStart.Y += Dimension + Margin;
-			}
-
-			SceneState->AlertSize = 20.0f;
-			grid_cell* BottomCell = GetGridCell(Grid, 0, 0);
-			float BottomOfBottomCell = GetBottom(BottomCell->Rectangle); 
-			SceneState->AlertCenter = Vector2(
-				ScreenCenterX, BottomOfBottomCell - SceneState->AlertSize
-			);
-		}
-
 		if(SceneState->IsLeader)
 		{
 			SceneState->SyncState = SyncState_Send;
@@ -1966,29 +2001,6 @@ void StartCardGame(
 		{
 			SceneState->SyncState = SyncState_Read;
 		}
-
-		card* GeneralCard = GetInactiveCard(SceneState);
-		// TODO: grab general from loaded deck
-		card_definition* GeneralDef = SceneState->Definitions->Array + 0; 
-		InitCardWithDef(SceneState, GeneralCard, GeneralDef);
-		GeneralCard->Owner = Player_One;
-		PlayGridCard(
-			GameState,
-			SceneState,
-			GeneralCard,
-			2,
-			0
-		);
-		GeneralCard = GetInactiveCard(SceneState);
-		InitCardWithDef(SceneState, GeneralCard, GeneralDef);
-		GeneralCard->Owner = Player_Two;
-		PlayGridCard(
-			GameState,
-			SceneState,
-			GeneralCard,
-			2,
-			8
-		);
 	}
 	else
 	{

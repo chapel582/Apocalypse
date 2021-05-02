@@ -3621,6 +3621,17 @@ void CardGameLogic(
 	// SECTION STOP: Updating game state
 }
 
+bool CardInfoShouldBeVisible(card_game_state* SceneState, card* Card)
+{
+	return (
+		(
+			SceneState->NetworkGame &&
+			(Card->Owner == Player_One || Card->SetType == CardSet_Grid)
+		) ||
+		!SceneState->NetworkGame
+	);
+}
+
 void UpdateAndRenderCardGame(
 	game_state* GameState,
 	card_game_state* SceneState,
@@ -4267,18 +4278,24 @@ void UpdateAndRenderCardGame(
 						Card->Color,
 						1
 					);
-					PushTextCentered(
-						RenderGroup,
-						Assets,
-						FontHandle_TestFont,
-						Card->Definition->Name,
-						CARD_NAME_SIZE,
-						0.2f * Card->Rectangle.Dim.Y, 
-						Center,
-						Vector4(0, 0, 0, 1),
-						FrameArena,
-						2
-					);
+					if(
+						Card->SetType != CardSet_Stack &&
+						CardInfoShouldBeVisible(SceneState, Card)
+					)
+					{
+						PushTextCentered(
+							RenderGroup,
+							Assets,
+							FontHandle_TestFont,
+							Card->Definition->Name,
+							CARD_NAME_SIZE,
+							0.2f * Card->Rectangle.Dim.Y, 
+							Center,
+							Vector4(0, 0, 0, 1),
+							FrameArena,
+							2
+						);
+					}
 				}
 				else
 				{
@@ -4308,7 +4325,11 @@ void UpdateAndRenderCardGame(
 					);
 				}
 			}
-			if(Card->Active && Card->HoveredOver)
+			if(
+				Card->Active &&
+				Card->HoveredOver &&
+				CardInfoShouldBeVisible(SceneState, Card)
+			)
 			{
 				PushInfoCard(
 					RenderGroup,

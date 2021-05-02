@@ -323,6 +323,10 @@ struct card_update_payload
 	player_id Owner;
 	card_set_type SetType;
 	
+	int16_t Movement;
+	uint8_t Row;
+	uint8_t Col;
+	
 	int32_t TapsAvailable;
 	int32_t TimesTapped;
 	int16_t SelfPlayDelta;

@@ -3051,6 +3051,9 @@ void SendGameState(
 		Payload->TurnStartSelfPlayDelta = Card->TurnStartSelfPlayDelta;
 		Payload->OppPlayDelta = Card->OppPlayDelta;
 		Payload->TurnStartOppPlayDelta = Card->TurnStartOppPlayDelta;
+		Payload->Movement = Card->Movement;
+		Payload->Row = Card->Row;
+		Payload->Col = Card->Col;
 		Payload->GridTags = Card->GridTags;
 		Payload->StackTags = Card->StackTags;
 
@@ -3800,11 +3803,45 @@ void UpdateAndRenderCardGame(
 								{
 									RemoveCardFromSet(SceneState, CardToChange);
 								}
-								AddCardToSet(
-									SceneState,
-									CardUpdate->SetType,
-									CardOwner,
-									CardToChange
+
+								if(CardUpdate->SetType != CardSet_Grid)
+								{
+									AddCardToSet(
+										SceneState,
+										CardUpdate->SetType,
+										CardOwner,
+										CardToChange
+									);
+								}
+								else
+								{
+									PlayGridCard(
+										GameState,
+										SceneState,
+										CardToChange,
+										CardUpdate->Row,
+										CardUpdate->Col
+									);
+								}
+							}
+						}
+
+						if(CardUpdate->SetType == CardSet_Grid)
+						{
+							grid* Grid = &SceneState->Grid;
+							if(
+								CardToChange->SetType == CardSet_Grid &&
+								(
+									CardUpdate->Row != CardToChange->Row ||
+									CardUpdate->Col != CardToChange->Col
+								)
+							)
+							{
+								MoveGridCardOnly(
+									Grid,
+									CardToChange,
+									CardUpdate->Row,
+									CardUpdate->Col
 								);
 							}
 						}
@@ -3827,6 +3864,7 @@ void UpdateAndRenderCardGame(
 						CardToChange->TurnStartOppPlayDelta = (
 							CardUpdate->TurnStartOppPlayDelta
 						);
+						CardToChange->Movement = CardUpdate->Movement;
 
 						CardToChange->GridTags = CardUpdate->GridTags;
 						CardToChange->StackTags = CardUpdate->StackTags;

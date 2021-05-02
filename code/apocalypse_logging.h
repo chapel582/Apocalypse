@@ -10,8 +10,9 @@
 #define PERM_COREDUMP_LOG_PATH (LOGS_PATH "/coredump.bin")
 
 #if APOCALYPSE_SLOW
-// TODO: Complete assertion macro
-#define ASSERT(Expression) if(!(Expression)) {PlatformWriteEntireFile(ASSERT_LOG_PATH, "At " __FILE__ ": " __FUNCTION__ ": " LINE_STRING, sizeof("At " __FILE__ ": " __FUNCTION__ ": " LINE_STRING) - 1);PlatformWriteEntireFile(PERM_COREDUMP_LOG_PATH, GlobalGameMemoryPtr->PermanentStorage, (uint32_t) (GlobalGameMemoryPtr->PermanentStorageSize + GlobalGameMemoryPtr->TransientStorageSize));*(int*) 0 = 0;}
+// TODO: Switch the assertion to have the coredump captured by another process
+// #define ASSERT(Expression) if(!(Expression)) {PlatformWriteEntireFile(ASSERT_LOG_PATH, "At " __FILE__ ": " __FUNCTION__ ": " LINE_STRING, sizeof("At " __FILE__ ": " __FUNCTION__ ": " LINE_STRING) - 1);PlatformWriteEntireFile(PERM_COREDUMP_LOG_PATH, GlobalGameMemoryPtr->PermanentStorage, (uint32_t) (GlobalGameMemoryPtr->PermanentStorageSize + GlobalGameMemoryPtr->TransientStorageSize));*(int*) 0 = 0;}
+#define ASSERT(Expression) if(!(Expression)) {PlatformWriteEntireFile(ASSERT_LOG_PATH, "At " __FILE__ ": " __FUNCTION__ ": " LINE_STRING, sizeof("At " __FILE__ ": " __FUNCTION__ ": " LINE_STRING) - 1);*(int*) 0 = 0;}
 #else
 #define ASSERT(Expression)
 #endif

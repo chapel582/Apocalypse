@@ -1232,6 +1232,9 @@ void PlayGridCard(
 		Card->Visible = false;
 		Card->Row = GridRow;
 		Card->Col = GridCol;
+		// NOTE: cards can't move or attack when entering the field
+		Card->TimesTapped = Card->TapsAvailable;
+		Card->Movement = 0;
 	}
 	else
 	{
@@ -1947,6 +1950,10 @@ void StartCardGame(
 								2,
 								0
 							);
+							GeneralCard->TimesTapped = 0;
+							GeneralCard->Movement = (
+								CardDefinition->Movement
+							);
 						}
 						else if(PlayerIndex == Player_Two)
 						{
@@ -1956,6 +1963,10 @@ void StartCardGame(
 								GeneralCard,
 								2,
 								8
+							);
+							GeneralCard->TimesTapped = 0;
+							GeneralCard->Movement = (
+								CardDefinition->Movement
 							);
 						}
 						else

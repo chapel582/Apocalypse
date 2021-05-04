@@ -3,7 +3,8 @@
 #define DEFAULT_HAND_SIZE 5
 #define MAX_CARDS_PER_SET 64
 #define MAX_CARDS_PER_DATA_SET 256
-#define DEFAULT_NEXT_TURN_TIMER 40.0f
+#define BASE_NEXT_TURN_TIMER 40.0f
+#define INCREMENT_NEXT_TURN_TIMER 10.0f
 #define MISSED_UPDATES_BEFORE_DESTRUCTION 5 // NOTE: measured in frames
 
 #include "apocalypse_socket.h"
@@ -281,6 +282,8 @@ struct card_game_state
 
 	card_data_set* ViewingCardDataSet;
 
+	uint16_t TurnCount;
+
 	// NOTE: server is assumed to be leader (has final say on game state)
 	bool IsLeader;
 	bool NetworkGame;
@@ -362,6 +365,7 @@ struct state_update_payload
 	player_id StackTurn;
 
 	bool StackBuilding;
+	uint16_t TurnCount;
 
 	float TurnTimer;
 	float NextTurnTimer[Player_Count];

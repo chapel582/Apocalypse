@@ -2000,9 +2000,10 @@ void StartCardGame(
 			DrawFullHand(SceneState, Player_Two);
 		}
 
-		SetTurnTimer(SceneState, DEFAULT_NEXT_TURN_TIMER);
-		SceneState->NextTurnTimer[Player_One] = DEFAULT_NEXT_TURN_TIMER;
-		SceneState->NextTurnTimer[Player_Two] = DEFAULT_NEXT_TURN_TIMER;
+		SetTurnTimer(SceneState, BASE_NEXT_TURN_TIMER);
+		SceneState->NextTurnTimer[Player_One] = BASE_NEXT_TURN_TIMER;
+		SceneState->NextTurnTimer[Player_Two] = BASE_NEXT_TURN_TIMER;
+		SceneState->TurnCount = 1;
 
 		if(SceneState->IsLeader)
 		{
@@ -2981,6 +2982,7 @@ void SendGameState(
 		Payload->NextTurnTimer[Player_Two] = (
 			SceneState->NextTurnTimer[Player_Two]
 		);
+		Payload->TurnCount = SceneState->TurnCount;
 		Payload->StackTurn = SceneState->StackTurn;
 		Payload->StackBuilding = SceneState->StackBuilding;
 		
@@ -3441,7 +3443,11 @@ void CardGameLogic(
 		player_id NextTurnPlayer = GetOpponent(SceneState->CurrentTurn);
 		SetTurnTimer(SceneState, SceneState->NextTurnTimer[NextTurnPlayer]);
 
-		SceneState->NextTurnTimer[NextTurnPlayer] = DEFAULT_NEXT_TURN_TIMER;
+		SceneState->NextTurnTimer[NextTurnPlayer] = (
+			BASE_NEXT_TURN_TIMER +
+			(INCREMENT_NEXT_TURN_TIMER * (int)(SceneState->TurnCount / 2))
+		);
+		SceneState->TurnCount++;
 
 		DrawCard(GameState, SceneState, SceneState->CurrentTurn);
 
@@ -3764,7 +3770,7 @@ void UpdateAndRenderCardGame(
 									LeaderState->StackTurn
 								);
 							}
-
+							SceneState->TurnCount = LeaderState->TurnCount;
 							SceneState->LastFrame = Header->FrameId;
 						}
 						break;

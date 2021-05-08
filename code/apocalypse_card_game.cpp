@@ -4371,11 +4371,10 @@ void UpdateAndRenderCardGame(
 	}
 	// SECTION STOP: Push cards
 
+	vector4 White = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	vector4 Black = Vector4(0.0f, 0.0f, 0.0f, 1.0f);
 	// SECTION START: Push player draw/discard totals
 	{
-		vector4 White = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-		vector4 Black = Vector4(0.0f, 0.0f, 0.0f, 1.0f);
-
 		char* PlayerString = PushArray(
 			FrameArena, MAX_RESOURCE_STRING_SIZE, char
 		);
@@ -4505,8 +4504,6 @@ void UpdateAndRenderCardGame(
 	}
 	// SECTION STOP: Push player draw/discard totals
 
-	vector4 White = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-
 	// SECTION START: push cards in card data set
 	if(SceneState->ViewingCardDataSet != NULL)
 	{
@@ -4574,6 +4571,10 @@ void UpdateAndRenderCardGame(
 	// SECTION STOP: push cards in card data set
 
 	{
+		char* OccupantString = PushArray(
+			FrameArena, MAX_RESOURCE_STRING_SIZE, char
+		);
+
 		grid* Grid = &SceneState->Grid;
 		vector4 Yellow = Vector4(1.0f, 1.0f, 0.0f, 1.0f);
 		uint32_t GridLayer = 0;
@@ -4641,9 +4642,57 @@ void UpdateAndRenderCardGame(
 						Assets,
 						BitmapHandle_TestCard2,
 						GetCenter(Rectangle),
-						0.65f * GridXDim,
-						0.65f * GridYDim,
+						0.5f * GridXDim,
+						0.5f * GridYDim,
 						PlayerColor,
+						GridLayer + 1
+					);
+
+					snprintf(
+						OccupantString,
+						MAX_RESOURCE_STRING_SIZE,
+						"A: %d L: %d",
+						Occupant->Attack,
+						Occupant->Health
+					);
+					float FontHeight = 0.15f * Rectangle.Dim.Y;
+					vector2 Center = Vector2(
+						GetCenter(Rectangle).X,
+						GetBottom(Rectangle) + FontHeight
+					);
+					PushTextCentered(
+						RenderGroup,
+						Assets,
+						FontHandle_TestFont,
+						OccupantString,
+						MAX_RESOURCE_STRING_SIZE,
+						FontHeight,
+						Center,
+						Black,
+						FrameArena,
+						GridLayer + 1
+					);
+
+					snprintf(
+						OccupantString,
+						MAX_RESOURCE_STRING_SIZE,
+						"%s",
+						Occupant->Definition->Name
+					);
+					Center = Vector2(
+						GetCenter(Rectangle).X,
+						GetTop(Rectangle) - FontHeight
+					);
+ 					PushTextCentered(
+						RenderGroup,
+						Assets,
+						FontHandle_TestFont,
+						OccupantString,
+						MAX_RESOURCE_STRING_SIZE,
+						FontHeight,
+						Center,
+						Black,
+						FrameArena,
 						GridLayer + 1
 					);
 				}

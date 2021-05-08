@@ -414,7 +414,7 @@ platform_socket_result PlatformAcceptConnection(
 	}
 
 	ClientSocketResult->Socket = Win32ClientSocket;
-
+	ClientSocketResult->IsValid = true;
 	goto end;
 
 error:

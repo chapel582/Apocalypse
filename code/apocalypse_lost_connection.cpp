@@ -218,20 +218,16 @@ void UpdateAndRenderLostConnection(
 							&SceneState->ConnectSocket
 						);
 						if(
-							ListenSocket->IsValid && ConnectSocket->IsValid
+							ListenSocket->IsValid
 						)
 						{
 							PlatformServerDisconnect(
 								ListenSocket, ConnectSocket
 							);
 						}
-						else if(ConnectSocket->IsValid)
-						{
-							PlatformClientDisconnect(ConnectSocket);
-						}
 						else
 						{
-							ASSERT(false);
+							PlatformClientDisconnect(ConnectSocket);
 						}
 						break;
 					}

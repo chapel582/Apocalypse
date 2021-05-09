@@ -18,6 +18,7 @@ typedef enum
 	Packet_CardDataSetUpdate,
 	Packet_RandSeed,
 	Packet_JoinGameType,
+	Packet_CardStackUpdate,
 	Packet_SyncDone
 } packet_type;
 

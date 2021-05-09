@@ -116,9 +116,16 @@ struct card_data_set
 	card_data* ShowInfoCard;
 };
 
+typedef enum
+{
+	CardStackEntry_None,
+	CardStackEntry_PlayerTarget,
+	CardStackEntry_CardTarget
+} card_stack_entry_type;
 struct card_stack_entry
 {
 	card* Card;
+	card_stack_entry_type Type;
 	union
 	{
 		struct
@@ -274,7 +281,8 @@ struct card_game_state
 	player_id StackTurn;
 	bool StackBuilding;
 	// TODO: probably should put this in an arena
-	card_stack_entry Stack[256];
+	card_stack_entry* Stack;
+	uint32_t StackBufferCount;
 	uint32_t StackSize;
 	float StackYStart;
 	vector2 StackEntryInfoDim;
@@ -297,6 +305,11 @@ struct card_game_state
 	// NOTE: last frame received from master
 	uint64_t LastFrame;
 };
+
+inline bool TargetsStillNeeded(card_game_state* SceneState)
+{
+	return SceneState->TargetsSet < SceneState->TargetsNeeded;
+}
 
 #pragma pack(push, 1)
 struct sync_done_packet
@@ -357,6 +370,35 @@ struct remove_card_packet
 {
 	packet_header Header;
 	remove_card_payload Payload;
+};
+
+struct serialized_card_stack_entry
+{
+	uint32_t CardId;
+	card_stack_entry_type Type;
+	union
+	{
+		struct
+		{
+			bool PlayerTargetSet;
+			player_id PlayerTarget;
+		};
+		struct
+		{
+			uint32_t CardTargetId;
+		};
+	};
+};
+struct card_stack_payload
+{
+
+	uint32_t EntryCount;
+	// NOTE: followed by CardStackEntryCount serialized_card_stack_entry
+};
+struct card_stack_packet
+{
+	packet_header Header;
+	card_stack_payload Payload;
 };
 
 struct state_update_payload

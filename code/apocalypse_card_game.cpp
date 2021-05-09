@@ -936,6 +936,7 @@ void PlayStackCard(
 	stack_effect_tags* StackTags = &Card->StackTags;
 	if(HasTag(StackTags, StackEffect_HurtOpp))
 	{
+		StackEntry->Type = CardStackEntry_PlayerTarget;
 		StackEntry->PlayerTarget = GetOpponent(SceneState->CurrentTurn);
 	}
 
@@ -946,6 +947,7 @@ void PlayStackCard(
 	{
 		SelectCard(SceneState, Card, FrameArena);
 		SceneState->TargetsNeeded++;
+		StackEntry->Type = CardStackEntry_CardTarget;
 		SetTag(&SceneState->ValidTargets, TargetType_Card);
 	}
 	else if(
@@ -1760,8 +1762,9 @@ void StartCardGame(
 		GameState->SceneArgs
 	);
 
+	memory_arena* TransientArena = &GameState->TransientArena; 
 	GameState->SceneState = PushStruct(
-		&GameState->TransientArena, card_game_state
+		TransientArena, card_game_state
 	);
 
 	card_game_state* SceneState = (card_game_state*) GameState->SceneState;
@@ -1843,9 +1846,7 @@ void StartCardGame(
 			Grid->RowCount = 5;
 			Grid->ColCount = 9;
 			Grid->Cells = PushArray(
-				&GameState->TransientArena,
-				Grid->RowCount * Grid->ColCount,
-				grid_cell
+				TransientArena, Grid->RowCount * Grid->ColCount, grid_cell
 			);
 
 			float Dimension = (1.0f / 15.0f) * SceneState->ScreenDimInWorld.X;
@@ -1999,6 +2000,12 @@ void StartCardGame(
 			DrawFullHand(SceneState, Player_One);
 			DrawFullHand(SceneState, Player_Two);
 		}
+
+		SceneState->StackBufferCount = 256; 
+		SceneState->Stack = PushArray(
+			TransientArena, SceneState->StackBufferCount, card_stack_entry
+		);
+		// TODO: check that we never exceed buffer size and handle correctly
 
 		SetTurnTimer(SceneState, BASE_NEXT_TURN_TIMER);
 		SceneState->NextTurnTimer[Player_One] = BASE_NEXT_TURN_TIMER;
@@ -3030,6 +3037,100 @@ void SendGameState(
 				SwitchingLeader
 			);
 		}
+
+		{
+			card_stack_packet* StackPacket = PushStruct(
+				FrameArena, card_stack_packet
+			);
+			serialized_card_stack_entry* SerializedStackEntries = PushArray(
+				FrameArena,
+				SceneState->StackSize,
+				serialized_card_stack_entry,
+				1
+			);
+			
+			Header = &StackPacket->Header;
+			card_stack_payload* StackPayload = &StackPacket->Payload;
+
+			StackPayload->EntryCount = SceneState->StackSize;
+			for(
+				uint32_t StackIndex = 0;
+				StackIndex < StackPayload->EntryCount;
+				StackIndex++
+			)
+			{
+				card_stack_entry* StackEntry = SceneState->Stack + StackIndex;
+				serialized_card_stack_entry* Update = (
+					SerializedStackEntries + StackIndex
+				);
+
+				ASSERT(StackEntry->Card != NULL);
+				Update->CardId = StackEntry->Card->CardId;
+				Update->Type = StackEntry->Type;
+				switch(Update->Type)
+				{
+					case(CardStackEntry_None):
+					{
+						break;
+					}
+					case(CardStackEntry_PlayerTarget):
+					{
+						Update->PlayerTargetSet = StackEntry->PlayerTargetSet;
+						Update->PlayerTarget = StackEntry->PlayerTarget;
+						break;
+					}
+					case(CardStackEntry_CardTarget):
+					{
+						if(StackEntry->CardTarget)
+						{
+							Update->CardTargetId = ( 
+								StackEntry->CardTarget->CardId
+							);
+						}
+						else
+						{
+							Update->CardTargetId = 0;
+						}
+						break;
+					}
+					default:
+					{
+						ASSERT(false);
+						break;
+					}
+				}
+			}
+
+			Header->DataSize = (
+				sizeof(card_stack_packet) +
+				StackPayload->EntryCount * sizeof(serialized_card_stack_entry)
+			);
+			InitPacketHeader(
+				GameState,
+				Header,
+				Packet_CardStackUpdate,
+				(uint8_t*) StackPayload
+			);
+
+			if(SwitchingLeader)
+			{
+				SocketSendErrorCheck(
+					GameState,
+					&SceneState->ConnectSocket,
+					&SceneState->ListenSocket,
+					&StackPacket->Header
+				);
+			}
+			else
+			{
+				ThrottledSocketSendErrorCheck(
+					GameState,
+					&SceneState->ConnectSocket,
+					&SceneState->ListenSocket,
+					&StackPacket->Header
+				);
+			}
+		}
 	}
 
 	for(
@@ -3454,6 +3555,7 @@ void CardGameLogic(
 		SwitchTurns(GameState, SceneState);
 		// NOTE: turn start effects and resets
 		DeselectCard(SceneState);
+		SceneState->StackSize = 0;
 		for(
 			uint32_t CardIndex = 0;
 			CardIndex < SceneState->MaxCards;
@@ -3971,6 +4073,68 @@ void UpdateAndRenderCardGame(
 						}
 						break;
 					}
+					case(Packet_CardStackUpdate):
+					{
+						card_stack_payload* UpdatePayload = (
+							(card_stack_payload*) Payload
+						);
+						uint8_t* EntriesPtr = (
+							(uint8_t*)(UpdatePayload) + sizeof(*UpdatePayload)
+						);
+						serialized_card_stack_entry* EntryUpdates = (
+							(serialized_card_stack_entry*)(EntriesPtr)
+						);
+
+						SceneState->StackSize = UpdatePayload->EntryCount;
+						for(
+							uint32_t StackIndex = 0;
+							StackIndex < SceneState->StackSize;
+							StackIndex++
+						)
+						{
+							card_stack_entry* StackEntry = (
+								SceneState->Stack + StackIndex
+							);
+							serialized_card_stack_entry* EntryUpdate = (
+								EntryUpdates + StackIndex
+							);
+
+							StackEntry->Card = GetCardWithId(
+								SceneState, EntryUpdate->CardId
+							);
+							StackEntry->Type = EntryUpdate->Type;
+							switch(StackEntry->Type)
+							{
+								case(CardStackEntry_None):
+								{
+									break;
+								}
+								case(CardStackEntry_PlayerTarget):
+								{
+									StackEntry->PlayerTargetSet = (
+										EntryUpdate->PlayerTargetSet
+									);
+									StackEntry->PlayerTarget = GetOpponent(
+										EntryUpdate->PlayerTarget
+									);
+									break;
+								}
+								case(CardStackEntry_CardTarget):
+								{
+									StackEntry->CardTarget = GetCardWithId(
+										SceneState, EntryUpdate->CardTargetId
+									);
+									break;
+								}
+								default:
+								{
+									ASSERT(false);
+									break;
+								}
+							}
+						}
+						break;
+					}
 					case(Packet_RandSeed):
 					{
 						rand_seed_payload* RandSeedPayload = (
@@ -4112,7 +4276,10 @@ void UpdateAndRenderCardGame(
 					{
 						SwitchingLeader = (
 							FrameStartStackTurn != SceneState->StackTurn ||
-							!FrameStartStackBuilding
+							(
+								!FrameStartStackBuilding && 
+								!TargetsStillNeeded(SceneState)
+							)
 						);
 					}
 					else

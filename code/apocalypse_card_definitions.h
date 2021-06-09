@@ -88,7 +88,14 @@ typedef enum
 	*/
 	GridEffect_DiagonalAttack,
 
+	/*
+	NOTE: CantCounter cards cannot counter
+	*/
 	GridEffect_CantCounter,
+	/*
+	NOTE: Uncounterable cards cannout be countered
+	*/
+	GridEffect_Uncounterable,
 
 	/*
 	NOTE: attack all in-range enemies

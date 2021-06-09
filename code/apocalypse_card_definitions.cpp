@@ -398,6 +398,15 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	);
 	SetTag(&Definition->GridTags, GridEffect_CantCounter);
 
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 40, 40, -40, 20);
+	SetName(
+		Definition,
+		"Uncounterable",
+		sizeof("Uncounterable")
+	);
+	SetTag(&Definition->GridTags, GridEffect_Uncounterable);
+
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;
 	

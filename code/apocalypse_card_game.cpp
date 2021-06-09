@@ -1377,7 +1377,10 @@ attack_card_result AttackCardWithoutDiscarding(
 
 	int16_t AttackingCardHealthDelta = AttackedCard->Attack;
 	int16_t AttackedCardHealthDelta = AttackingCard->Attack;
-	if(!HasTag(&AttackedCard->GridTags, GridEffect_CantCounter))
+	if(
+		!HasTag(&AttackingCard->GridTags, GridEffect_Uncounterable) &&
+		!HasTag(&AttackedCard->GridTags, GridEffect_CantCounter)
+	)
 	{
 		AttackingCard->Health -= AttackingCardHealthDelta;
 		AttackingCard->TurnStartHealth -= AttackingCardHealthDelta;		
@@ -2656,7 +2659,7 @@ inline void StandardPrimaryUpHandler(
 									}
 									else
 									{
-										SelectedCard->TapsAvailable -= 1;
+										SelectedCard->TimesTapped += 1;
 									}
 									if(Result.AttackedDied)
 									{

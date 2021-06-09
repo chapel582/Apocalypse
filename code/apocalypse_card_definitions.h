@@ -88,6 +88,8 @@ typedef enum
 	*/
 	GridEffect_DiagonalAttack,
 
+	GridEffect_CantCounter,
+
 	/*
 	NOTE: attack all in-range enemies
 	*/

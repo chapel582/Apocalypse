@@ -389,6 +389,15 @@ card_definitions* DefineCards(memory_arena* MemoryArena)
 	);
 	SetTag(&Definition->GridTags, GridEffect_AttackAll);
 
+	Definition = &Definitions->Array[CardId];
+	InitCard(Definition, CardId++, 1, 40, 40, -40, 20);
+	SetName(
+		Definition,
+		"CantCounter",
+		sizeof("CantCounter")
+	);
+	SetTag(&Definition->GridTags, GridEffect_CantCounter);
+
 	ASSERT(CardId < MAX_CARDS_IN_GAME);
 	Definitions->NumCards = CardId;
 	

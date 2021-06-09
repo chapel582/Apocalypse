@@ -1377,8 +1377,11 @@ attack_card_result AttackCardWithoutDiscarding(
 
 	int16_t AttackingCardHealthDelta = AttackedCard->Attack;
 	int16_t AttackedCardHealthDelta = AttackingCard->Attack;
-	AttackingCard->Health -= AttackingCardHealthDelta;
-	AttackingCard->TurnStartHealth -= AttackingCardHealthDelta;
+	if(!HasTag(&AttackedCard->GridTags, GridEffect_CantCounter))
+	{
+		AttackingCard->Health -= AttackingCardHealthDelta;
+		AttackingCard->TurnStartHealth -= AttackingCardHealthDelta;		
+	}
 	AttackedCard->Health -= AttackedCardHealthDelta;
 	AttackedCard->TurnStartHealth -= AttackedCardHealthDelta;
 
